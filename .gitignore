@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.vercel/
+.next/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+
+# Prisma
+backend/prisma/migrations/dev.db
+
+# Misc
+*.local
+.turbo/
+
+# Never commit dev seed credentials — regenerate the list from
+# backend/prisma/seed.ts instead if you need it again locally.
+credentials.txt
+
+# Python / TS build caches
+__pycache__/
+*.pyc
+*.tsbuildinfo

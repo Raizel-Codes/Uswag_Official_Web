@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" fill="none">
+  <!-- USWAG cute chibi student avatar — girl, ponytail, holding a book -->
+  <circle cx="60" cy="70" r="58" fill="#E7EFE4"/>
+  <!-- legs -->
+  <rect x="47" y="104" width="11" height="18" rx="4" fill="#F6CFA3"/>
+  <rect x="62" y="104" width="11" height="18" rx="4" fill="#F6CFA3"/>
+  <!-- socks -->
+  <rect x="46" y="116" width="13" height="8" rx="3" fill="#FFFFFF"/>
+  <rect x="61" y="116" width="13" height="8" rx="3" fill="#FFFFFF"/>
+  <!-- shoes -->
+  <rect x="44" y="122" width="17" height="8" rx="4" fill="#0d1b12"/>
+  <rect x="59" y="122" width="17" height="8" rx="4" fill="#0d1b12"/>
+  <!-- skirt -->
+  <path d="M40 92c0-8 9-14 20-14s20 6 20 14l4 16H36z" fill="#142718"/>
+  <path d="M44 92l2 16m14-16v16m14-16l2 16" stroke="#0d1b12" stroke-width="1.4"/>
+  <!-- torso / shirt -->
+  <path d="M43 74c0-7 8-12 17-12s17 5 17 12v20H43z" fill="#FFFFFF"/>
+  <!-- tie -->
+  <path d="M55 64l5 6 5-6 3 4-5 20h-6l-5-20z" fill="#2E5B41"/>
+  <!-- collar -->
+  <path d="M51 64l9 8 9-8 4 4-10 9h-6l-10-9z" fill="#F4F7F3"/>
+  <!-- arms holding book -->
+  <path d="M43 78c-7 2-11 9-11 17v6c0 3 2 5 5 5h4v-9c0-6 2-11 6-14z" fill="#FFFFFF"/>
+  <path d="M77 78c7 2 11 9 11 17v6c0 3-2 5-5 5h-4v-9c0-6-2-11-6-14z" fill="#FFFFFF"/>
+  <rect x="34" y="99" width="20" height="14" rx="2" fill="#98CBB0"/>
+  <rect x="34" y="99" width="20" height="3" fill="#2E5B41"/>
+  <!-- neck -->
+  <rect x="53" y="55" width="14" height="12" rx="4" fill="#F6CFA3"/>
+  <!-- head -->
+  <circle cx="60" cy="40" r="21" fill="#F8D5AC"/>
+  <!-- ponytail -->
+  <path d="M83 30c8 2 12 12 8 22-3 8-3 16 1 22-8-2-12-10-11-19 1-7-1-14-3-19z" fill="#2b1c14"/>
+  <!-- hair -->
+  <path d="M39 38c-3-16 9-27 21-27s24 11 21 27c-1-6-6-9-9-8 0-4-3-7-6-8-3 4-9 6-14 4-5-2-9 1-10 7-1-1-2 3-3 5z" fill="#2b1c14"/>
+  <path d="M78 27c4 3 6 8 5 13-2-4-4-8-8-10z" fill="#2b1c14"/>
+  <!-- eyes -->
+  <circle cx="53" cy="41" r="2.6" fill="#2b1c14"/>
+  <circle cx="68" cy="41" r="2.6" fill="#2b1c14"/>
+  <!-- blush -->
+  <circle cx="48" cy="47" r="3" fill="#F2A98E" opacity="0.55"/>
+  <circle cx="73" cy="47" r="3" fill="#F2A98E" opacity="0.55"/>
+  <!-- smile -->
+  <path d="M55 49c2 3 9 3 11 0" stroke="#8a4a2c" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- hair bow -->
+  <path d="M83 28l-6-3 2 4-2 4 6-3 6 3-2-4 2-4z" fill="#98CBB0"/>
+</svg>

@@ -1,0 +1,278 @@
+USWAG OFFICIAL WEBSITE & PWA — PROJECT FILE STRUCTURE
+United Students Working for Advocacy and Growth | Northwest Samar State University
+
+1. CURRENT REPOSITORY FILE TREE
+
+USWAG-OFFICIAL_WEBSITE/
+├── .gitignore                                # Git ignore configuration
+├── 01 - USWAG Constitution and Bylaws.pdf    # Official organization constitution & bylaws
+├── USWAG_Website_Plan.docx                   # Project outline and roadmap document
+├── plan_extracted.txt                        # Extracted development plan & architecture
+├── readme.md                                 # Project overview & design tokens / palette
+├── claude.md                                 # Project reference notes
+├── filestructure.txt                         # Directory structure diagram (this file)
+│
+├── prototype/                                # Interactive UI/UX standalone prototypes
+│   ├── member.html                           # Member portal prototype (Digital ID, QR, Attendance)
+│   ├── officer-admin.html                    # Officer admin panel prototype (QR Scanner, Events)
+│   └── super-admin.html                      # Super admin panel prototype (Org Management, Bylaws)
+│
+├── frontend/                                 # Client-side SPA / PWA (React + Vite + TS)
+└── backend/                                  # Server-side API & Services (Node.js + PostgreSQL)
+
+
+2. TARGET / PRODUCTION FULL-STACK ARCHITECTURE
+
+USWAG-OFFICIAL_WEBSITE/
+│
+├── .github/                                  # CI/CD Workflows & Automation
+│   └── workflows/
+│       ├── frontend-deploy.yml               # Automated preview & Vercel deployment
+│       └── backend-deploy.yml                # Railway / Render deployment pipeline
+│
+├── docs/                                     # Project Documentation & Resources
+│   ├── 01 - USWAG Constitution and Bylaws.pdf# Org Constitution & By-Laws reference
+│   ├── USWAG_Website_Plan.docx               # Full project plan document
+│   ├── plan_extracted.txt                    # Development blueprint & system architecture
+│   ├── API_DOCUMENTATION.md                  # REST API endpoints & payload schemas
+│   └── DATABASE_SCHEMA.md                    # ERD, database tables & relationships
+│
+├── prototype/                                # Standalone HTML5/CSS3/JS UI Prototypes
+│   ├── member.html                           # Member portal prototype
+│   ├── officer-admin.html                    # Officer dashboard & scanner prototype
+│   └── super-admin.html                      # Super admin dashboard & controls prototype
+│
+├── frontend/                                 # Frontend Web Application (React + Vite + TS + PWA)
+│   ├── public/                               # Static Assets & PWA Shell
+│   │   ├── favicon.ico                       # Website favicon
+│   │   ├── manifest.webmanifest              # PWA Web App Manifest (Standalone, Theme Colors)
+│   │   ├── sw.js                             # Custom Service Worker (Caching, Push Handler)
+│   │   ├── robots.txt                        # Search engine crawling rules
+│   │   └── icons/                            # PWA Icons & Brand Graphics
+│   │       ├── icon-72x72.png
+│   │       ├── icon-96x96.png
+│   │       ├── icon-128x128.png
+│   │       ├── icon-144x144.png
+│   │       ├── icon-152x152.png
+│   │       ├── icon-192x192.png              # Android standard home-screen icon
+│   │       ├── icon-384x384.png
+│   │       ├── icon-512x512.png              # Splash screen & high-res PWA icon
+│   │       └── apple-touch-icon.png          # iOS home-screen icon
+│   │
+│   ├── src/
+│   │   ├── assets/                           # Bundled media & visual assets
+│   │   │   ├── images/                       # Org logos, banners, advocacy illustrations
+│   │   │   │   ├── logo-uswag.svg            # USWAG official logo (vector)
+│   │   │   │   ├── logo-nwssu.svg            # Northwest Samar State University logo
+│   │   │   │   ├── hero-bg.jpg               # Hero background imagery
+│   │   │   │   └── default-avatar.png        # Placeholder profile photo
+│   │   │   └── icons/                        # Custom SVG UI icons
+│   │   │
+│   │   ├── components/                       # Modular UI Components
+│   │   │   ├── common/                       # Generic reusable UI primitives
+│   │   │   │   ├── Button.tsx                # Primary, Secondary, Outline buttons
+│   │   │   │   ├── Card.tsx                  # Mist Background container cards
+│   │   │   │   ├── Badge.tsx                 # Status & advocacy pillar badges
+│   │   │   │   ├── Modal.tsx                 # Accessible modal dialogs
+│   │   │   │   ├── Input.tsx                 # Form inputs & validation states
+│   │   │   │   ├── Dropdown.tsx              # Select & filter dropdown menus
+│   │   │   │   ├── SkeletonLoader.tsx        # Skeleton placeholders for feed/events
+│   │   │   │   └── Toast.tsx                 # In-app notifications & alerts
+│   │   │   │
+│   │   │   ├── layout/                       # Structural Layout Components
+│   │   │   │   ├── Header.tsx                # Translucent sticky nav bar with shrink
+│   │   │   │   ├── Footer.tsx                # Footer with links, contacts, social icons
+│   │   │   │   ├── Sidebar.tsx               # Admin & Member dashboard navigation drawer
+│   │   │   │   ├── DashboardLayout.tsx       # Auth-protected shell wrapper
+│   │   │   │   └── PublicLayout.tsx          # Public page wrapper
+│   │   │   │
+│   │   │   ├── pwa/                          # PWA-specific UI widgets
+│   │   │   │   ├── InstallPromptBanner.tsx   # "Add USWAG to Home Screen" custom prompt
+│   │   │   │   ├── PushNotificationPrompt.tsx# Web Push opt-in subscription modal
+│   │   │   │   └── FloatingNotificationBell.tsx # Floating bell with unread count badge
+│   │   │   │
+│   │   │   ├── qr/                           # QR Code generation and scanning widgets
+│   │   │   │   ├── DigitalMemberCard.tsx     # Member ID card + Signed QR display
+│   │   │   │   ├── QRScannerCamera.tsx       # html5-qrcode camera stream scanner
+│   │   │   │   └── ScanResultCard.tsx        # Valid (Green) / Invalid / Expired alert card
+│   │   │   │
+│   │   │   └── feed/                         # Social & news components
+│   │   │       ├── FacebookPostCard.tsx      # Synced FB post card with link out
+│   │   │       └── EventCard.tsx             # Upcoming event card with RSVP action
+│   │   │
+│   │   ├── context/                          # Global React Contexts & Providers
+│   │   │   ├── AuthContext.tsx               # User authentication state & JWT session
+│   │   │   ├── NotificationContext.tsx       # Real-time alerts & unread message count
+│   │   │   └── ThemeContext.tsx              # Palette tokens & theme preferences
+│   │   │
+│   │   ├── hooks/                            # Custom React Hooks
+│   │   │   ├── useAuth.ts                    # User login, logout, role checks
+│   │   │   ├── useEvents.ts                  # Event querying, filtering, RSVP
+│   │   │   ├── useQRScanner.ts               # Camera scanner lifecycle & verification
+│   │   │   ├── useNotifications.ts           # Push notifications & unread polling
+│   │   │   └── usePWAInstall.ts              # beforeinstallprompt handler hook
+│   │   │
+│   │   ├── pages/                            # Application View Pages
+│   │   │   │
+│   │   │   ├── public/                       # Publicly accessible pages (No login required)
+│   │   │   │   ├── HomePage.tsx              # Hero, 3 Pillars, Upcoming Events, FB Feed
+│   │   │   │   ├── AboutPage.tsx             # Mission, Preamble, History, Adviser message
+│   │   │   │   ├── AdvocaciesPage.tsx        # Youth Voice, Mental Health, Environment
+│   │   │   │   ├── OfficersPage.tsx          # Current Officer Grid, Duties, Org Chart
+│   │   │   │   ├── EventsPage.tsx            # Public Events Calendar & Details
+│   │   │   │   ├── NewsPage.tsx              # Facebook auto-synced news & announcements
+│   │   │   │   ├── JoinUsPage.tsx            # Member application form & orientation FAQ
+│   │   │   │   ├── BylawsPage.tsx            # Constitution & By-Laws reader + Amendments
+│   │   │   │   ├── ContactPage.tsx           # Contact form, campus location & socials
+│   │   │   │   └── LoginPage.tsx             # Member & Officer login portal
+│   │   │   │
+│   │   │   ├── member/                       # Member Portal (Auth: Member / Officer / Admin)
+│   │   │   │   ├── MemberDashboardPage.tsx   # Standing, upcoming events, quick QR preview
+│   │   │   │   ├── MyQRPage.tsx              # Full-screen QR & downloadable Digital Card
+│   │   │   │   ├── MyAttendancePage.tsx      # Scanned activity history & attendance rate
+│   │   │   │   ├── MemberEventsPage.tsx      # RSVP to events & slot eligibility status
+│   │   │   │   ├── NotificationsPage.tsx     # Full notification center & push settings
+│   │   │   │   └── ProfilePage.tsx           # Profile info, department, credentials
+│   │   │   │
+│   │   │   └── admin/                        # Admin Portal (Auth: Super Admin / Officer Admin)
+│   │   │       ├── AdminDashboardPage.tsx    # Org-wide stats, attendance trends, metrics
+│   │   │       ├── MemberManagementPage.tsx  # Application approvals, issue QR, renewals
+│   │   │       ├── EventManagementPage.tsx   # Event CRUD, scanner assignments, live count
+│   │   │       ├── ScanConsolePage.tsx       # Mobile camera scan page for event check-in
+│   │   │       ├── ContentManagerPage.tsx    # Manual posts, FB sync override, advocacy edit
+│   │   │       ├── OfficerRosterPage.tsx     # Manage active term officers, archive past terms
+│   │   │       ├── BylawsAmendmentsPage.tsx  # Constitution editor & amendment changelog
+│   │   │       ├── FinanceOverviewPage.tsx   # Dues collected, expenditures, semestral report
+│   │   │       └── AuditLogPage.tsx          # System-wide immutable action log
+│   │   │
+│   │   ├── routes/                           # Routing configuration & role-gated guards
+│   │   │   ├── AppRoutes.tsx                 # Main React Router setup
+│   │   │   ├── ProtectedRoute.tsx            # Authenticated user route guard
+│   │   │   └── RoleRoute.tsx                 # Role-based access control (RBAC) guard
+│   │   │
+│   │   ├── services/                         # HTTP API Clients (Axios / Fetch)
+│   │   │   ├── api.ts                        # Axios instance with JWT interceptors
+│   │   │   ├── authService.ts                # Login, refresh token, password reset
+│   │   │   ├── memberService.ts              # Member profile, applications, renewals
+│   │   │   ├── eventService.ts               # Event CRUD, RSVP, attendance listing
+│   │   │   ├── qrService.ts                  # QR validation & live scanning API
+│   │   │   ├── postService.ts                # News feed & Facebook synced posts
+│   │   │   └── notificationService.ts        # Push subscription & notification APIs
+│   │   │
+│   │   ├── types/                            # TypeScript Type Definitions & Interfaces
+│   │   │   ├── auth.types.ts                 # User, Role (SuperAdmin, Officer, Member)
+│   │   │   ├── member.types.ts               # MemberProfile, Standing, AcademicYear
+│   │   │   ├── event.types.ts                # Event, RSVP, AttendanceRecord
+│   │   │   ├── qr.types.ts                   # QRPayload, ScanVerificationResponse
+│   │   │   └── post.types.ts                 # FacebookPost, Announcement, NewsItem
+│   │   │
+│   │   ├── utils/                            # Utility functions & helpers
+│   │   │   ├── formatters.ts                 # Date/Time, currency, name formatting
+│   │   │   ├── qrCrypto.ts                   # Client-side QR payload verification
+│   │   │   ├── storage.ts                    # LocalStorage / SessionStorage wrappers
+│   │   │   └── validators.ts                 # Form input validation schemas
+│   │   │
+│   │   ├── styles/                           # Global stylesheets & design system tokens
+│   │   │   ├── index.css                     # Tailwind base, components, utilities
+│   │   │   └── tokens.css                    # Color palette (#142718, #2E5B41, #98CBB0, #E7EFE4)
+│   │   │
+│   │   ├── App.tsx                           # Main React application component
+│   │   ├── main.tsx                          # React DOM entry point
+│   │   └── vite-env.d.ts                     # Vite TypeScript declarations
+│   │
+│   ├── .env.example                          # Frontend environment variables template
+│   ├── index.html                            # HTML entry point (Meta tags, Google Fonts)
+│   ├── package.json                          # Frontend dependencies & scripts
+│   ├── postcss.config.js                     # PostCSS config for Tailwind CSS
+│   ├── tailwind.config.js                    # Tailwind theme customization (USWAG palette)
+│   ├── tsconfig.json                         # TypeScript compiler configuration
+│   └── vite.config.ts                        # Vite build & PWA plugin configuration
+│
+└── backend/                                  # Backend REST API & Services (Node.js + TS/Express)
+    ├── prisma/ or src/db/                    # Database ORM & Migration schemas
+    │   ├── schema.prisma                     # PostgreSQL schema definitions
+    │   ├── migrations/                       # SQL migration history
+    │   └── seed.ts                           # Initial database seeder (Default SuperAdmin, etc.)
+    │
+    ├── src/
+    │   ├── config/                           # Application Configurations
+    │   │   ├── env.ts                        # Environment variables parser & validator
+    │   │   ├── database.ts                   # PostgreSQL connection pool (Neon/Supabase)
+    │   │   ├── jwt.ts                        # JWT secret, expiration, algorithm config
+    │   │   └── storage.ts                    # Cloudinary / Supabase Storage credentials
+    │   │
+    │   ├── controllers/                      # Request Handlers & Business Logic
+    │   │   ├── auth.controller.ts            # Authentication & token refreshing
+    │   │   ├── member.controller.ts          # Member registration, approval, standing
+    │   │   ├── event.controller.ts           # Event creation, RSVP management
+    │   │   ├── scan.controller.ts            # QR verification & attendance check-in
+    │   │   ├── post.controller.ts            # FB-synced & manual announcement posts
+    │   │   ├── officer.controller.ts         # Officer roster, elections, transitions
+    │   │   ├── bylaws.controller.ts          # Constitution content & amendment log
+    │   │   ├── finance.controller.ts         # Org dues, expenditures, semestral balance
+    │   │   └── notification.controller.ts    # Web Push triggers & inbox management
+    │   │
+    │   ├── middlewares/                      # Express Middlewares
+    │   │   ├── auth.middleware.ts            # JWT authentication & session extraction
+    │   │   ├── role.middleware.ts            # RBAC guard (SuperAdmin, Secretary, PRO, etc.)
+    │   │   ├── rateLimiter.middleware.ts     # Rate limiting against brute-force attacks
+    │   │   ├── validation.middleware.ts      # Request body schema validation (Zod/Joi)
+    │   │   └── errorHandler.middleware.ts    # Centralized HTTP error handling
+    │   │
+    │   ├── routes/                           # API Route Definitions
+    │   │   ├── index.ts                      # Route aggregator (/api/v1)
+    │   │   ├── auth.routes.ts                # /api/v1/auth
+    │   │   ├── member.routes.ts              # /api/v1/members
+    │   │   ├── event.routes.ts               # /api/v1/events
+    │   │   ├── scan.routes.ts                # /api/v1/scan
+    │   │   ├── post.routes.ts                # /api/v1/posts
+    │   │   ├── officer.routes.ts             # /api/v1/officers
+    │   │   ├── bylaws.routes.ts              # /api/v1/bylaws
+    │   │   ├── finance.routes.ts             # /api/v1/finance
+    │   │   └── notification.routes.ts        # /api/v1/notifications
+    │   │
+    │   ├── services/                         # Core Business Logic & External Integrations
+    │   │   ├── qr.service.ts                 # UUID generation & HMAC-SHA256 signature signing
+    │   │   ├── facebookSync.service.ts       # Meta Graph API poller & post deduplication
+    │   │   ├── push.service.ts               # Web Push API dispatcher (web-push)
+    │   │   ├── attendance.service.ts         # Attendance logging & streak calculations
+    │   │   └── audit.service.ts              # Immutable action logger
+    │   │
+    │   ├── jobs/                             # Background Cron Tasks (node-cron)
+    │   │   ├── facebookSync.job.ts           # Periodic Facebook page post sync (every 30m)
+    │   │   └── memberRenewal.job.ts          # Annual membership status check & archiving
+    │   │
+    │   ├── utils/                            # Shared Helper Utilities
+    │   │   ├── crypto.ts                     # HMAC signature generation & verification
+    │   │   ├── logger.ts                     # Structured logging (Winston / Pino)
+    │   │   └── response.ts                   # Standardized JSON response envelope
+    │   │
+    │   ├── types/                            # Backend TypeScript Interfaces
+    │   │   └── index.ts                      # Express Request extensions, Token payloads
+    │   │
+    │   └── server.ts                         # Server entry point & HTTP listener
+    │
+    ├── .env.example                          # Backend environment variables template
+    ├── package.json                          # Backend dependencies & npm scripts
+    ├── tsconfig.json                         # Backend TypeScript configuration
+    └── Dockerfile                            # Optional containerization configuration
+
+
+3. SYSTEM DESIGN & PERMISSION MAPPING SUMMARY
+
+Role Hierarchy:
+  ├── Super Admin   : President / Delegated VP (Full System Control, Bylaws, Transition)
+  ├── Officer Admin : Secretary, Treasurer, Auditor, Business Mgr, PRO (Scoped by Duty)
+  │   ├── Secretary : Members, minutes, official announcements
+  │   ├── Treasurer : Dues collection, financial statements
+  │   ├── Auditor   : Audit logs, financial examination, attendance records
+  │   └── PRO       : News posts, Facebook sync, advocacy content
+  ├── Member        : Verified Org Family (Dashboard, Digital QR ID, RSVP, History)
+  └── Public/Guest  : Unauthenticated Visitors (Public pages, Calendar, News, Join Us)
+
+Design Tokens (Tailwind & CSS Tokens):
+  ├── Deep Forest    : #142718 (Primary text, headers, footer, dark surface)
+  ├── Primary Green  : #2E5B41 (Buttons, links, active navigation, section headings)
+  ├── Sage Accent    : #98CBB0 (Hover states, badges, QR frame, chart accents)
+  └── Mist Background: #E7EFE4 (Page background, container cards, input fields)
+

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" fill="none">
+  <!-- USWAG cute chibi student avatar — boy, cap, backpack, shorts -->
+  <circle cx="60" cy="70" r="58" fill="#E7EFE4"/>
+  <!-- backpack -->
+  <path d="M79 82c8 0 13 6 13 14v16c0 3-2 5-5 5h-8V86z" fill="#142718"/>
+  <!-- legs -->
+  <rect x="46" y="104" width="12" height="14" rx="4" fill="#F6CFA3"/>
+  <rect x="62" y="104" width="12" height="14" rx="4" fill="#F6CFA3"/>
+  <rect x="44" y="116" width="16" height="8" rx="4" fill="#FFFFFF"/>
+  <rect x="60" y="116" width="16" height="8" rx="4" fill="#FFFFFF"/>
+  <rect x="44" y="122" width="16" height="8" rx="4" fill="#0d1b12"/>
+  <rect x="60" y="122" width="16" height="8" rx="4" fill="#0d1b12"/>
+  <!-- shorts -->
+  <path d="M43 92c0-6 7-10 17-10s17 4 17 10v14H43z" fill="#2E5B41"/>
+  <!-- torso / shirt -->
+  <path d="M42 74c0-7 8-12 18-12s18 5 18 12v22H42z" fill="#FFFFFF"/>
+  <!-- tie -->
+  <path d="M56 64l4 6 4-6 3 4-5 18h-4l-5-18z" fill="#2E5B41"/>
+  <path d="M52 64l8 8 8-8 4 4-9 10h-6l-9-10z" fill="#F4F7F3"/>
+  <!-- arms -->
+  <path d="M42 78c-6 2-10 8-11 16l-2 10c-1 3 1 6 4 6s5-2 5-5l2-10 5-8z" fill="#FFFFFF"/>
+  <path d="M78 78c6 2 10 8 11 16l2 10c1 3-1 6-4 6s-5-2-5-5l-2-10-5-8z" fill="#FFFFFF"/>
+  <circle cx="31" cy="111" r="5" fill="#F6CFA3"/>
+  <circle cx="89" cy="111" r="5" fill="#F6CFA3"/>
+  <!-- neck -->
+  <rect x="54" y="55" width="12" height="12" rx="4" fill="#F6CFA3"/>
+  <!-- head -->
+  <circle cx="60" cy="40" r="21" fill="#F6CFA3"/>
+  <circle cx="39" cy="41" r="4" fill="#F2C299"/>
+  <circle cx="81" cy="41" r="4" fill="#F2C299"/>
+  <!-- cap -->
+  <path d="M38 33c0-13 10-21 22-21s22 8 22 21c-3-2-6-3-9-3-3-6-9-9-13-9s-10 3-13 9c-3 0-6 1-9 3z" fill="#2E5B41"/>
+  <path d="M60 12c8 0 15 4 19 10-3-1-6 0-8 2-3-6-7-10-11-12z" fill="#254a35"/>
+  <ellipse cx="60" cy="34" rx="24" ry="4" fill="#254a35"/>
+  <!-- hair peeking -->
+  <path d="M42 39c-1-3 0-6 2-8 1 3 1 6 0 9z" fill="#241812"/>
+  <!-- eyes -->
+  <circle cx="53" cy="41" r="2.6" fill="#241812"/>
+  <circle cx="68" cy="41" r="2.6" fill="#241812"/>
+  <!-- blush -->
+  <circle cx="47" cy="47" r="3" fill="#F2A98E" opacity="0.55"/>
+  <circle cx="73" cy="47" r="3" fill="#F2A98E" opacity="0.55"/>
+  <!-- smile -->
+  <path d="M54 49c2 3 10 3 12 0" stroke="#8a4a2c" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,49 @@
+import { useState, useCallback, useRef } from "react";
+import * as qrService from "@/services/qrService";
+import type { ScanVerificationResponse } from "@/types/qr.types";
+
+// Pairs with QRScannerCamera.tsx.
+// After a successful decode the hook debounces further decodes for 3 s so a
+// single physical QR code doesn't trigger multiple API calls.
+// Call reset() to clear the last result and allow the next scan immediately.
+export function useQRScanner(eventId: string) {
+  const [result, setResult] = useState<ScanVerificationResponse | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const cooldownRef = useRef(false);
+
+  const handleDecoded = useCallback(
+    async (rawValue: string) => {
+      // Skip if we are already in a cooldown window or actively verifying
+      if (cooldownRef.current || isVerifying) return;
+      cooldownRef.current = true;
+
+      setIsVerifying(true);
+      setError(null);
+      try {
+        const res = await qrService.verifyScan(rawValue, eventId);
+        setResult(res);
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Network error — check your connection";
+        setError(msg);
+      } finally {
+        setIsVerifying(false);
+        // Hold the cooldown for 3 s so the same QR code is not re-submitted
+        // before the officer has had a chance to read the result.
+        setTimeout(() => {
+          cooldownRef.current = false;
+        }, 3000);
+      }
+    },
+    [eventId, isVerifying],
+  );
+
+  function reset() {
+    setResult(null);
+    setError(null);
+    cooldownRef.current = false;
+  }
+
+  return { result, isVerifying, error, handleDecoded, reset };
+}

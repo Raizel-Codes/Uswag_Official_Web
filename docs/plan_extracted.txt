@@ -1,0 +1,222 @@
+USWAG WEBSITE PLAN — PLAIN TEXT EXTRACTION
+(Source: USWAG_Website_Plan.docx — extracted for quick reference / grep-ability)
+USWAG
+United Students Working for Advocacy and Growth
+Northwest Samar State University
+Official Website & PWA
+Project Outline, Sitemap & Development Plan
+Prepared August 28, 2026
+
+======================================================================
+1. FOUNDATION: WHAT THE SITE MUST COMMUNICATE
+======================================================================
+This plan is grounded directly in the USWAG Constitution and By-Laws: the organization's three advocacy pillars (youth voice, mental health & wellness, environmental leadership), its dual-entity governance (officers vs. general membership), its annual officer/membership cycle, and its reporting obligations to the SARS Office and the university adviser. The website should function as the organization's digital headquarters — not just a brochure, but the operational hub for events, membership, and institutional memory.
+Core Advocacy Pillars (Article II)
+Youth Voice & Participation — student involvement in governance and civic leadership
+Mental Health & Wellness — literacy, peer support, wellness campaigns
+Environmental Leadership — sustainability efforts and green initiatives
+Two Governance Entities to Reflect in the System
+Admin (Officers) — manage content, events, membership, officer transitions, and bylaws
+Member (Org Family) — verified card-carrying members who built the org's history and legacy
+
+======================================================================
+2. DESIGN SYSTEM
+======================================================================
+
+--------------------------------------------------
+2.1 Color Palette
+--------------------------------------------------
+A single palette applied consistently across every page, component, and the PWA icon/splash screen.
+
+Deep Forest
+#142718 | Primary Green
+#2E5B41 | Sage Accent
+#98CBB0 | Mist Background
+#E7EFE4
+
+
+Token | Hex | Primary Use
+Deep Forest (#142718) | #142718 | Headers, footer, nav bar, body text on light bg, dark-mode surface
+Primary Green (#2E5B41) | #2E5B41 | Buttons, links, active states, section headings
+Sage Accent (#98CBB0) | #98CBB0 | Hover states, badges, chart accents, QR frame, progress bars
+Mist Background (#E7EFE4) | #E7EFE4 | Page background, cards, input fields
+
+Accessibility check
+Deep Forest on Mist Background → passes WCAG AA for body text
+White text on Primary Green → passes AA for buttons/nav
+Sage Accent is used for accents/hover only, never as body text on white — contrast is too low
+
+--------------------------------------------------
+2.2 Typography & Visual Hierarchy
+--------------------------------------------------
+Headings: a confident, slightly rounded sans-serif (e.g. Poppins / Sora) for a modern, youth-forward feel
+Body: a highly readable sans-serif (e.g. Inter / Manrope) for long-form content like bylaws and reports
+Scale: establish 5–6 fixed steps (e.g. 12/14/16/20/28/40px) reused everywhere — no ad-hoc sizes
+Hierarchy cues: weight + color + spacing before size alone; Primary Green for section labels, Deep Forest for headlines, grey for metadata
+Generous white space and card-based grouping so dense content (officer duties, bylaws) doesn't feel like a wall of text
+
+--------------------------------------------------
+2.3 Modern Interaction Patterns
+--------------------------------------------------
+Sticky, translucent nav bar with scroll-aware shrink
+Motion: subtle fade/slide-in on scroll (Framer Motion), never blocking or slow
+Skeleton loaders instead of spinners for content-heavy pages (events, news feed)
+Dark-mode variant using Deep Forest as the dominant surface (nice-to-have, phase 2)
+Floating action button for the notification bell / install-app prompt, consistent with PWA feel
+
+======================================================================
+3. TECHNICAL ARCHITECTURE
+======================================================================
+
+--------------------------------------------------
+3.1 Stack Overview
+--------------------------------------------------
+
+Layer | Technology | Notes
+Frontend | React (Vite) + TypeScript | Vite over CRA for faster builds; TS recommended for a multi-role app
+Styling | Tailwind CSS + custom design tokens | Map the palette to Tailwind theme colors directly
+State/Data | React Query + Zustand | Server cache vs. lightweight UI state, kept separate
+Backend | Node.js (Express or Fastify) | REST API; Fastify if you want built-in schema validation
+Database | PostgreSQL (Neon/Supabase) | Relational fits members, events, attendance, officer terms well
+Auth | JWT + refresh tokens, bcrypt | Separate role claims for admin sub-roles vs. member
+File/Image storage | Cloudinary or Supabase Storage | Member photos, QR images, event banners
+Push Notifications | Web Push API + service worker | Free, no vendor lock-in; works installed or in-browser
+QR Generation | qrcode (node) + jsQR / html5-qrcode (scan) | Server-generated signed payloads; camera-based scan on officer phones
+Facebook Sync | Meta Graph API + scheduled job | Cron (node-cron or Vercel Cron) pulls Page posts periodically
+Hosting — Frontend | Vercel | As planned; PWA-friendly, fast edge CDN
+Hosting — Backend | Railway or Render | Vercel serverless functions are workable too, but a persistent Node service is simpler for cron + websockets
+CI/CD | GitHub Actions → Vercel auto-deploy | Preview deployments per pull request
+
+Why not put everything in Vercel serverless functions?
+Vercel works great for the frontend and can host light API routes, but a scheduled Facebook sync job and QR/attendance logic benefit from a small always-on Node service (Railway/Render both have generous free tiers for a student org). This keeps Vercel doing what it's best at — fast static + edge delivery — while a lightweight backend owns the database and integrations.
+
+--------------------------------------------------
+3.2 PWA Requirements
+--------------------------------------------------
+Web App Manifest — app name, icons (192/512px), theme_color: #142718, background_color: #E7EFE4, display: standalone
+Service Worker — offline shell caching for public pages + push notification handling (Workbox recommended)
+Install prompt — custom “Add USWAG to your home screen” banner for logged-in members, respecting the browser's native beforeinstallprompt event
+Push notifications — opt-in permission flow; triggered server-side on new event, announcement, or officer/bylaws update
+Floating in-app notification bell with unread badge, in addition to native push, so it works even when notifications are off
+
+--------------------------------------------------
+3.3 Facebook Page Auto-Sync
+--------------------------------------------------
+Create a Meta Developer App and request Page Public Content Access (or use a Page Access Token if USWAG admins manage the Page).
+Backend cron job (e.g. every 30–60 min) calls the Graph API /{page-id}/posts endpoint.
+New posts are parsed (text, image, permalink, timestamp) and upserted into a posts table, deduplicated by Facebook post ID.
+The News/Updates page renders these as native-feeling cards — styled in the USWAG palette — with a “View on Facebook” link out.
+Optional: flag posts matching keywords (“seminar”, “event”) to auto-suggest creating a matching Events entry for RSVP.
+
+======================================================================
+4. USER ROLES & PERMISSIONS
+======================================================================
+Per your direction: two admin tiers plus the general member role, reflecting Article VI's officer structure.
+
+Role | Who | Can Do
+Super Admin | President (+ delegated VP) | Everything below, plus: manage officer accounts/roles, edit bylaws/constitution page, approve amendments, view all analytics, issue/revoke admin access each academic year
+Officer Admin | Secretary, Treasurer, Auditor, Business Manager, PROs | Scoped by role: Secretary → members/minutes/announcements; Treasurer → dues/finance reports; Auditor → view financial + attendance records; PRO → news/social content; all can create events and scan QR at assigned events
+Member | Verified org family members | View dashboard, personal QR ID, attendance history, RSVP to events, receive notifications, view approved records
+Public / Guest | Anyone | View public pages: About, Advocacies, Officers, Events calendar, News, Join Us
+
+This mirrors Article VI's duties (Secretary keeps records, Treasurer manages funds, Auditor examines records, PRO disseminates content) directly into scoped permissions — so the system enforces what the Constitution already assigns on paper.
+
+======================================================================
+5. UNIQUE MEMBER QR SYSTEM
+======================================================================
+
+--------------------------------------------------
+5.1 How It Stays Non-Duplicable
+--------------------------------------------------
+Each member record gets a server-generated UUID at approval — never a guessable sequential ID
+The QR encodes a signed token (UUID + HMAC signature using a server secret) rather than raw data — a photocopied or screenshotted QR still scans, but any tampered/regenerated QR fails signature verification
+Optional short-lived rotating layer (phase 2): QR refreshes a rotating component every N hours for high-stakes events, so an old screenshot alone can't be reused later
+Every scan is logged (who scanned, when, which event) — a member “used” at two physical locations minutes apart is instantly visible to admins
+
+--------------------------------------------------
+5.2 Verification Flow (Officer's Phone)
+--------------------------------------------------
+Officer opens the mobile-optimized Scan page (role-gated, camera access via html5-qrcode)
+Camera reads the QR → sends signed token to the backend
+Backend verifies signature + checks member status (active/expired per Article III's annual renewal) — responds Valid / Invalid / Expired
+Valid → green confirmation card with member name, photo, college/dept; auto-logs attendance for the selected event
+Invalid/cloned → red warning card, no attendance recorded, flagged for admin review
+
+--------------------------------------------------
+5.3 What the QR Powers
+--------------------------------------------------
+Event attendance logging (in-campus and out-of-campus activities)
+Eligibility basis for selecting participants in limited-slot activities, based on attendance history/standing
+Digital membership card — viewable/downloadable from the member dashboard, shown as proof of active membership
+
+======================================================================
+6. SITEMAP & PAGE-BY-PAGE PLAN
+======================================================================
+
+--------------------------------------------------
+6.1 Public Pages
+--------------------------------------------------
+
+Page | Purpose | Key Content
+Home | First impression + hook to join | Hero with mission statement, 3 advocacy pillars as animated cards, upcoming event highlight, latest FB posts preview, CTA to join
+About / Mission | Institutional identity | Preamble text, Article I & II content, history & legacy section, adviser message
+Advocacies | Deep dive per pillar | Youth Voice / Mental Health & Wellness / Environmental Leadership — each with programs, gallery, impact stats
+Officers | Governance transparency | Current officer grid by position (Art. VI), photos, per-position duties, org chart, PRO list per college
+Events | Public calendar | Filterable calendar/list, event detail pages, past-event recaps, RSVP button (member login required to RSVP)
+News & Updates | FB-synced feed | Auto-pulled Facebook posts styled as cards, chronological, searchable by tag
+Join USWAG | Membership funnel | Eligibility (Art. III), application form, fee info, orientation schedule, FAQ
+Bylaws / Transparency | Public accountability | Read-only Constitution & By-Laws viewer, current amendment log
+Contact | Reach the org | Contact form, adviser info, social links, campus location map
+
+
+--------------------------------------------------
+6.2 Member Portal (Auth Required)
+--------------------------------------------------
+
+Page | Purpose
+Member Dashboard | Snapshot: standing, next event, unread announcements, quick QR access
+My QR ID | Full-screen QR + digital membership card, downloadable as image/PDF
+My Attendance | History of scanned events, running attendance rate
+Events (Member view) | RSVP to upcoming events, view eligibility for limited-slot activities
+Notifications | Full history behind the floating bell; mark read/unread; push preferences
+Profile | Personal info, college/department, emergency contact, password/notification settings
+
+
+--------------------------------------------------
+6.3 Admin Panel (Role Required)
+--------------------------------------------------
+
+Page | Purpose | Access
+Admin Dashboard | Org-wide stats: membership count, attendance trends, engagement | Super Admin, Officer Admin
+Member Management | Approve applications, issue/revoke QR, edit records, renewal tracking | Super Admin, Secretary
+Event Management | Create/edit events, assign scanners, view live attendance | Super Admin, all Officer Admins
+Scan Console | Mobile camera scan page for live verification | Super Admin, any assigned Officer Admin
+Content / News Manager | Manual posts, override FB sync, manage Advocacies content | Super Admin, PRO
+Officer Roster & Transitions | Manage current officer set, archive past terms per Art. VI §4 | Super Admin only
+Bylaws & Amendments | Publish current Constitution, log amendments per Art. IX | Super Admin only
+Finance Overview | Dues collected, expenses, semester financial statements per Art. VI §2(d) | Super Admin, Treasurer, Auditor
+Audit Log | System-wide action log for accountability | Super Admin, Auditor
+
+
+======================================================================
+7. SUGGESTED BUILD SEQUENCE
+======================================================================
+Design system in Figma — tokens, components, 3–4 key screens (Home, Officers, Member Dashboard, Scan Console)
+Static public site (Home, About, Advocacies, Officers, Contact) — ships value immediately, no auth needed yet
+Auth + Member portal — registration/approval flow, dashboard, profile
+QR issuance + digital ID — generate on approval, display on dashboard
+Events + Scan Console — event CRUD, RSVP, live scanning, attendance logging
+Admin panel completion — member management, content manager, officer roster, bylaws, finance, audit log
+PWA layer — manifest, service worker, install prompt, push notifications
+Facebook sync — Graph API integration, News page, keyword-based event suggestions
+QA, accessibility pass, and adviser/officer review before public launch
+
+======================================================================
+8. MAKING IT HIGHLY ENGAGING
+======================================================================
+Live counters on Home: active members, events held this year, trees planted / activities per pillar
+Member “badges” for milestones (first event attended, 5 events, out-of-campus activity completed) shown on the dashboard
+Officer spotlight / “meet the team” short video or quote cards, refreshed each term
+Legacy wall: past officer sets and milestone photos, honoring Article VIII's mentorship spirit and the org's history
+Shareable digital event posters auto-generated in the USWAG palette when an admin creates an event
+Gentle gamified attendance streaks tied into the eligibility system for out-of-campus activities, made transparent so it feels fair, not arbitrary

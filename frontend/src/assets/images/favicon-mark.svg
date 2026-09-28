@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="240 148 120 172" role="img" aria-label="USWAG">
+  <!-- Shield-only simplification of logo-uswag.svg, for favicon/app-icon sizes where the
+       full wreath crest turns to mush (illegible below ~48px). -->
+  <defs>
+    <linearGradient id="shieldFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E5B41"/>
+      <stop offset="1" stop-color="#142718"/>
+    </linearGradient>
+  </defs>
+  <path d="M300,158 L349,175 L349,246 Q349,289 300,313 Q251,289 251,246 L251,175 Z"
+        fill="url(#shieldFill)" stroke="#98CBB0" stroke-width="6" stroke-linejoin="round"/>
+  <g transform="translate(300,238)">
+    <path d="M0,-6 Q-18,-16 -38,-11 L-38,20 Q-18,15 0,26 Z" fill="#E7EFE4"/>
+    <path d="M0,-6 Q18,-16 38,-11 L38,20 Q18,15 0,26 Z" fill="#E7EFE4"/>
+    <line x1="0" y1="-6" x2="0" y2="26" stroke="#142718" stroke-width="2.5"/>
+  </g>
+</svg>

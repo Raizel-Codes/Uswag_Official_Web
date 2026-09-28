@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" fill="none">
+  <!-- USWAG cute chibi student avatar — boy, backpack over both shoulders, waving -->
+  <circle cx="60" cy="70" r="58" fill="#E7EFE4"/>
+  <!-- backpack body -->
+  <rect x="47" y="80" width="26" height="30" rx="8" fill="#98CBB0"/>
+  <rect x="55" y="86" width="10" height="10" rx="3" fill="#2E5B41"/>
+  <!-- legs -->
+  <rect x="46" y="108" width="12" height="20" rx="4" fill="#142718"/>
+  <rect x="62" y="108" width="12" height="20" rx="4" fill="#142718"/>
+  <!-- shoes -->
+  <rect x="44" y="125" width="16" height="8" rx="4" fill="#0d1b12"/>
+  <rect x="60" y="125" width="16" height="8" rx="4" fill="#0d1b12"/>
+  <!-- torso / shirt -->
+  <path d="M42 78c0-7 8-12 18-12s18 5 18 12v32H42z" fill="#FFFFFF"/>
+  <!-- tie -->
+  <path d="M56 68l4 6 4-6 3 4-5 24h-4l-5-24z" fill="#2E5B41"/>
+  <!-- collar -->
+  <path d="M52 68l8 8 8-8 4 4-9 10h-6l-9-10z" fill="#F4F7F3"/>
+  <!-- straight arm -->
+  <path d="M78 80c6 2 10 9 10 17l1 12c0 3-2 5-5 5s-5-2-5-5l-1-11-6-9z" fill="#FFFFFF"/>
+  <circle cx="84" cy="114" r="5" fill="#F2C299"/>
+  <!-- raised waving arm -->
+  <path d="M43 80c-8 0-16 5-19 13l-4 9c-1 3 1 6 4 5s4-2 5-5l4-8c2-4 6-7 10-8z" fill="#FFFFFF"/>
+  <circle cx="19" cy="100" r="6" fill="#F2C299"/>
+  <!-- neck -->
+  <rect x="54" y="58" width="12" height="12" rx="4" fill="#F2C299"/>
+  <!-- head -->
+  <circle cx="60" cy="42" r="22" fill="#F6CFA3"/>
+  <!-- ears -->
+  <circle cx="38" cy="43" r="4" fill="#F2C299"/>
+  <circle cx="82" cy="43" r="4" fill="#F2C299"/>
+  <!-- hair -->
+  <path d="M37 39c-3-17 10-28 23-28s26 11 23 28c-2-4-7-6-9-4 0-6-4-10-9-11-2 4-9 6-14 4-6-2-10 2-10 8-2-1-3 2-4 3z" fill="#332216"/>
+  <!-- eyes (happy arc) -->
+  <path d="M49 43c1-2 4-2 5 0" stroke="#332216" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M66 43c1-2 4-2 5 0" stroke="#332216" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- blush -->
+  <circle cx="47" cy="49" r="3" fill="#F2A98E" opacity="0.55"/>
+  <circle cx="73" cy="49" r="3" fill="#F2A98E" opacity="0.55"/>
+  <!-- smile -->
+  <path d="M53 50c3 4 11 4 14 0" stroke="#8a4a2c" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

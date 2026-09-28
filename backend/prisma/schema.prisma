@@ -1,0 +1,271 @@
+// USWAG database schema.
+// Roles and officer positions mirror Article VI of the Constitution —
+// see /claude.md "Roles & permissions" before changing any enum here.
+// Do not add new roles or officer positions without a corresponding
+// Constitution amendment (Article IX).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  OFFICER_ADMIN
+  MEMBER
+}
+
+enum OfficerPosition {
+  PRESIDENT
+  VICE_PRESIDENT
+  SECRETARY
+  TREASURER
+  AUDITOR
+  BUSINESS_MANAGER
+  PRO
+}
+
+enum MembershipStatus {
+  ACTIVE
+  PENDING
+  EXPIRED
+  REJECTED
+}
+
+enum EventPillar {
+  YOUTH_VOICE
+  MENTAL_HEALTH
+  ENVIRONMENTAL
+}
+
+enum EventScope {
+  IN_CAMPUS
+  OUT_OF_CAMPUS
+}
+
+enum EventStatus {
+  DRAFT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum ScanResult {
+  VALID
+  INVALID
+  EXPIRED
+}
+
+enum PostSource {
+  FACEBOOK
+  MANUAL
+}
+
+model User {
+  id               String           @id @default(uuid())
+  name             String
+  email            String           @unique
+  passwordHash     String
+  role             UserRole
+  officerPosition  OfficerPosition? // set only when role is OFFICER_ADMIN or SUPER_ADMIN
+  collegeOrDept    String
+  yearLevel        String?
+  navStyle         String           @default("auto") // 'auto', 'bottom', or 'sidebar'
+  tokenVersion     Int              @default(1) // bump to invalidate every outstanding refresh token (logout-all / revocation)
+
+  // Password reset. Only a SHA-256 hash of the raw token is ever stored —
+  // same principle as the QR signing secret (crypto.ts): the raw token is
+  // only in the reset link the user receives, never at rest in the DB, so a
+  // DB leak alone can't be used to reset anyone's password.
+  passwordResetTokenHash  String?
+  passwordResetExpiresAt  DateTime?
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  memberProfile      MemberProfile?
+  scansPerformed     AttendanceRecord[] @relation("ScannedBy")
+  postsAuthored      Post[]
+  auditLogEntries    AuditLogEntry[]
+  pushSubscriptions  PushSubscription[]
+  financeEntries     FinanceEntry[]
+  purchaseRequests   PurchaseRequest[]
+}
+
+model MemberProfile {
+  id               String            @id @default(uuid())
+  userId           String            @unique
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  serialNumber     String            @unique // e.g. UW-2026-004821, never sequential/guessable
+  status           MembershipStatus  @default(PENDING)
+  academicYear     String            // e.g. "2026-2027" — renewed per Article III §3
+
+  // QR signing fields. The UUID (User.id) is what gets signed —
+  // this table does not store the signature itself; it is derived
+  // on demand in qr.service.ts using QR_SIGNING_SECRET.
+  qrIssuedAt       DateTime?
+  qrVersion        Int               @default(1) // bump to invalidate all previously issued QR codes
+
+  joinedAt         DateTime          @default(now())
+  expiresAt        DateTime?
+
+  rsvps            EventRsvp[]
+  attendance       AttendanceRecord[]
+}
+
+model UswagEvent {
+  id             String       @id @default(uuid())
+  title          String
+  description    String
+  pillar         EventPillar
+  scope          EventScope
+  status         EventStatus  @default(DRAFT)
+  location       String
+  startsAt       DateTime
+  limitedSlots   Int?         // present only for limited out-of-campus activities
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  rsvps          EventRsvp[]
+  attendance     AttendanceRecord[]
+}
+
+model EventRsvp {
+  id         String         @id @default(uuid())
+  eventId    String
+  event      UswagEvent     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId   String
+  member     MemberProfile  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status     String         // "going" | "applied" | "waitlisted"
+  createdAt  DateTime       @default(now())
+
+  @@unique([eventId, memberId])
+}
+
+// Every scan attempt is logged — valid, invalid, AND expired.
+// This is the mechanism that makes cloned/reused QR codes detectable:
+// the same serial number scanned at two locations minutes apart is
+// immediately visible here. See claude.md "QR membership system".
+model AttendanceRecord {
+  id                String        @id @default(uuid())
+  eventId           String
+  event             UswagEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId          String?       // null when the scanned QR didn't resolve to a known member
+  member            MemberProfile? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  scannedByOfficerId String
+  scannedByOfficer  User          @relation("ScannedBy", fields: [scannedByOfficerId], references: [id])
+  result            ScanResult
+  reason            String?       // populated when result != VALID (e.g. "signature mismatch", "membership expired")
+  scannedAt         DateTime      @default(now())
+}
+
+model Post {
+  id             String      @id @default(uuid())
+  source         PostSource
+  type           String      @default("NEWS") // "NEWS" | "MINUTE" | "ANNOUNCEMENT"
+  body           String
+  imageUrl       String?
+  permalink      String?     @unique // Facebook post permalink, used for dedup
+  facebookPostId String?     @unique // dedup key for synced posts
+  authorId       String?     // null for Facebook-synced posts
+  author         User?       @relation(fields: [authorId], references: [id])
+  publishedAt    DateTime    @default(now())
+  likeCount      Int?
+  commentCount   Int?
+}
+
+model AmendmentLog {
+  id            String   @id @default(uuid())
+  articleRef    String   // e.g. "Article VI, Sec. 1"
+  proposal      String
+  proposedBy    String
+  status        String   // "proposed" | "approved" | "rejected"
+  createdAt     DateTime @default(now())
+  resolvedAt    DateTime?
+}
+
+// System-wide action log for accountability — primarily viewed by the
+// Auditor (read-only) and Super Admin. See claude.md "What NOT to do":
+// don't let this be the only enforcement mechanism — it's a record, not a gate.
+model AuditLogEntry {
+  id          String   @id @default(uuid())
+  actorId     String
+  actor       User     @relation(fields: [actorId], references: [id])
+  action      String   // e.g. "member.approve", "event.create", "bylaws.amend"
+  targetType  String?  // e.g. "MemberProfile", "UswagEvent"
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
+
+// Stores browser PushSubscription objects per user so the server can
+// send Web Push notifications to any of their registered devices.
+// endpoint is unique — if a browser re-subscribes it gets a new endpoint,
+// and the old row is cleaned up automatically when the push returns HTTP 410.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique // the browser-assigned push URL
+  p256dh    String           // client public key (base64url)
+  auth      String           // auth secret (base64url)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Finance ledger — written by Treasurer, read by Treasurer + Auditor + Super Admin.
+// Positive amount = income (dues), negative = expense.
+// Per Article VI §3(b) the Treasurer is the sole officer who may record entries;
+// the Auditor has read-only access enforced via requireOfficerPosition in finance.routes.ts.
+model FinanceEntry {
+  id               String   @id @default(uuid())
+  type             String   // "DUES" | "EXPENSE"
+  description      String
+  amount           Float    // positive for income, negative for expenses
+  relatedMemberId  String?  // links a DUES entry to the paying member (MemberProfile.id)
+  recordedById     String
+  recordedBy       User     @relation(fields: [recordedById], references: [id])
+  createdAt        DateTime @default(now())
+
+  @@index([recordedById])
+  @@index([createdAt])
+}
+
+enum PurchaseRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Procurement workflow for Business Manager
+model PurchaseRequest {
+  id          String                @id @default(uuid())
+  item        String
+  estimatedCost Float
+  event       String?               // related event name
+  status      PurchaseRequestStatus @default(PENDING)
+  requestedById String
+  requestedBy User                  @relation(fields: [requestedById], references: [id])
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@index([requestedById])
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  name        String
+  contactInfo String?
+  category    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+

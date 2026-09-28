@@ -1,0 +1,30 @@
+/*
+  USWAG design tokens.
+  Source of truth: docs/USWAG_Website_Plan.docx §2.1, mirrored in
+  tailwind.config.js theme.extend.colors. Keep both in sync.
+*/
+:root {
+  --color-deep: #142718;    /* headers, footer, nav, body text on light bg, dark surfaces */
+  --color-primary: #2E5B41; /* buttons, links, active states, section headings */
+  --color-sage: #98CBB0;    /* hover states, badges, QR frame — never body text on white */
+  --color-mist: #E7EFE4;    /* page background, cards, input fields */
+
+  /* Semantic status colors — root vars and badge tints straight from
+     prototype/{member,officer-admin,super-admin}.html (--grey/--danger/--warn
+     and .badge.green/.amber/.red). Use these instead of Tailwind's default
+     red/amber/green or inline hex for status chips, badges, and alerts. */
+  --color-grey: #6B7A70;        /* secondary/meta text, disabled state */
+  --color-success: #2F9E5C;     /* active/confirmed/valid status text & icons */
+  --color-success-bg: #E5F6EC;  /* active/confirmed/valid chip background */
+  --color-warn: #C98A2E;        /* pending/expired status text & icons */
+  --color-warn-bg: #FDF1E0;     /* pending/expired chip background */
+  --color-danger: #B3453F;      /* rejected/invalid/error status text & icons */
+  --color-danger-bg: #FBE9E8;   /* rejected/invalid/error chip background */
+
+  /* Public marketing site headings — institutional authority, see prototype/landingDesktop.html */
+  --font-display: 'Lora', serif;
+  /* Member/Officer/Super Admin portal headings, see prototype/{member,officer-admin,super-admin}.html.
+     Not yet wired to any component — see tailwind.config.js `heading` key for follow-up migration. */
+  --font-heading: 'Poppins', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}

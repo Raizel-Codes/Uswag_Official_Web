@@ -24,5 +24,7 @@ export const CHAPTERS: Chapter[] = [
 
 export function chapterFor(path: string) {
   const i = CHAPTERS.findIndex((c) => c.path === path);
+  // Appendix / utility pages (Bylaws, Contact, Login…) aren't numbered sections of the Record.
+  if (i === -1) return { index: -1, chapter: undefined, prev: undefined, next: undefined };
   return { index: i, chapter: CHAPTERS[i], prev: CHAPTERS[i - 1], next: CHAPTERS[i + 1] };
 }

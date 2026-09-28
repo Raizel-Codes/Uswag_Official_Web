@@ -1026,3 +1026,17 @@ select.lp-input {
 
 /* Inline links without the tap-target padding keep their underline under the text */
 .lp-link.py-0::after { bottom: -2px; }
+
+/* Status notices — semantic tokens from tokens.css; small text uses Deep Forest for contrast */
+.lp-notice {
+  border-radius: 3px;
+  padding: 1rem 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-deep);
+  border: 1px solid;
+}
+.lp-notice--success { background: var(--color-success-bg); border-color: rgb(47 158 92 / 0.4); }
+.lp-notice--warn { background: var(--color-warn-bg); border-color: rgb(201 138 46 / 0.45); }
+
+textarea.lp-input { min-height: 160px; resize: vertical; line-height: 1.6; }

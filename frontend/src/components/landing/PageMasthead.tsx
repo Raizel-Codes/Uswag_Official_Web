@@ -13,6 +13,8 @@ interface PageMastheadProps {
   lead?: ReactNode;
   /** Actions or an aside rendered under the lead. */
   children?: ReactNode;
+  /** Overrides the "Section N" label for pages outside the numbered chapters (e.g. "Appendix"). */
+  sectionLabel?: string;
 }
 
 /**
@@ -20,11 +22,12 @@ interface PageMastheadProps {
  * nameplate as the front page, carrying this page's section numeral, on grained parchment.
  * It slides under the fixed Header exactly like the front-page hero so there's no Mist strip.
  */
-export default function PageMasthead({ eyebrow, title, lead, children }: PageMastheadProps) {
+export default function PageMasthead({ eyebrow, title, lead, children, sectionLabel }: PageMastheadProps) {
   const ref = useRef<HTMLElement>(null);
   useLandingReveal(ref);
   const { pathname } = useLocation();
   const { chapter } = chapterFor(pathname);
+  const label = sectionLabel ?? (chapter?.numeral ? `Section ${chapter.numeral}` : '');
 
   return (
     <header
@@ -38,14 +41,10 @@ export default function PageMasthead({ eyebrow, title, lead, children }: PageMas
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-3">
             <p className="lp-eyebrow lp-ink-secondary lp-onum hidden sm:block">Est. {FOUNDED_YEAR}</p>
             <p className="lp-masthead text-center col-start-2">The USWAG Record</p>
-            <p className="lp-eyebrow lp-ink-secondary text-right hidden sm:block">
-              {chapter?.numeral ? `Section ${chapter.numeral}` : ''}
-            </p>
+            <p className="lp-eyebrow lp-ink-secondary text-right hidden sm:block">{label}</p>
           </div>
           <div className="h-px bg-[var(--lp-ink)]" />
-          {chapter?.numeral && (
-            <p className="lp-eyebrow lp-ink-secondary text-center mt-2.5 sm:hidden">Section {chapter.numeral}</p>
-          )}
+          {label && <p className="lp-eyebrow lp-ink-secondary text-center mt-2.5 sm:hidden">{label}</p>}
         </div>
 
         <div className="mt-12 md:mt-14 grid lg:grid-cols-12 gap-8 items-end">

@@ -299,3 +299,36 @@ Each step is a separate commit.
 10. Placeholders and `ASSETS.md`.
 11. Reduced-motion pass, contrast pass, and Lighthouse and axe runs.
 12. Chrome verification: desktop at 1440 and 1280, mobile at 390 and 360. Check animation smoothness in a performance trace, and compare portal screenshots before and after (member, officer-admin and super-admin dashboards).
+
+---
+
+## 8. Implementation notes (Phase 4, 2026-09-28)
+
+What was built differs from the plan above in a few places:
+
+| Plan | As built | Why |
+|---|---|---|
+| Fixed `LandingAtmosphere` layer carrying `--lp-era` | `useEraScroll` tweens `background-color` on the `.lp` root directly (parchment to Mist) | A fixed layer inside the page paints *over* the shared Footer, because positioned content paints after non-positioned siblings. Tweening a concrete color instead of an inherited custom property also avoids restyling the whole subtree every frame. |
+| Grain and vignette opacity tied to the era | Grain sits on past sections as a static texture. The timeline's grain fades out down the section through a mask. The vignette is on the side edges only. | No per-frame work, and no visible seams between sections. |
+| `EraSection.tsx` wrapper | Not needed. Each section is a plain `<section class="lp-section" data-era>` and calls `useLandingReveal` on its own ref. | Scoping reveals per section means live data only re-scans its own subtree, so the hero doesn't flicker when queries resolve. |
+| `CornerFrame` / `OrnamentalDivider` gain a `color` prop | **Not modified.** The landing page uses its own `EngravedRule`. | Zero risk to the other public pages. |
+| `content-visibility: auto` on S3–S5 | Not used | Placeholder sizing shifts ScrollTrigger measurements. |
+| ≤ 20 ScrollTriggers | 43 (one per revealed element, via `ScrollTrigger.batch`) | Within normal limits for GSAP. Could be cut to about 10 per-section triggers if profiling ever shows a cost. |
+
+Other implementation details:
+- Base typography and section classes in `landing.css` use `.lp :where(.x)` / `:where(.lp .x)`. Tailwind utilities on the same element can override them, but they still beat Tailwind's preflight element resets.
+- Landing CSS ships only in `HomePage-*.css` (3.1 KB gz). The shared `index-*.css` gained utilities and lost only utilities that the old HomePage alone used. No shared rule changed.
+
+### Verification (Chrome, localhost)
+- **Desktop at 1568px:** all six sections render. The parchment-to-Mist scrub, timeline spine fill and card morph all run.
+- **Mobile at 390px:** no horizontal overflow (`scrollWidth` 375 at 390 with a scrollbar), and every section stacks correctly.
+- **Reduced motion:** static era surfaces, all content visible, and "Then / Now" cards side by side.
+- **Contrast:** automated scan of every visible landing text node, **0 failures** against AA.
+- **Headings:** one `h1` and a logical h2/h3 order. Keyboard focus shows a 2px Primary ring.
+- **Portals:** the member dashboard rendered normally after sign-in, and the CSS diff shows no shared rule changes.
+- **Not measured:** frame rate. The automation tab was reported `hidden`, so Chrome paused `requestAnimationFrame`. The animations were stepped manually to verify their states, but smoothness still needs a visible-window performance trace.
+
+### Open items
+- Timeline entries 2–4 are **placeholders pending adviser confirmation** (`components/landing/timeline.data.ts`).
+- Photo placeholders are in `frontend/public/assets/placeholders/` (see `ASSETS.md`).
+- Shared-scope issues are unchanged and flagged: `maximum-scale=1.0` in `index.html`, no skip link in `PublicLayout`, and low-alpha footer text.

@@ -55,10 +55,10 @@ export default function OriginSection() {
 
         {/* Archive: founding-era flyer with the USWAG mark pinned over it */}
         <div className="lg:col-span-5 relative pb-16 sm:pb-10 lg:pt-10" data-lp-reveal>
-          <FoundingFlyer foundedYear={FOUNDED_YEAR} className="max-w-[330px] ml-0 sm:ml-6" />
+          <FoundingFlyer foundedYear={FOUNDED_YEAR} className="max-w-[270px] sm:max-w-[330px] ml-0 sm:ml-6" />
 
           <figure
-            className="lp-print absolute right-0 sm:right-4 lg:-right-2 bottom-0 w-[200px] sm:w-[230px]"
+            className="lp-print absolute right-0 sm:right-4 lg:-right-2 bottom-0 w-[160px] sm:w-[230px]"
             style={{ transform: 'rotate(4deg)' }}
             data-lp-develop
             tabIndex={0}

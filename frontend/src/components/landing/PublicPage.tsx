@@ -18,6 +18,8 @@ interface PublicPageProps {
   hideChapterNav?: boolean;
   /** Rendered after the chapter links (e.g. the front page's mobile sticky bar + spacer). */
   after?: ReactNode;
+  /** A single fixed era for utility pages (Login): no parchment → Mist journey. */
+  surface?: 'journey' | 'present';
 }
 
 /**
@@ -33,6 +35,7 @@ export default function PublicPage({
   refreshKeys = [],
   hideChapterNav = false,
   after,
+  surface = 'journey',
 }: PublicPageProps) {
   const root = useRef<HTMLDivElement>(null);
   useEraScroll(root, { startSelector: eraStart, endSelector: eraEnd });
@@ -54,7 +57,7 @@ export default function PublicPage({
   }, refreshKeys);
 
   return (
-    <div ref={root} className="lp">
+    <div ref={root} className={`lp ${surface === 'present' ? 'lp--present' : ''}`}>
       {children}
       {!hideChapterNav && <ChapterNav />}
       {after}

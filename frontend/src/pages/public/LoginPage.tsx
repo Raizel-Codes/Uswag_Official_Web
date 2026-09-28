@@ -2,9 +2,19 @@
 // On success, redirects:
 //   super_admin | officer_admin → /admin
 //   member                      → /dashboard
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import PublicPage from '@/components/landing/PublicPage';
+import EngravedCrest from '@/components/landing/artifacts/EngravedCrest';
+import DigitalCardFace from '@/components/landing/artifacts/DigitalCardFace';
+import EngravedRule from '@/components/landing/ornaments/EngravedRule';
+
+const MEMBER_PERKS = [
+  { title: 'Your digital membership card', desc: 'A signed QR card, ready to scan at the door.' },
+  { title: 'RSVPs & attendance', desc: 'Reserve limited slots and see your attendance record.' },
+  { title: 'Announcements', desc: 'Notices from your officers, the moment they’re posted.' },
+];
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -15,6 +25,12 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+
+  // A sign-in page has one job — put the cursor where it's needed.
+  useEffect(() => {
+    emailRef.current?.focus();
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -31,10 +47,7 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       // Axios wraps HTTP errors; pull the backend message when available
-      const msg =
-        err?.response?.data?.message ??
-        err?.message ??
-        'Login failed. Please try again.';
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Login failed. Please try again.';
       setError(msg);
     } finally {
       setIsSubmitting(false);
@@ -42,140 +55,136 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-mist flex items-center justify-center px-4 py-16">
-      {/* Card */}
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden">
-
-        {/* Header band */}
-        <div className="bg-forest px-8 py-8 text-white text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-sage/30 mb-4">
-            {/* Lock icon */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-sage" viewBox="0 0 24 24" fill="currentColor">
-              <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Welcome back</h1>
-          <p className="text-sage/80 text-sm mt-1">Sign in to your USWAG account</p>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="px-8 py-8 space-y-5">
-
-          {/* Error banner */}
-          {error && (
-            <div role="alert" className="flex items-start gap-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-red-700 text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-              </svg>
-              <span>{error}</span>
+    <PublicPage surface="present" hideChapterNav>
+      <section aria-labelledby="login-heading" className="lp-section pt-10 md:pt-14">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8 grid lg:grid-cols-2 gap-10 lg:gap-14 items-stretch">
+          {/* ---- Sign-in (first in source order: it's what the visitor came for) ---- */}
+          <div className="flex flex-col justify-center">
+            <div className="flex items-center gap-3">
+              <EngravedCrest size={40} />
+              <p className="lp-eyebrow lp-ink-muted">The USWAG Record · Members &amp; officers</p>
             </div>
-          )}
+            <h1 id="login-heading" className="lp-h2 mt-6" style={{ fontSize: 'clamp(2.25rem, 4vw, 3.25rem)' }}>
+              Welcome back.
+            </h1>
+            <p className="lp-body lp-ink-muted mt-3">Sign in to your member or officer account.</p>
 
-          {/* Email */}
-          <div className="space-y-1.5">
-            <label htmlFor="login-email" className="block text-sm font-medium text-forest">
-              Email address
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@nwssu.edu.ph"
-              className="
-                w-full rounded-lg border border-gray-200 bg-mist px-4 py-2.5
-                text-sm text-forest placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                transition
-              "
-            />
-          </div>
+            <form onSubmit={handleSubmit} className="lp-card p-6 sm:p-8 mt-8 space-y-5">
+              {error && (
+                <p role="alert" className="lp-alert">
+                  {error}
+                </p>
+              )}
 
-          {/* Password */}
-          <div className="space-y-1.5">
-            <label htmlFor="login-password" className="block text-sm font-medium text-forest">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="login-password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="
-                  w-full rounded-lg border border-gray-200 bg-mist px-4 py-2.5 pr-11
-                  text-sm text-forest placeholder-gray-400
-                  focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                  transition
-                "
-              />
-              <button
-                type="button"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-primary transition"
-              >
-                {showPassword ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3.53 2.47a.75.75 0 00-1.06 1.06l18 18a.75.75 0 101.06-1.06l-18-18zM22.676 12.553a11.249 11.249 0 01-2.631 4.31l-3.099-3.099a5.25 5.25 0 00-6.71-6.71L7.759 4.577A11.217 11.217 0 0112 3.75c4.5 0 8.336 2.57 10.676 6.553a1.126 1.126 0 010 2.247-.003 0zM15.75 12c0 .18-.013.357-.037.53l-4.244-4.243A3.75 3.75 0 0115.75 12zM21.25 5.5L5.5 21.25" />
-                    <path d="M8.25 12c0-.18.013-.357.037-.53l4.244 4.243A3.75 3.75 0 018.25 12z" />
-                  </svg>
+              <div>
+                <label htmlFor="login-email" className="lp-label">Email address</label>
+                <input
+                  ref={emailRef}
+                  id="login-email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@nwssu.edu.ph"
+                  className="lp-input"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <label htmlFor="login-password" className="lp-label">Password</label>
+                  <Link to="/forgot-password" className="lp-link py-0 text-[0.8125rem] mb-2">
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="lp-input pr-12"
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-forest/70 hover:text-primary transition-colors"
+                  >
+                    {showPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                        <path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.1A10.4 10.4 0 0112 5c5 0 9 4.5 10 7-.4 1-1.3 2.4-2.6 3.7M6.6 6.6C4.6 8 3.3 10 2 12c1 2.5 5 7 10 7 1.8 0 3.4-.5 4.8-1.3" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                        <path d="M2 12c1-2.5 5-7 10-7s9 4.5 10 7c-1 2.5-5 7-10 7S3 14.5 2 12z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button id="login-submit" type="submit" disabled={isSubmitting} className="lp-btn lp-btn--primary w-full disabled:opacity-60 disabled:cursor-not-allowed">
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Signing in…
+                  </span>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
-                    <path fillRule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clipRule="evenodd" />
-                  </svg>
+                  <>
+                    Sign in <span className="lp-btn__arrow" aria-hidden="true">→</span>
+                  </>
                 )}
               </button>
-            </div>
-            <div className="text-right">
-              <Link to="/forgot-password" className="text-xs text-primary hover:underline font-medium">
-                Forgot password?
+            </form>
+
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+              <p className="lp-small lp-ink-muted" style={{ fontWeight: 400 }}>
+                Not a member yet?{' '}
+                <Link to="/apply" className="lp-link py-0">Apply for membership</Link>
+              </p>
+              <Link to="/" className="lp-link py-0 text-[0.875rem]">
+                <span aria-hidden="true">←</span> Front page
               </Link>
             </div>
           </div>
 
-          {/* Submit */}
-          <button
-            id="login-submit"
-            type="submit"
-            disabled={isSubmitting}
-            className="
-              w-full rounded-lg bg-primary py-2.5 px-4
-              text-sm font-semibold text-white font-display
-              hover:bg-primary-light active:scale-[0.98]
-              focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-              disabled:opacity-60 disabled:cursor-not-allowed
-              transition-all duration-150
-            "
-          >
-            {isSubmitting ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Signing in…
-              </span>
-            ) : (
-              'Sign in'
-            )}
-          </button>
+          {/* ---- Canvas: what signing in opens up ---- */}
+          <aside aria-label="What members can do" className="lp-vault lp-vault--framed lp-vault--panel lp-on-dark p-8 sm:p-12 lp-login-canvas">
+            <div>
+              <p className="lp-eyebrow text-sage">Your record, in one place</p>
+              <p className="font-display text-mist mt-4 leading-[1.1]" style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)' }}>
+                Your card. Your attendance. <em className="text-sage">Your voice.</em>
+              </p>
+              <EngravedRule className="mt-6 max-w-[200px] text-sage" reveal={false} />
+            </div>
 
-          {/* Back to public site */}
-          <p className="text-center text-xs text-gray-400">
-            Not a member yet?{' '}
-            <Link to="/join" className="text-primary hover:underline font-medium">
-              Join USWAG
-            </Link>
-          </p>
-        </form>
-      </div>
-    </div>
+            <div className="lp-card-stage my-10 max-w-[360px] w-full mx-auto lp-login-card" aria-hidden="true">
+              <DigitalCardFace />
+            </div>
+
+            <ul className="space-y-4">
+              {MEMBER_PERKS.map((p) => (
+                <li key={p.title} className="flex gap-3.5">
+                  <span className="mt-1.5 w-2 h-2 rotate-45 bg-sage shrink-0" aria-hidden="true" />
+                  <p className="text-[0.9375rem] leading-[1.55] text-mist/90">
+                    <span className="font-semibold text-mist">{p.title}.</span> {p.desc}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        </div>
+      </section>
+    </PublicPage>
   );
 }

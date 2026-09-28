@@ -817,3 +817,212 @@
   /* Static classical dial at 10:10 — the modern face stays hidden */
   .lp-clock__hand { will-change: auto; }
 }
+
+/* Utility pages (Login) sit in the present from the first pixel */
+.lp.lp--present { background-color: var(--color-mist); }
+
+/* ======================================================================
+   Forms — Application & Login in the Record style
+   ====================================================================== */
+
+.lp-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-deep);
+  margin-bottom: 0.5rem;
+}
+.lp-hint { font-size: 0.8125rem; color: rgb(20 39 24 / 0.75); margin-top: 0.4rem; }
+
+/* Engraved field: hairline box with a Sage underline that draws in on focus */
+.lp-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 0.95rem;
+  font-size: 1rem; /* ≥16px so iOS doesn't zoom on focus */
+  color: var(--color-deep);
+  background: rgb(231 239 228 / 0.55);
+  border: 1px solid rgb(20 39 24 / 0.28);
+  border-radius: 3px;
+  box-shadow: inset 0 -2px 0 0 transparent;
+  transition:
+    border-color var(--lp-dur-ui) var(--lp-ease),
+    box-shadow var(--lp-dur-ui) var(--lp-ease),
+    background-color var(--lp-dur-ui) var(--lp-ease);
+}
+.lp-input::placeholder { color: rgb(20 39 24 / 0.7); } /* 5.4:1 — hints only, never labels */
+.lp-input:hover { border-color: rgb(20 39 24 / 0.5); }
+.lp-input:focus {
+  outline: none;
+  background: var(--color-mist);
+  border-color: var(--color-primary);
+  box-shadow: inset 0 -2px 0 0 var(--color-primary), 0 0 0 3px rgb(46 91 65 / 0.16);
+}
+.lp-input[aria-invalid='true'] { border-color: var(--color-danger); }
+select.lp-input {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232E5B41' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 16px;
+}
+
+/* Large tappable checkbox in the brand */
+.lp-check {
+  appearance: none;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  border: 1.5px solid var(--color-deep);
+  border-radius: 3px;
+  background: var(--color-mist);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition: background-color var(--lp-dur-micro) var(--lp-ease), border-color var(--lp-dur-micro) var(--lp-ease);
+}
+.lp-check::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  background: var(--color-mist);
+  transform: scale(0);
+  transition: transform var(--lp-dur-micro) var(--lp-ease);
+}
+.lp-check:checked { background: var(--color-primary); border-color: var(--color-primary); }
+.lp-check:checked::before { transform: scale(1); }
+
+/* ---- The sealed envelope (MembershipEnvelope.tsx) ---- */
+.lp-envelope {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+  aspect-ratio: 1.6;
+  perspective: 1400px;
+  filter: drop-shadow(0 22px 26px rgb(90 72 50 / 0.22)) drop-shadow(0 2px 3px rgb(90 72 50 / 0.2));
+}
+.lp-envelope > * { position: absolute; }
+/* Inside of the envelope (seen behind the letter once the flap lifts) */
+.lp-envelope__back {
+  inset: 0;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgb(90 72 50 / 0.16), rgb(90 72 50 / 0.04) 45%),
+    var(--lp-parchment-deep);
+}
+/* The letter tucked inside */
+.lp-envelope__letter {
+  left: 6%;
+  right: 6%;
+  top: 7%;
+  bottom: 8%;
+  z-index: 2;
+  padding: 7% 8%;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 27px, rgb(122 98 66 / 0.18) 27px 28px),
+    var(--lp-parchment);
+  box-shadow: 0 1px 2px rgb(90 72 50 / 0.2);
+  transition: transform 700ms var(--lp-ease) 380ms;
+}
+/* Front pocket: side + bottom flaps meeting under the seal */
+.lp-envelope__pocket {
+  inset: 0;
+  z-index: 3;
+  border-radius: 4px;
+  clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%);
+  background:
+    radial-gradient(40% 36% at 86% 78%, rgb(201 180 143 / 0.5), transparent 70%),
+    radial-gradient(30% 30% at 10% 70%, rgb(201 180 143 / 0.4), transparent 70%),
+    var(--lp-parchment-deep);
+}
+.lp-envelope__folds { inset: 0; z-index: 4; width: 100%; height: 100%; pointer-events: none; }
+/* Top flap: hinged at the top edge, swings up and back when opened */
+.lp-envelope__flap {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 60%;
+  z-index: 5;
+  transform-origin: 50% 0;
+  transform: rotateX(0deg);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background:
+    linear-gradient(180deg, transparent, rgb(122 98 66 / 0.14)),
+    var(--lp-parchment-deep);
+  transition:
+    transform 700ms cubic-bezier(0.65, 0, 0.35, 1),
+    z-index 0s linear 350ms;
+}
+/* Wax seal — the open button */
+.lp-envelope__seal {
+  left: 50%;
+  top: 60%;
+  z-index: 6;
+  width: clamp(72px, 19%, 96px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 350ms var(--lp-ease), opacity 300ms var(--lp-ease);
+}
+.lp-envelope__seal:hover { transform: translate(-50%, -50%) scale(1.06) rotate(-4deg); }
+.lp-envelope__seal:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 4px; }
+
+/* The opened flap stands 60% of the envelope's height above it (≈37.5% of its width) —
+   make room so it never covers the content above. */
+.lp-envelope { transition: margin-top 700ms var(--lp-ease); }
+.lp .lp-envelope.is-open { margin-top: 40%; } /* beats Tailwind space-y (0,3,0) */
+
+.lp-envelope.is-open .lp-envelope__seal {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -80%) scale(0.7) rotate(18deg);
+}
+.lp-envelope.is-open .lp-envelope__flap { transform: rotateX(180deg); z-index: 1; }
+.lp-envelope.is-open .lp-envelope__letter { transform: translateY(-46%); }
+
+/* Drop-in happens in JS (GSAP); the unfolding terms use a CSS keyframe on mount */
+@keyframes lp-unfold {
+  from { grid-template-rows: 0fr; opacity: 0; transform: translateY(-12px); }
+  to { grid-template-rows: 1fr; opacity: 1; transform: none; }
+}
+.lp-terms {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: lp-unfold 700ms var(--lp-ease) 650ms both;
+}
+.lp-terms > * { overflow: hidden; }
+
+/* ---- Login canvas ---- */
+.lp-login-canvas {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.lp-login-card {
+  transform: rotate(-4deg);
+  transition: transform 900ms var(--lp-ease);
+}
+.lp-login-canvas:hover .lp-login-card { transform: rotate(-1.5deg) translateY(-4px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-envelope__flap,
+  .lp-envelope__letter,
+  .lp-envelope__seal,
+  .lp-envelope,
+  .lp-login-card { transition: none !important; }
+  .lp-terms { animation: none; }
+}
+
+/* Inline links without the tap-target padding keep their underline under the text */
+.lp-link.py-0::after { bottom: -2px; }

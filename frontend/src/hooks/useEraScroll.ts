@@ -31,6 +31,8 @@ export function useEraScroll(root: RefObject<HTMLElement>, { startSelector, endS
   useGSAP(
     () => {
       if (!root.current || prefersReducedMotion()) return;
+      // Pages without era markers (e.g. Login) have a fixed surface — nothing to scrub.
+      if (!root.current.querySelector(startSelector) || !root.current.querySelector(endSelector)) return;
 
       gsap.fromTo(
         root.current,

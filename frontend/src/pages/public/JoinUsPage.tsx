@@ -129,7 +129,7 @@ function Process() {
           <ol className="mt-10 space-y-6">
             {STEPS.map((s) => (
               <li key={s.n} className="flex gap-5" data-lp-reveal>
-                <span className="w-11 h-11 shrink-0 rounded-full bg-primary text-mist flex items-center justify-center font-display text-[1.25rem] lp-lnum" aria-hidden="true">
+                <span className="lp-seal w-12 h-12 font-display text-[1.25rem] lp-lnum" aria-hidden="true">
                   {s.n}
                 </span>
                 <div>

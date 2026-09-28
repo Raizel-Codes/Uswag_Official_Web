@@ -63,7 +63,7 @@ export default function ImpactSection({ officers, upcomingEvents, recentPosts }:
         ref={mandatesRef}
         aria-labelledby="lp-mandates-heading"
         data-era="present-dark"
-        className="lp-section lp-surface-deep"
+        className="lp-section lp-vault"
       >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
           <div className="max-w-[640px]">
@@ -75,8 +75,7 @@ export default function ImpactSection({ officers, upcomingEvents, recentPosts }:
             </h2>
             <EngravedRule className="mt-7 max-w-[220px] text-sage" />
             <p className="lp-body mt-7 text-mist/80" data-lp-reveal>
-              Every USWAG program traces back to one of the purposes set out in our Constitution — the same three we
-              started with.
+              Every USWAG program traces back to one of the three core causes set out in our Constitution.
             </p>
           </div>
 
@@ -88,7 +87,7 @@ export default function ImpactSection({ officers, upcomingEvents, recentPosts }:
                 data-lp-reveal
               >
                 <span
-                  className="absolute top-6 right-0 lg:right-8 font-display text-[6.5rem] leading-none font-semibold text-sage/10 select-none pointer-events-none"
+                  className="absolute top-4 right-0 lg:right-8 text-[7rem] lp-outline-num"
                   aria-hidden="true"
                 >
                   {m.num}
@@ -123,8 +122,8 @@ export default function ImpactSection({ officers, upcomingEvents, recentPosts }:
               </div>
               <ul className="mt-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
                 {officers.slice(0, 7).map((o) => (
-                  <li key={o.id} className="lp-lift bg-mist border border-[rgb(20_39_24/0.1)] rounded-[12px] p-4 text-center" data-lp-reveal>
-                    <div className="w-16 h-16 mx-auto rounded-full overflow-hidden border-2 border-sage bg-primary/10 flex items-center justify-center font-display text-[1.125rem] text-primary">
+                  <li key={o.id} className="lp-card lp-lift p-5 text-center" data-lp-reveal>
+                    <div className="lp-cameo w-16 h-16 mx-auto flex items-center justify-center font-display text-[1.125rem] text-primary">
                       {o.photoUrl ? (
                         <img src={o.photoUrl} alt="" loading="lazy" decoding="async" width={64} height={64} className="w-full h-full object-cover" />
                       ) : (

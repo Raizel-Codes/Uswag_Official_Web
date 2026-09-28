@@ -143,7 +143,7 @@ function Legacy() {
         <figure className="lg:col-span-5 lg:col-start-8 lp-card p-8" data-lp-reveal>
           <div className="flex items-center gap-4">
             <span
-              className="w-14 h-14 rounded-full bg-primary text-mist flex items-center justify-center font-display text-[1.25rem]"
+              className="lp-seal w-14 h-14 font-display text-[1.25rem]"
               aria-hidden="true"
             >
               AH

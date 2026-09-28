@@ -3,6 +3,7 @@ import { useGSAP } from '@gsap/react';
 import { gsap, ensureGsapRegistered, prefersReducedMotion } from '@/lib/motion';
 import { useLandingReveal } from '@/hooks/useLandingReveal';
 import EngravedRule from '../ornaments/EngravedRule';
+import TimelineClock from '../artifacts/TimelineClock';
 import { TIMELINE } from '../timeline.data';
 
 ensureGsapRegistered();
@@ -10,10 +11,12 @@ ensureGsapRegistered();
 /**
  * S3 — the years in between. A ledger timeline whose spine fills from sepia to Primary as the
  * visitor scrolls through it (transform: scaleY only). Placeholder entries are clearly badged
- * until the adviser confirms them — see timeline.data.ts.
+ * until the adviser confirms them — see timeline.data.ts. Behind the ledger, TimelineClock
+ * sweeps from an engraved classical dial to a modern one as the reader moves through the years.
  */
 export default function YearsTimeline({ eyebrow = 'Chapter II' }: { eyebrow?: string }) {
   const ref = useRef<HTMLElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   useLandingReveal(ref);
 
   useGSAP(
@@ -49,10 +52,11 @@ export default function YearsTimeline({ eyebrow = 'Chapter II' }: { eyebrow?: st
           </p>
         </header>
 
-        <div className="lp-timeline lg:col-span-7 lg:col-start-6">
+        <div ref={trackRef} className="lp-timeline lg:col-span-7 lg:col-start-6">
+          <TimelineClock trackRef={trackRef} />
           <span className="lp-timeline__spine" aria-hidden="true" />
           <span className="lp-timeline__progress" aria-hidden="true" />
-          <ol className="space-y-8">
+          <ol className="space-y-12 lg:space-y-16 py-6">
           {TIMELINE.map((entry) => (
             <li
               key={entry.id}

@@ -45,7 +45,7 @@ export default function RebirthSection() {
           <ul className="mt-9 space-y-6">
             {FEATURES.map((f) => (
               <li key={f.title} className="flex gap-4" data-lp-reveal>
-                <span className="shrink-0 w-11 h-11 rounded-[10px] bg-primary text-mist flex items-center justify-center" aria-hidden="true">
+                <span className="lp-seal w-12 h-12" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     <path d={f.icon} />
                   </svg>

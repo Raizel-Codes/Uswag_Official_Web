@@ -148,7 +148,7 @@ function CurrentOfficers() {
               return (
                 <li key={o.id} className="lp-card lp-lift p-6 sm:p-7 flex flex-col" data-lp-reveal>
                   <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 shrink-0 rounded-full overflow-hidden border-2 border-sage bg-mist flex items-center justify-center">
+                    <div className="lp-cameo w-20 h-20 shrink-0 flex items-center justify-center">
                       {o.photoUrl ? (
                         <img src={o.photoUrl} alt="" loading="lazy" decoding="async" width={80} height={80} className="w-full h-full object-cover" />
                       ) : (

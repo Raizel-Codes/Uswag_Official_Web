@@ -73,7 +73,7 @@ function Mandates() {
                 {/* Title side */}
                 <div className={`lg:col-span-5 relative ${flip ? 'lg:order-2 lg:col-start-8' : ''}`} data-lp-reveal>
                   <span
-                    className="absolute -top-10 -left-2 font-display text-[8rem] sm:text-[10rem] leading-none font-semibold text-primary/[0.07] select-none pointer-events-none"
+                    className="absolute -top-10 -left-2 text-[8rem] sm:text-[10rem] lp-outline-num lp-outline-num--light"
                     aria-hidden="true"
                   >
                     {a.num}

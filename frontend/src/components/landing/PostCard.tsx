@@ -16,7 +16,7 @@ export default function PostCard({ post, clamp = false }: PostCardProps) {
   return (
     <article className="lp-card lp-lift p-6 sm:p-7" data-lp-reveal>
       <div className="flex items-center gap-3 mb-4">
-        <span className="w-9 h-9 rounded-[8px] bg-primary text-mist flex items-center justify-center shrink-0" aria-hidden="true">
+        <span className="lp-seal w-10 h-10" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
             <path d="M22 12a10 10 0 1 0-11.5 9.87v-6.98H7.9V12h2.6V9.8c0-2.56 1.52-3.98 3.86-3.98 1.12 0 2.3.2 2.3.2v2.5h-1.3c-1.28 0-1.68.79-1.68 1.6V12h2.86l-.46 2.89h-2.4v6.98A10 10 0 0 0 22 12Z" />
           </svg>

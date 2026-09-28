@@ -36,8 +36,8 @@ function EventRow({ event }: { event: UswagEvent }) {
     <li className={`lp-card lp-lift flex gap-5 p-5 sm:p-6 ${isPast ? 'opacity-80' : ''}`} data-lp-reveal>
       <time
         dateTime={event.startsAt}
-        className={`flex h-[68px] w-[64px] shrink-0 flex-col items-center justify-center rounded-[10px] ${
-          isPast ? 'border border-forest/20' : 'bg-primary text-mist'
+        className={`flex h-[68px] w-[64px] shrink-0 flex-col items-center justify-center ${
+          isPast ? 'rounded-[3px] border border-forest/25' : 'lp-plate'
         }`}
       >
         <span className="font-display text-[1.5rem] leading-none font-medium lp-lnum">{dt.day}</span>

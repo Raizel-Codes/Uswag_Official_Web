@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useLandingReveal } from '@/hooks/useLandingReveal';
 import EngravedRule from '../ornaments/EngravedRule';
+import crestOnDark from '@/assets/images/logo-uswag-on-dark.svg';
 
 interface CtaLink {
   to: string;
@@ -38,7 +39,7 @@ export default function LandingCTA({
     <section ref={ref} aria-labelledby={id} data-era="present" className="lp-section pt-0">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
         <div
-          className="lp-on-dark relative overflow-hidden rounded-[12px] bg-primary text-mist p-[clamp(2rem,6vw,5rem)] grid md:grid-cols-[1.4fr_1fr] gap-10 md:gap-16 items-center"
+          className="lp-on-dark lp-vault lp-vault--framed lp-vault--panel p-[clamp(2.25rem,6vw,5rem)] grid md:grid-cols-[1.4fr_1fr] gap-10 md:gap-16 items-center"
           data-lp-reveal
         >
           {/* Concentric arcs echo the timeline's diamonds — decorative */}
@@ -47,15 +48,17 @@ export default function LandingCTA({
             <circle cx="170" cy="170" r="120" stroke="currentColor" />
             <circle cx="170" cy="170" r="72" stroke="currentColor" />
           </svg>
+          {/* Crest watermark, centred in the arcs */}
+          <img src={crestOnDark} alt="" aria-hidden="true" className="absolute -top-2 -right-2 w-[150px] opacity-[0.09] pointer-events-none select-none" />
 
           <div className="relative">
-            {/* Mist on Primary 6.64:1 — Sage on Primary (4.28) fails for small text */}
-            <p className="lp-eyebrow text-mist">{eyebrow}</p>
+            {/* Sage on Deep Forest 8.63:1 */}
+            <p className="lp-eyebrow text-sage">{eyebrow}</p>
             <h2 id={id} className="lp-h2 mt-4 text-mist">
               {title}
             </h2>
             <EngravedRule className="mt-7 max-w-[200px] text-sage" reveal={false} />
-            <p className="lp-body mt-7 text-mist">{body}</p>
+            <p className="lp-body mt-7 text-mist/90">{body}</p>
           </div>
 
           <div className="relative flex flex-col items-start md:items-end gap-4">
@@ -67,7 +70,7 @@ export default function LandingCTA({
                 {secondary.label} <span aria-hidden="true">→</span>
               </Link>
             )}
-            {note && <p className="lp-small text-mist">{note}</p>}
+            {note && <p className="lp-small text-mist/80">{note}</p>}
           </div>
         </div>
       </div>
@@ -80,7 +83,7 @@ export function MobileJoinBar() {
   return (
     <>
       <div className="lp-sticky md:hidden fixed bottom-0 inset-x-0 z-40">
-        <Link to="/join" className="lp-btn lp-btn--primary w-full rounded-[12px]">
+        <Link to="/join" className="lp-btn lp-btn--primary w-full">
           Join USWAG
         </Link>
       </div>

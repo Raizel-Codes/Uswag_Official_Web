@@ -458,8 +458,8 @@
 }
 .lp-lift:hover,
 .lp-lift:focus-within {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgb(20 39 24 / 0.1);
+  transform: translateY(-3px);
+  box-shadow: var(--lp-lift-shadow, 0 10px 28px rgb(20 39 24 / 0.1));
 }
 
 /* Mandate icons draw themselves once their card is revealed */
@@ -527,17 +527,33 @@
    Inner public pages (About → Join) — same Record, one continuous style
    ====================================================================== */
 
-/* Present-day card on Mist: hairline border, faint lift — no white (outside the palette) */
+/* Present-day "engraved plate": crisp corners, hairline border with an inner Sage rule 5px in —
+   the archival flyer's double rule re-cut in the brand greens. The 4px Mist band (first inset
+   shadow) masks the Sage band beneath it, leaving a single 1px inner line. */
 .lp-card {
-  background: rgb(231 239 228 / 0.7);
-  border: 1px solid rgb(20 39 24 / 0.12);
-  border-radius: 14px;
+  --lp-plate: var(--color-mist);
+  background: var(--lp-plate);
+  border: 1px solid rgb(20 39 24 / 0.16);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 4px var(--lp-plate),
+    inset 0 0 0 5px rgb(152 203 176 / 0.6),
+    0 1px 2px rgb(20 39 24 / 0.05),
+    0 14px 32px -24px rgb(20 39 24 / 0.35);
+  /* On hover the inner rule warms to Primary and the plate lifts off the page */
+  --lp-lift-shadow:
+    inset 0 0 0 4px var(--lp-plate),
+    inset 0 0 0 5px var(--color-primary),
+    0 2px 4px rgb(20 39 24 / 0.06),
+    0 26px 44px -26px rgb(20 39 24 / 0.5);
 }
-/* Archival card on parchment */
+/* Archival card on parchment: same construction in sepia */
 .lp-card--past {
-  background: rgb(239 234 218 / 0.7);
-  border-color: rgb(122 98 66 / 0.3);
-  border-radius: 0;
+  --lp-plate: var(--lp-parchment);
+  border-color: rgb(122 98 66 / 0.35);
+  box-shadow:
+    inset 0 0 0 4px var(--lp-plate),
+    inset 0 0 0 5px rgb(122 98 66 / 0.35);
 }
 
 /* Constitution / document excerpt: ruled margin, article label in the gutter */
@@ -555,33 +571,54 @@
 .lp-chapter-link {
   display: block;
   padding: 1.5rem 1.75rem;
-  border: 1px solid rgb(20 39 24 / 0.14);
-  border-radius: 14px;
+  border: 1px solid rgb(20 39 24 / 0.16);
+  border-radius: 3px;
+  background: var(--color-mist);
+  box-shadow: inset 0 0 0 4px var(--color-mist), inset 0 0 0 5px rgb(152 203 176 / 0.6);
   text-decoration: none;
   color: var(--color-deep);
   transition:
     border-color var(--lp-dur-ui) var(--lp-ease),
-    background-color var(--lp-dur-ui) var(--lp-ease),
+    box-shadow var(--lp-dur-ui) var(--lp-ease),
     transform var(--lp-dur-ui) var(--lp-ease);
 }
 .lp-chapter-link:hover,
 .lp-chapter-link:focus-visible {
   border-color: var(--color-primary);
-  background-color: rgb(46 91 65 / 0.05);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 0 0 4px var(--color-mist),
+    inset 0 0 0 5px var(--color-primary),
+    0 22px 40px -26px rgb(20 39 24 / 0.5);
 }
-.lp-chapter-link--next { border-color: rgb(46 91 65 / 0.35); }
+/* "Next" is the invitation: it gets the Deep Forest vault treatment */
+.lp-chapter-link--next {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgb(46 91 65 / 0.9), transparent 60%),
+    var(--color-deep);
+  border-color: var(--color-deep);
+  color: var(--color-mist);
+  box-shadow: inset 0 0 0 4px transparent, inset 0 0 0 5px rgb(152 203 176 / 0.45);
+}
+.lp-chapter-link--next:hover,
+.lp-chapter-link--next:focus-visible {
+  border-color: var(--color-deep);
+  box-shadow: inset 0 0 0 5px rgb(152 203 176 / 0.9), 0 22px 40px -22px rgb(20 39 24 / 0.6);
+}
+.lp-chapter-link--next .lp-ink-muted { color: rgb(231 239 228 / 0.82); }
+.lp-chapter-link--next .text-primary { color: var(--color-sage); }
 
 /* Filter chips (Events) */
 .lp-chip {
   flex-shrink: 0;
   min-height: 40px;
   padding: 0.5rem 1.125rem;
-  border: 1px solid rgb(20 39 24 / 0.2);
-  border-radius: 999px;
-  font-size: 0.8125rem;
+  border: 1px solid rgb(20 39 24 / 0.25);
+  border-radius: 2px;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--color-deep);
   background: transparent;
   transition:
@@ -602,7 +639,7 @@
   min-height: 48px;
   background: rgb(231 239 228 / 0.6);
   border: 1px solid rgb(20 39 24 / 0.25);
-  border-radius: 12px;
+  border-radius: 3px;
   padding: 0.75rem 1rem 0.75rem 2.75rem;
   font-size: 0.9375rem;
   color: var(--color-deep);
@@ -616,7 +653,7 @@
   border: 1px solid rgb(179 69 63 / 0.35);
   background: var(--color-danger-bg);
   color: var(--lp-danger-ink);
-  border-radius: 12px;
+  border-radius: 3px;
   padding: 1rem 1.25rem;
   font-size: 0.9375rem;
   font-weight: 500;
@@ -628,4 +665,155 @@
 @media (prefers-reduced-motion: reduce) {
   .lp-chapter-link:hover,
   .lp-chapter-link:focus-visible { transform: none; }
+}
+
+/* ======================================================================
+   Premium present layer — the craft of the archive, re-cut in the brand
+   greens, so the modern half is as considered as the classical half.
+   ====================================================================== */
+
+/* The paper never disappears — it just gets finer. A neutral-green fine grain under the whole
+   page (past sections add their heavier sepia grain on top of it). Static; one tiled image. */
+.lp {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .08 0 0 0 0 .15 0 0 0 0 .09 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+
+/* Buttons: an engraved inner hairline, like a stamped plate */
+.lp-btn--primary { box-shadow: inset 0 0 0 1px rgb(152 203 176 / 0.35); }
+.lp-btn--light { box-shadow: inset 0 0 0 1px rgb(20 39 24 / 0.2); }
+
+/* ---- The vault: Deep Forest showcase surface ----
+   A lit, grained dark room with an inset Sage double frame. Used for the mandates, every
+   closing call to action, and the "next chapter" link, so the present has rhythm and flows
+   straight into the Deep Forest footer. */
+.lp-vault {
+  position: relative;
+  isolation: isolate;
+  color: var(--color-mist);
+  background:
+    radial-gradient(80% 70% at 12% 0%, rgb(46 91 65 / 0.85), transparent 62%),
+    radial-gradient(70% 60% at 100% 100%, rgb(46 91 65 / 0.55), transparent 60%),
+    var(--color-deep);
+}
+.lp-vault::before {
+  /* fine light grain so the dark isn't flat */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .6 0 0 0 0 .8 0 0 0 0 .69 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+.lp-vault--framed::after {
+  /* inset double Sage rule */
+  content: '';
+  position: absolute;
+  inset: clamp(10px, 1.6vw, 18px);
+  pointer-events: none;
+  border: 1px solid rgb(152 203 176 / 0.4);
+  box-shadow: inset 0 0 0 4px transparent, inset 0 0 0 5px rgb(152 203 176 / 0.18);
+}
+.lp-vault--panel { border-radius: 3px; overflow: hidden; }
+
+/* Engraved outline numerals (Sage stroke, hollow) — mandate numbers, section marks */
+.lp-outline-num {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(152 203 176 / 0.45);
+  user-select: none;
+  pointer-events: none;
+}
+.lp-outline-num--light { -webkit-text-stroke-color: rgb(46 91 65 / 0.22); }
+
+/* Seal: circular Primary medallion with an inset Sage ring — replaces rounded icon squares */
+.lp-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, rgb(61 116 85), var(--color-primary) 55%, var(--color-deep));
+  color: var(--color-mist);
+  box-shadow: inset 0 0 0 2px var(--color-primary), inset 0 0 0 3px rgb(152 203 176 / 0.7), 0 6px 14px -8px rgb(20 39 24 / 0.6);
+}
+
+/* Cameo: portrait in a double Sage ring */
+.lp-cameo {
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-mist);
+  box-shadow: 0 0 0 3px var(--color-mist), 0 0 0 4px var(--color-sage), 0 10px 22px -12px rgb(20 39 24 / 0.5);
+}
+
+/* Date plate (Events): a small vault tile with an inner Sage rule */
+.lp-plate {
+  border-radius: 3px;
+  color: var(--color-mist);
+  background: radial-gradient(120% 100% at 20% 0%, var(--color-primary), var(--color-deep) 70%);
+  box-shadow: inset 0 0 0 3px transparent, inset 0 0 0 4px rgb(152 203 176 / 0.45);
+}
+
+/* ---- Timeline clock (TimelineClock.tsx) ---- */
+.lp-clock-track {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.lp-clock {
+  --clock-size: min(760px, 118vw);
+  position: sticky;
+  top: calc(50vh - var(--clock-size) / 2 + 30px);
+  width: var(--clock-size);
+  aspect-ratio: 1;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  color: var(--color-deep);
+  opacity: 0.17;
+}
+.lp-clock__layer,
+.lp-clock__hand {
+  position: absolute;
+  inset: 0;
+}
+.lp-clock__hand { transform-origin: 50% 50%; will-change: transform; }
+.lp-clock__classic { color: var(--lp-sepia-ink); }
+.lp-clock__modern { color: var(--color-primary); opacity: 0; visibility: hidden; }
+.lp-clock__readout {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 60%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25em;
+  font-size: calc(var(--clock-size) * 0.1);
+}
+.lp-clock__year {
+  font-family: var(--font-body);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.lp-clock__label {
+  font-family: var(--font-body);
+  font-size: 0.16em;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+/* Timeline entries sit on near-opaque paper so the clock never fights the text */
+.lp-timeline__card { background: rgb(239 234 218 / 0.9); }
+.lp-timeline > ol { position: relative; z-index: 1; }
+@media (max-width: 767px) {
+  .lp-clock { opacity: 0.12; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Static classical dial at 10:10 — the modern face stays hidden */
+  .lp-clock__hand { will-change: auto; }
 }

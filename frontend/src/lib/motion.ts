@@ -31,12 +31,19 @@ export const EASE = {
   standard: 'power2.out',
   entrance: 'power3.out',
   smooth: 'sine.inOut',
+  // Landing page house curve — GSAP twin of --lp-ease: cubic-bezier(0.22, 1, 0.36, 1)
+  house: 'expo.out',
 } as const;
 
 export const DURATION = {
   fast: 0.35,
   base: 0.6,
   slow: 0.9,
+  // Landing page narrative reveals — twin of --lp-dur-story
+  story: 0.85,
 } as const;
+
+/** Per-item delay for staggered landing reveals (seconds). */
+export const STAGGER = 0.07;
 
 export { gsap, ScrollTrigger };

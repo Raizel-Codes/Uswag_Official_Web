@@ -1,0 +1,523 @@
+/*
+  USWAG landing page ("From the Record to the Present").
+  Spec: docs/design/landing-architecture.md.
+
+  Imported ONLY by pages/public/HomePage.tsx, so it ships in that lazy route chunk.
+  Vite keeps a chunk's CSS in the document after client-side navigation, so every rule
+  here is scoped under `.lp` — nothing may leak into other public pages or the portals.
+  The four brand tokens come from tokens.css (--color-*); the --lp-* tones below are
+  supporting "archival" colors used only on this page.
+*/
+
+.lp {
+  /* PAST — warm parchment tinted toward Mist; Deep Forest is the ink */
+  --lp-parchment: #EFEADA;      /* past page surface (Mist's warm sibling) */
+  --lp-parchment-deep: #E4DCC6; /* aged cards, clippings, flyer stock */
+  --lp-midera: #EBECDF;         /* 50/50 parchment→mist, static fallback for the timeline */
+  --lp-sepia: #7A6242;          /* engraved rules & captions ≥14px (4.78:1 on parchment) */
+  --lp-sepia-ink: #5A4832;      /* secondary text on parchment (7.25:1) */
+  --lp-foxing: #C9B48F;         /* age stains & halftone — DECORATIVE ONLY (1.68:1) */
+  --lp-ink: var(--color-deep);
+
+  /* Motion — see §1.4 of the architecture doc; mirrored in lib/motion.ts */
+  --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --lp-ease-press: cubic-bezier(0.2, 0, 0, 1);
+  --lp-dur-micro: 180ms;
+  --lp-dur-ui: 420ms;
+  --lp-dur-story: 850ms;
+
+  --lp-section-y: clamp(4.5rem, 8vw, 7.5rem);
+
+  position: relative;
+  background-color: var(--lp-parchment); /* scrubbed to Mist by useEraScroll */
+  color: var(--lp-ink);
+  font-family: var(--font-body);
+  overflow-x: clip;
+}
+
+.lp ::selection {
+  background: var(--color-sage);
+  color: var(--color-deep);
+}
+
+/* ---------- Surfaces & texture ---------- */
+
+:where(.lp .lp-section) {
+  position: relative;
+  padding-block: var(--lp-section-y);
+}
+
+/* Paper grain: a 240px fractal-noise tile rasterised once and tiled; opacity-only. */
+.lp-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--lp-grain-opacity, 0.55);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .28 0 0 0 0 .18 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* Grain that thins out down the section — the paper "wears off" with no seam */
+.lp-grain--fade::before {
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
+  mask-image: linear-gradient(to bottom, #000, transparent);
+}
+.lp-grain > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Sepia vignette at the page edges of the archival hero */
+.lp-vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Side edges only — a top/bottom vignette leaves a visible seam against the next section */
+  background: linear-gradient(to right, rgb(122 98 66 / 0.12), transparent 14%, transparent 86%, rgb(122 98 66 / 0.12));
+}
+
+.lp-surface-deep {
+  background-color: var(--color-deep);
+  color: var(--color-mist);
+}
+
+/* ---------- Typography (Lora display + Inter body; D5) ---------- */
+
+.lp :where(.lp-masthead) {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(0.8125rem, 1vw, 0.9375rem);
+  line-height: 1;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+.lp :where(.lp-nameplate) {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 2.4vw, 2rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.lp :where(.lp-display) {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.5rem, 6.2vw, 5.5rem);
+  line-height: 1.03;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.lp :where(.lp-h2) {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2rem, 3.8vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.lp :where(.lp-h3) {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.375rem;
+  line-height: 1.25;
+}
+.lp :where(.lp-dateline) {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+.lp :where(.lp-eyebrow) {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.lp :where(.lp-body) {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  max-width: 62ch;
+}
+.lp :where(.lp-small) {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+/* Figures "modernise" with the page: old-style in the past, lining/tabular in the present */
+.lp :where(.lp-onum) { font-variant-numeric: oldstyle-nums proportional-nums; }
+.lp :where(.lp-lnum) { font-variant-numeric: lining-nums tabular-nums; }
+
+.lp :where(.lp-ink-secondary) { color: var(--lp-sepia-ink); }
+.lp :where(.lp-ink-caption) { color: var(--lp-sepia); }
+/* Small text on Mist: forest at 75% ≈ 6.1:1 (forest/60 was 4.03 — fails AA) */
+.lp :where(.lp-ink-muted) { color: rgb(20 39 24 / 0.75); }
+
+.lp-dropcap::first-letter {
+  float: left;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 4.25em;
+  line-height: 0.8;
+  padding: 0.08em 0.1em 0 0;
+  color: var(--color-primary);
+}
+
+/* ---------- Ornaments ---------- */
+
+:where(.lp .lp-rule) {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--lp-sepia);
+  transform-origin: center;
+}
+.lp-rule__line {
+  flex: 1;
+  height: 0;
+  border-top: 1px solid currentColor;
+}
+.lp-rule__line--double {
+  height: 4px;
+  border-top: 2px solid currentColor;
+  border-bottom: 1px solid currentColor;
+}
+
+.lp-double-rule {
+  border-top: 3px solid var(--lp-ink);
+  box-shadow: 0 4px 0 -3px var(--lp-ink); /* thin second rule 3px below */
+  height: 5px;
+}
+
+/* ---------- Buttons & links ---------- */
+
+.lp-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 48px;
+  padding: 0.875rem 1.75rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  border: 1.5px solid transparent;
+  transition:
+    color var(--lp-dur-ui) var(--lp-ease),
+    border-color var(--lp-dur-ui) var(--lp-ease),
+    transform var(--lp-dur-micro) var(--lp-ease-press);
+}
+.lp-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--lp-dur-ui) var(--lp-ease);
+}
+.lp-btn:hover::before,
+.lp-btn:focus-visible::before { transform: scaleX(1); }
+.lp-btn:active { transform: translateY(1px) scale(0.985); }
+.lp-btn__arrow { transition: transform var(--lp-dur-ui) var(--lp-ease); }
+.lp-btn:hover .lp-btn__arrow,
+.lp-btn:focus-visible .lp-btn__arrow { transform: translateX(3px); }
+
+/* Primary on light: white on Primary 7.81:1 → white on Deep 15.9:1 */
+.lp-btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.lp-btn--primary::before { background: var(--color-deep); }
+
+/* Ghost on light: Deep text; border strengthens, faint wash */
+.lp-btn--ghost {
+  background: transparent;
+  color: var(--color-deep);
+  border-color: rgb(20 39 24 / 0.3);
+}
+.lp-btn--ghost::before { background: rgb(20 39 24 / 0.06); }
+.lp-btn--ghost:hover,
+.lp-btn--ghost:focus-visible { border-color: var(--color-deep); }
+
+/* On Primary/Deep panels: Deep text on Mist 13.4:1, wipes to white */
+.lp-btn--light {
+  background: var(--color-mist);
+  color: var(--color-deep);
+}
+.lp-btn--light::before { background: #fff; }
+
+.lp-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.625rem; /* ≥44px tap target with line-height */
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--lp-dur-ui) var(--lp-ease);
+}
+.lp-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.45rem;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--lp-dur-ui) var(--lp-ease);
+}
+.lp-link:hover,
+.lp-link:focus-visible { color: var(--color-deep); }
+.lp-link:hover::after,
+.lp-link:focus-visible::after { transform: scaleX(1); }
+.lp-link--light { color: var(--color-mist); }
+.lp-link--light:hover,
+.lp-link--light:focus-visible { color: #fff; }
+
+/* Focus: always visible, never removed */
+.lp :focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.lp-surface-deep :focus-visible,
+.lp-on-dark :focus-visible {
+  outline-color: var(--color-sage); /* 8.63:1 on Deep Forest */
+}
+
+/* ---------- Paper artifacts ---------- */
+
+.lp-paper {
+  background-color: var(--lp-parchment-deep);
+  background-image:
+    radial-gradient(38% 30% at 82% 14%, rgb(201 180 143 / 0.55), transparent 70%),
+    radial-gradient(26% 22% at 12% 88%, rgb(201 180 143 / 0.45), transparent 70%),
+    radial-gradient(14% 12% at 64% 72%, rgb(201 180 143 / 0.35), transparent 70%);
+  color: var(--lp-ink);
+}
+
+/* Wrapper that casts the paper shadow — clip-path on the child would clip a box-shadow */
+.lp-paper-shadow {
+  filter: drop-shadow(0 18px 28px rgb(90 72 50 / 0.18)) drop-shadow(0 2px 3px rgb(90 72 50 / 0.2));
+}
+
+/* Decorative typeset text: ruled bars standing in for column text (aria-hidden) */
+.lp-textlines {
+  height: var(--lines-h, 5.5rem);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgb(20 39 24 / 0.55) 0 2px,
+    transparent 2px 9px
+  );
+  opacity: 0.6;
+}
+
+.lp-clipping__rule {
+  border-top: 2px solid var(--lp-ink);
+  border-bottom: 1px solid var(--lp-ink);
+  height: 5px;
+}
+
+/* Archival print (heritage logo): sepia at rest, develops in view, full colour on hover/focus */
+.lp-print {
+  background: #f7f3e8;
+  padding: 0.75rem 0.75rem 0.875rem;
+  box-shadow: 0 14px 30px rgb(90 72 50 / 0.2), 0 1px 2px rgb(90 72 50 / 0.25);
+  transition: transform var(--lp-dur-ui) var(--lp-ease);
+}
+.lp-print img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: sepia(0.9) saturate(0.7) contrast(0.95);
+  transition: filter var(--lp-dur-story) var(--lp-ease);
+}
+.lp-print.is-developed img { filter: sepia(0.4) saturate(0.85); }
+.lp-print:hover,
+.lp-print:focus-within { transform: translateY(-2px) rotate(0deg) !important; }
+.lp-print:hover img,
+.lp-print:focus-within img { filter: none; }
+
+/* Photo corners */
+.lp-print__corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  background: rgb(20 39 24 / 0.85);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.lp-flyer {
+  border: 3px double var(--lp-ink);
+  outline: 1px solid rgb(20 39 24 / 0.5);
+  outline-offset: -10px;
+}
+
+/* ---------- Timeline ---------- */
+
+.lp-timeline {
+  position: relative;
+  padding-left: 2.5rem; /* room for the spine + markers */
+}
+.lp-timeline__spine,
+.lp-timeline__progress {
+  position: absolute;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  left: 7px;
+  width: 2px;
+}
+.lp-timeline__spine { background: rgb(122 98 66 / 0.25); }
+.lp-timeline__progress {
+  background: linear-gradient(to bottom, var(--lp-sepia), var(--color-primary));
+  transform-origin: top center;
+}
+.lp-timeline__marker {
+  position: absolute;
+  left: -2.5rem; /* sits on the spine: the timeline wrapper has 2.5rem left padding */
+  top: 0.55rem;
+  width: 16px;
+  height: 16px;
+  transform: rotate(45deg);
+  background: var(--lp-parchment);
+  border: 2px solid var(--lp-sepia);
+}
+.lp-timeline__item--confirmed .lp-timeline__marker {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.lp-timeline__card {
+  border: 1px solid rgb(122 98 66 / 0.3);
+  background: rgb(239 234 218 / 0.6);
+}
+.lp-timeline__item--pending .lp-timeline__card {
+  border-style: dashed;
+}
+.lp-badge-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px dashed var(--lp-sepia-ink);
+  color: var(--lp-sepia-ink); /* 7.25:1 on parchment */
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Membership card morph ---------- */
+
+.lp-card-stage {
+  position: relative;
+  width: min(100%, 420px);
+  aspect-ratio: 1.586; /* ISO/IEC 7810 ID-1 */
+}
+.lp-card-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.lp-card-face--paper {
+  z-index: 2;
+  border-radius: 0;
+  clip-path: inset(0 0 0 0);
+  will-change: clip-path;
+}
+.lp-card-face--digital {
+  z-index: 1;
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgb(46 91 65 / 0.9), transparent 60%),
+    var(--color-deep);
+  color: var(--color-mist);
+  box-shadow: 0 24px 48px rgb(20 39 24 / 0.28), 0 2px 6px rgb(20 39 24 / 0.2);
+}
+.lp-qr-frame {
+  background: var(--color-mist);
+  border: 3px solid var(--color-sage);
+  border-radius: 8px;
+}
+
+/* ---------- Present-day cards ---------- */
+
+.lp-lift {
+  transition:
+    transform var(--lp-dur-ui) var(--lp-ease),
+    box-shadow var(--lp-dur-ui) var(--lp-ease);
+}
+.lp-lift:hover,
+.lp-lift:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgb(20 39 24 / 0.1);
+}
+
+/* Mandate icons draw themselves once their card is revealed */
+.lp-draw path {
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+  transition: stroke-dashoffset 1.2s var(--lp-ease);
+}
+.is-revealed .lp-draw path,
+.lp-draw.is-revealed path { stroke-dashoffset: 0; }
+
+/* Mobile sticky bar */
+.lp-sticky {
+  background: rgb(231 239 228 / 0.94);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgb(20 39 24 / 0.1);
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+}
+
+.lp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Reduced motion (§3.5) ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* No scrub: each section carries its own static era surface instead */
+  .lp { background-color: var(--color-mist) !important; }
+  .lp-section[data-era='past'] { background-color: var(--lp-parchment); }
+  .lp-section[data-era='mid'] { background-color: var(--lp-midera); }
+  .lp-section[data-era='present'] { background-color: var(--color-mist); }
+  .lp-section[data-era='present-dark'] { background-color: var(--color-deep); }
+
+  .lp [data-lp-reveal] { opacity: 1 !important; visibility: visible !important; transform: none !important; }
+  .lp-draw path { stroke-dashoffset: 0; transition: none; }
+  .lp-timeline__progress { transform: none !important; }
+  .lp-btn::before,
+  .lp-link::after { transition: none; }
+  .lp-lift:hover,
+  .lp-lift:focus-within,
+  .lp-print:hover,
+  .lp-print:focus-within { transform: none !important; }
+
+  /* Card: show Then / Now side by side rather than wiping */
+  .lp-card-morph .lp-card-stage { display: grid; gap: 1.25rem; aspect-ratio: auto; }
+  .lp-card-morph .lp-card-face {
+    position: relative;
+    inset: auto;
+    aspect-ratio: 1.586;
+    clip-path: none !important;
+  }
+  .lp-card-morph .lp-card-label { display: block !important; }
+}

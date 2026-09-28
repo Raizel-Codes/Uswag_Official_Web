@@ -111,7 +111,9 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (status === 401) {
+    // A 401 from /auth/login is "wrong email or password", not an expired session — let the
+    // login form show the message instead of hard-reloading /login and wiping it.
+    if (status === 401 && !isAuthEndpoint) {
       clearSessionAndRedirect();
     }
 

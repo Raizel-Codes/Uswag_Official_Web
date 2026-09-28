@@ -1,6 +1,11 @@
 # Landing page architecture: "From the Record to the Present"
 
-Status: **DRAFT, awaiting approval.** No implementation code has been written.
+Status: **APPROVED 2026-09-28.** Resolved decisions:
+- **D1:** name is "United Students".
+- **D2:** founded **2010**. The remaining milestones are placeholders pending the adviser's confirmation.
+- **D5:** Lora + Inter only.
+- **D6:** the new folders are approved.
+- **D7:** show live counts only (current officers, upcoming events).
 Inputs: `reference-audit.md`, `current-state.md`, the brief (2026-09-28) and `CLAUDE.md`.
 
 ---
@@ -11,12 +16,12 @@ Inputs: `reference-audit.md`, `current-state.md`, the brief (2026-09-28) and `CL
 |---|---|---|
 | D1 | Org name: "**United Students**" (Constitution, CLAUDE.md, site) or "**Unified Student**" (brief, unused gold SVG)? | Use **United Students**, since the Constitution is the source of truth, unless an amendment changed it. |
 | D2 | Founding year and real milestones for the timeline (≥3 dated events, e.g. founding, first adviser, notable campaigns, dormancy, revival, first digital membership). | You supply them. Until then the timeline section **does not render** (see §2, S3). I won't invent history. |
-| D3 | Does this brief **supersede `prototype/landingDesktop.html`** for `/`? (CLAUDE.md calls the prototype the approved reference.) | Yes for `/`. I'll add a note to the prototype file header after you confirm. |
-| D4 | What is `public/images/hero-cover.jpg` (the green graffiti "USWAG" mark)? The original or earlier logo? | If it is the earlier logo, feature it in S2 as a sepia archival artifact with honest alt text. If not, remove it from `/`. |
+| D3 | ✅ **Resolved 2026-09-28:** `prototype/landingDesktop.html` is **outdated** and does **not** govern `/`. This brief and this doc are the reference for the landing page. | n/a |
+| D4 | ✅ **Resolved 2026-09-28:** `public/images/hero-cover.jpg` **is the USWAG logo** (the graffiti wordmark). | It gets featured in S2 as the heritage mark, shown as a sepia archival artifact with alt text "The USWAG graffiti-style wordmark". It is no longer used as the hero "photo". |
 | D5 | Fonts: stay **Lora + Inter only** (CLAUDE.md pairing), or add a landing-only archival face? | **Lora + Inter only.** The classical layer comes from Lora italics, tracked capitals and old-style figures. There is no new font request and no pairing change. |
 | D6 | New folders `frontend/src/components/landing/` and `frontend/src/styles/landing.css` are not in `filestructure.txt` §2. | Approve both. `landing/` sits alongside `feed/`, `qr/` and `pwa/`. |
 | D7 | Hero stat numbers: live figures or none? No public member-count endpoint exists. | Show only numbers derivable from existing public queries (current officer count, upcoming events), or drop the stat row. There will be no fake "486". |
-| D8 | Git: the project folder **isn't a git repository**, and the brief asks for small commits. | I'll run `git init` plus an initial snapshot commit before phase 4, if you're OK with that. |
+| D8 | ✅ **Resolved 2026-09-28:** repo `github.com/Raizel-Codes/Uswag_Official_Web`, branch `main`. Commits are authored as contributor CodeForChange853. The baseline snapshot is `e2e82a9`. | n/a |
 
 ---
 

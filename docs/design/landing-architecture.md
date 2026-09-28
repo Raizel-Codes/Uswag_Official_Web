@@ -332,3 +332,47 @@ Other implementation details:
 - Timeline entries 2–4 are **placeholders pending adviser confirmation** (`components/landing/timeline.data.ts`).
 - Photo placeholders are in `frontend/public/assets/placeholders/` (see `ASSETS.md`).
 - Shared-scope issues are unchanged and flagged: `maximum-scale=1.0` in `index.html`, no skip link in `PublicLayout`, and low-alpha footer text.
+
+---
+
+## 9. Extension to the public pages (2026-09-28)
+
+At the owner's request, the Record style now runs through **About, Advocacies, Officers, Events, News and Join**. The site reads as one continuous document instead of separate tabs.
+
+**Shared shell** (`frontend/src/components/landing/`):
+- `PublicPage`: provides the `.lp` scope, the parchment-to-Mist era scrub between each page's `data-lp-era-start` and `data-lp-era-end`, a scroll-to-top on arrival (react-router previously kept the old scroll position), and the chapter links.
+- `PageMasthead`: the same "The USWAG Record" nameplate as the front page, carrying the page's section numeral from `chapters.ts` (I About … VI Join). It sits on grained parchment, tucked under the fixed Header.
+- `ChapterNav`: "Continue the record" previous/next cards, in Header nav order, at the foot of every page including the front page.
+- `SectionHeading`, `PostCard` (shared by Home and News), and a reusable `LandingCTA` panel with per-page copy.
+
+**Per-page time journey:**
+
+| Page | Past (parchment) | Present (Mist) |
+|---|---|---|
+| About | Preamble, Constitution Arts. I–III | Timeline, legacy, adviser |
+| Advocacies | Masthead and Art. II §2 intro | The three causes |
+| Officers | **Founding officers, 2010** (placeholder roster) | Today's live roster with Art. VI duties |
+| Events / News | Masthead | Live calendar / feed |
+| Join | Art. III eligibility, dues | Steps, membership card morph, FAQ |
+
+**Content corrections** (the source is `docs/01 - USWAG Constitution and Bylaws.pdf`):
+- About's Preamble and Articles I–II previously did **not** match the Constitution. They now quote it verbatim.
+- Officer duties now quote Art. VI §2 verbatim. Some earlier duties, such as "co-signs checks", weren't in it.
+- Join's eligibility quotes Art. III. The unsourced "attend two general assemblies per semester" requirement was removed.
+
+**Placeholders pending the adviser:**
+- `timeline.data.ts`: three milestones.
+- `firstOfficers.data.ts`: the founding officers' names. Titles follow the current Art. VI.
+
+**Unverified content kept as-is** (pre-existing; confirm or remove):
+- Advocacy stats: "4+ forums/semester", "200+ students reached", "500+ seedlings".
+- The adviser's name and quote on About.
+- The ₱50.00 fee.
+
+**Not restyled:** Bylaws, Contact, Apply, Login, Forgot and Reset pages. They still use the old dark-hero style.
+
+**Verification:**
+- All six pages were checked in Chrome at 1280–1536px.
+- At 390px there is no horizontal overflow on any page.
+- An automated AA contrast scan of every visible text node found 0 failures on every page, and each page has one `h1`.
+- The shared `index-*.css` has no `.lp` rules, and landing styles ship in a lazy chunk loaded only by the public pages.

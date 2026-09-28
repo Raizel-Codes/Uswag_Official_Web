@@ -5,6 +5,7 @@ import type { OfficerPublic } from '@/services/officerService';
 import type { UswagEvent } from '@/types/event.types';
 import type { NewsPost } from '@/types/post.types';
 import EngravedRule from '../ornaments/EngravedRule';
+import PostCard from '../PostCard';
 
 // The three purposes of Art. II §1 of the Constitution.
 const MANDATES = [
@@ -186,33 +187,7 @@ export default function ImpactSection({ officers, upcomingEvents, recentPosts }:
               {recentPosts.length > 0 ? (
                 <div className="space-y-6 mt-6">
                   {recentPosts.map((post) => (
-                    <article key={post.id} className="lp-lift bg-mist border border-[rgb(20_39_24/0.1)] rounded-[16px] p-7" data-lp-reveal>
-                      <div className="flex items-center gap-3 mb-4">
-                        <span className="w-8 h-8 rounded-[8px] bg-primary text-mist flex items-center justify-center shrink-0" aria-hidden="true">
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                            <path d="M22 12a10 10 0 1 0-11.5 9.87v-6.98H7.9V12h2.6V9.8c0-2.56 1.52-3.98 3.86-3.98 1.12 0 2.3.2 2.3.2v2.5h-1.3c-1.28 0-1.68.79-1.68 1.6V12h2.86l-.46 2.89h-2.4v6.98A10 10 0 0 0 22 12Z" />
-                          </svg>
-                        </span>
-                        <div>
-                          <p className="text-[0.875rem] font-semibold leading-tight">USWAG Official Page</p>
-                          <time dateTime={post.publishedAt} className="text-[0.75rem] lp-ink-muted font-medium">
-                            {new Date(post.publishedAt).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}
-                          </time>
-                        </div>
-                      </div>
-                      {post.imageUrl && (
-                        <div className="mb-4 rounded-[10px] overflow-hidden aspect-[16/10] bg-forest/5">
-                          <img src={post.imageUrl} alt="Photo from this Facebook post" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <p className="text-[1rem] leading-[1.65] whitespace-pre-wrap line-clamp-6">{post.body}</p>
-                      {post.permalink && (
-                        <a href={post.permalink} target="_blank" rel="noopener noreferrer" className="lp-link mt-2">
-                          View on Facebook <span aria-hidden="true">↗</span>
-                          <span className="lp-sr-only"> (opens in a new tab)</span>
-                        </a>
-                      )}
-                    </article>
+                    <PostCard key={post.id} post={post} clamp />
                   ))}
                 </div>
               ) : (

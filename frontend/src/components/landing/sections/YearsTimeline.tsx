@@ -12,7 +12,7 @@ ensureGsapRegistered();
  * visitor scrolls through it (transform: scaleY only). Placeholder entries are clearly badged
  * until the adviser confirms them — see timeline.data.ts.
  */
-export default function YearsTimeline() {
+export default function YearsTimeline({ eyebrow = 'Chapter II' }: { eyebrow?: string }) {
   const ref = useRef<HTMLElement>(null);
   useLandingReveal(ref);
 
@@ -37,7 +37,7 @@ export default function YearsTimeline() {
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8 grid lg:grid-cols-12 gap-12">
         <header className="lg:col-span-4 lg:sticky lg:top-32 self-start">
           <p className="lp-eyebrow lp-ink-caption" data-lp-reveal>
-            Chapter II
+            {eyebrow}
           </p>
           <h2 id="lp-years-heading" className="lp-h2 mt-4" data-lp-reveal>
             The years in between

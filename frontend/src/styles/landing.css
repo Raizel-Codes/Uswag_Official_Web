@@ -18,6 +18,7 @@
   --lp-sepia-ink: #5A4832;      /* secondary text on parchment (7.25:1) */
   --lp-foxing: #C9B48F;         /* age stains & halftone — DECORATIVE ONLY (1.68:1) */
   --lp-ink: var(--color-deep);
+  --lp-danger-ink: #8F322D;    /* --color-danger darkened so small error text reaches 6.7:1 on --color-danger-bg */
 
   /* Motion — see §1.4 of the architecture doc; mirrored in lib/motion.ts */
   --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -520,4 +521,110 @@
     clip-path: none !important;
   }
   .lp-card-morph .lp-card-label { display: block !important; }
+}
+
+/* ======================================================================
+   Inner public pages (About → Join) — same Record, one continuous style
+   ====================================================================== */
+
+/* Present-day card on Mist: hairline border, faint lift — no white (outside the palette) */
+.lp-card {
+  background: rgb(231 239 228 / 0.7);
+  border: 1px solid rgb(20 39 24 / 0.12);
+  border-radius: 14px;
+}
+/* Archival card on parchment */
+.lp-card--past {
+  background: rgb(239 234 218 / 0.7);
+  border-color: rgb(122 98 66 / 0.3);
+  border-radius: 0;
+}
+
+/* Constitution / document excerpt: ruled margin, article label in the gutter */
+.lp-doc {
+  border-left: 2px solid var(--lp-sepia);
+  padding-left: clamp(1.25rem, 3vw, 2.25rem);
+}
+.lp-doc p + p { margin-top: 0.875rem; }
+.lp-doc ol { list-style: lower-alpha; padding-left: 1.4rem; margin-top: 0.5rem; }
+.lp-doc li + li { margin-top: 0.35rem; }
+.lp-doc li::marker { color: var(--lp-sepia-ink); font-weight: 600; }
+
+/* Prev / next chapter cards */
+.lp-chapter-link {
+  display: block;
+  padding: 1.5rem 1.75rem;
+  border: 1px solid rgb(20 39 24 / 0.14);
+  border-radius: 14px;
+  text-decoration: none;
+  color: var(--color-deep);
+  transition:
+    border-color var(--lp-dur-ui) var(--lp-ease),
+    background-color var(--lp-dur-ui) var(--lp-ease),
+    transform var(--lp-dur-ui) var(--lp-ease);
+}
+.lp-chapter-link:hover,
+.lp-chapter-link:focus-visible {
+  border-color: var(--color-primary);
+  background-color: rgb(46 91 65 / 0.05);
+  transform: translateY(-2px);
+}
+.lp-chapter-link--next { border-color: rgb(46 91 65 / 0.35); }
+
+/* Filter chips (Events) */
+.lp-chip {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0.5rem 1.125rem;
+  border: 1px solid rgb(20 39 24 / 0.2);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-deep);
+  background: transparent;
+  transition:
+    background-color var(--lp-dur-ui) var(--lp-ease),
+    border-color var(--lp-dur-ui) var(--lp-ease),
+    color var(--lp-dur-ui) var(--lp-ease);
+}
+.lp-chip:hover { border-color: var(--color-deep); }
+.lp-chip[aria-pressed='true'] {
+  background: var(--color-deep);
+  border-color: var(--color-deep);
+  color: var(--color-mist);
+}
+
+/* Text inputs on Mist */
+.lp-field {
+  width: 100%;
+  min-height: 48px;
+  background: rgb(231 239 228 / 0.6);
+  border: 1px solid rgb(20 39 24 / 0.25);
+  border-radius: 12px;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  font-size: 0.9375rem;
+  color: var(--color-deep);
+  transition: border-color var(--lp-dur-ui) var(--lp-ease), box-shadow var(--lp-dur-ui) var(--lp-ease);
+}
+.lp-field::placeholder { color: rgb(20 39 24 / 0.7); } /* 5.3:1 on Mist */
+.lp-field:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgb(46 91 65 / 0.18); }
+
+/* Error notice — semantic danger tokens from tokens.css */
+.lp-alert {
+  border: 1px solid rgb(179 69 63 / 0.35);
+  background: var(--color-danger-bg);
+  color: var(--lp-danger-ink);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+/* Skeleton shimmer-free loading blocks */
+.lp-skeleton { background: rgb(20 39 24 / 0.07); border-radius: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-chapter-link:hover,
+  .lp-chapter-link:focus-visible { transform: none; }
 }

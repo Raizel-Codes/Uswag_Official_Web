@@ -15,7 +15,8 @@ export interface FoundingOfficer {
  * too. Fill in `name` (and optionally `collegeOrDept`) — the Officers page shows a
  * "Pending confirmation" badge until every name is filled.
  */
-export const FOUNDING_TERM_LABEL = `${FOUNDED_YEAR}–${FOUNDED_YEAR + 1}`;
+// Only the founding year is confirmed — not which academic year (2009–10 or 2010–11) the first term spanned.
+export const FOUNDING_TERM_LABEL = String(FOUNDED_YEAR);
 
 export const FOUNDING_OFFICERS: FoundingOfficer[] = [
   { position: 'President', name: null },

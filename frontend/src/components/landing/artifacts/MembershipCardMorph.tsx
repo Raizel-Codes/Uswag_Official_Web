@@ -3,6 +3,7 @@ import { useGSAP } from '@gsap/react';
 import { gsap, ensureGsapRegistered, prefersReducedMotion } from '@/lib/motion';
 import logoOnDark from '@/assets/images/logo-uswag-on-dark.svg';
 import RubberStamp from '../ornaments/RubberStamp';
+import { academicYearLabel } from '../academicYear';
 
 ensureGsapRegistered();
 
@@ -35,12 +36,6 @@ function Finder({ x, y }: { x: number; y: number }) {
   );
 }
 
-/** Academic year label for "today", e.g. "2026–2027" (NwSSU A.Y. starts around August). */
-function currentAcademicYear(now = new Date()) {
-  const start = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
-  return `${start}–${start + 1}`;
-}
-
 interface MembershipCardMorphProps {
   foundedYear: number;
   className?: string;
@@ -56,7 +51,7 @@ interface MembershipCardMorphProps {
 export default function MembershipCardMorph({ foundedYear, className = '' }: MembershipCardMorphProps) {
   const root = useRef<HTMLDivElement>(null);
   const qr = useDecorativeQr();
-  const ay = currentAcademicYear();
+  const ay = academicYearLabel();
 
   useGSAP(
     () => {

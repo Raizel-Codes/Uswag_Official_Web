@@ -174,7 +174,7 @@ export default function AboutPage() {
             Who we are, <em className="text-primary">in our own words.</em>
           </>
         }
-        lead="United Students Working for Advocacy and Growth — a cause-driven student organization at Northwest Samar State University, grounded in a written Constitution since 2010."
+        lead="United Students Working for Advocacy and Growth — a cause-driven student organization at Northwest Samar State University since 2010, grounded in its written Constitution."
       />
       <Preamble />
       <Articles />

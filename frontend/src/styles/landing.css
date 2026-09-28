@@ -545,7 +545,8 @@
   border-left: 2px solid var(--lp-sepia);
   padding-left: clamp(1.25rem, 3vw, 2.25rem);
 }
-.lp-doc p + p { margin-top: 0.875rem; }
+.lp-doc p + p,
+.lp-doc ol + p { margin-top: 0.875rem; }
 .lp-doc ol { list-style: lower-alpha; padding-left: 1.4rem; margin-top: 0.5rem; }
 .lp-doc li + li { margin-top: 0.35rem; }
 .lp-doc li::marker { color: var(--lp-sepia-ink); font-weight: 600; }

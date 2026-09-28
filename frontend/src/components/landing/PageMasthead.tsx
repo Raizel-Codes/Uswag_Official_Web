@@ -30,7 +30,7 @@ export default function PageMasthead({ eyebrow, title, lead, children }: PageMas
     <header
       ref={ref}
       data-era="past"
-      className="lp-section lp-grain lp-vignette -mt-[68px] md:-mt-[76px] pt-[calc(68px+2rem)] md:pt-[calc(76px+2.5rem)]"
+      className="lp-section lp-grain -mt-[68px] md:-mt-[76px] pt-[calc(68px+2rem)] md:pt-[calc(76px+2.5rem)]"
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
         <div data-lp-reveal>

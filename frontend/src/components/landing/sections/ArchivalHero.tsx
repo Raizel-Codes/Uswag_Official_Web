@@ -42,7 +42,7 @@ export default function ArchivalHero({ officerCount, upcomingCount }: ArchivalHe
       ref={ref}
       aria-labelledby="lp-hero-heading"
       data-era="past"
-      className="lp-section lp-grain lp-vignette -mt-[68px] md:-mt-[76px] pt-[calc(68px+2.5rem)] md:pt-[calc(76px+3rem)]"
+      className="lp-section lp-grain -mt-[68px] md:-mt-[76px] pt-[calc(68px+2.5rem)] md:pt-[calc(76px+3rem)]"
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
         {/* Masthead */}

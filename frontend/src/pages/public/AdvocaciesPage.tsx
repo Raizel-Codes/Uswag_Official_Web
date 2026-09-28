@@ -1,31 +1,31 @@
-import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useRef } from 'react';
+import { useLandingReveal } from '@/hooks/useLandingReveal';
+import PublicPage from '@/components/landing/PublicPage';
+import PageMasthead from '@/components/landing/PageMasthead';
+import SectionHeading from '@/components/landing/SectionHeading';
+import LandingCTA from '@/components/landing/sections/LandingCTA';
 
 const ADVOCACIES = [
   {
     id: 'youth',
     num: '01',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-primary w-14 h-14 mb-8">
-        <path className="draw-path transition-all duration-[1.2s] ease-out stroke-dasharray-[300] stroke-dashoffset-[300] group-[.is-visible]:stroke-dashoffset-0" d="M12 11c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z" />
-      </svg>
-    ),
+    icon: 'M12 11c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z',
     title: 'Youth Voice & Participation',
     subtitle: 'Governance & Civic Leadership',
-    desc: 'We push for meaningful student involvement in decision-making, governance, and civic leadership — not token representation, but a real seat at the table for how this university is run. Every student has a stake in NwSSU\'s direction, and USWAG ensures that stake is recognized.',
-    programs: ['Student Leaders\' Forums', 'Voter Education Campaigns', 'Policy Dialogues with Admin', 'Parliamentary Training', 'Youth Leadership Workshops', 'Civic Rights Orientations'],
+    // Art. II §2(a), verbatim
+    article: 'Promoting meaningful student involvement in decision-making, governance, and civic leadership.',
+    desc: 'We push for meaningful student involvement in decision-making, governance, and civic leadership — not token representation, but a real seat at the table for how this university is run. Every student has a stake in NwSSU’s direction, and USWAG ensures that stake is recognized.',
+    programs: ['Student Leaders’ Forums', 'Voter Education Campaigns', 'Policy Dialogues with Admin', 'Parliamentary Training', 'Youth Leadership Workshops', 'Civic Rights Orientations'],
     stat: { value: '4+', label: 'Forums per semester' },
   },
   {
     id: 'wellness',
     num: '02',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-primary w-14 h-14 mb-8">
-        <path className="draw-path transition-all duration-[1.2s] ease-out stroke-dasharray-[300] stroke-dashoffset-[300] group-[.is-visible]:stroke-dashoffset-0" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-      </svg>
-    ),
+    icon: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
     title: 'Mental Health & Wellness',
     subtitle: 'Peer Support & Literacy',
+    // Art. II §2(b), verbatim
+    article: 'Advancing mental health literacy, peer support systems, and wellness campaigns across the university.',
     desc: 'We build mental health literacy and peer support systems across campus, so wellness conversations happen before a crisis does — not after. Mental health is as integral to academic success as any course requirement.',
     programs: ['Peer Support Training', 'Wellness Fairs & Workshops', 'Stress De-briefing Sessions', 'Safe Space Circles', 'Mental Health Awareness Month', 'Campus Counselor Partnerships'],
     stat: { value: '200+', label: 'Students reached per semester' },
@@ -33,138 +33,126 @@ const ADVOCACIES = [
   {
     id: 'environment',
     num: '03',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-primary w-14 h-14 mb-8">
-        <path className="draw-path transition-all duration-[1.2s] ease-out stroke-dasharray-[300] stroke-dashoffset-[300] group-[.is-visible]:stroke-dashoffset-0" d="M12 3v18m0-18c-3 0-8 2-8 8s5 8 8 8m0-16c3 0 8 2 8 8s-5 8-8 8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
+    icon: 'M12 3v18m0-18c-3 0-8 2-8 8s5 8 8 8m0-16c3 0 8 2 8 8s-5 8-8 8',
     title: 'Environmental Leadership',
     subtitle: 'Sustainability & Stewardship',
-    desc: 'We lead sustainability efforts and hands-on environmental programs, treating stewardship of our campus and coastline as a student responsibility, not someone else\'s job. From barangay to coastline, we show up.',
+    // Art. II §2(c), verbatim
+    article: 'Leading sustainability efforts and environmental stewardship initiatives among the student body.',
+    desc: 'We lead sustainability efforts and hands-on environmental programs, treating stewardship of our campus and coastline as a student responsibility, not someone else’s job. From barangay to coastline, we show up.',
     programs: ['Coastal Cleanup Drives', 'Tree Planting Initiatives', 'Zero-Waste Campus Campaigns', 'Upcycling Workshops', 'Environmental Awareness Talks', 'Campus Greening Projects'],
     stat: { value: '500+', label: 'Seedlings planted this year' },
   },
 ];
 
-export default function AdvocaciesPage() {
-  useEffect(() => {
-    const els = document.querySelectorAll('[data-reveal]');
-    const observer = new IntersectionObserver(
-      (entries) => entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('is-visible');
-        }
-      }),
-      { threshold: 0.12 }
-    );
-    els.forEach(el => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
+function Mandates() {
+  const ref = useRef<HTMLElement>(null);
+  useLandingReveal(ref);
 
   return (
-    <div className="w-full bg-mist overflow-x-hidden font-body text-forest pb-24">
+    <section ref={ref} aria-labelledby="adv-mandates" data-era="mid" className="lp-section" data-lp-era-start>
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+        <SectionHeading
+          id="adv-mandates"
+          tone="past"
+          eyebrow="Article II, Section 2"
+          title="Three causes. Every program answers to them."
+          lead="Every USWAG program, fund disbursement, and event must answer to at least one of them."
+        />
 
-      {/* ===================== HERO ===================== */}
-      <section className="relative pt-[clamp(4rem,8vw,6rem)] pb-16 bg-forest text-mist overflow-hidden">
-        <div className="absolute top-0 right-[10%] w-[55%] h-[150%] bg-[radial-gradient(ellipse_60%_50%_at_70%_50%,rgba(152,203,176,0.08),transparent_70%)] pointer-events-none" />
-        
-        <div className="max-w-[1200px] mx-auto px-8 relative z-10">
-          <div className="max-w-[800px]">
-            <div className="flex items-center gap-2.5 font-semibold text-xs uppercase tracking-widest text-sage mb-5">
-              <span className="w-6 h-px bg-sage shrink-0" />
-              Our Mandates
-            </div>
-            <h1 className="font-display font-medium leading-[1.08] mb-6" style={{ fontSize: 'clamp(3rem, 5.5vw, 4.5rem)', letterSpacing: '-0.025em' }}>
-              Three Pillars of <em className="italic text-sage">Action</em>
-            </h1>
-            <p className="text-mist/70 text-[1.0625rem] leading-[1.75] max-w-[62ch]">
-              As defined by Article II of the USWAG Constitution, all organizational programs and initiatives must align with one of our three core advocacies.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <div className="h-px bg-gradient-to-r from-forest/15 via-transparent to-transparent w-full" />
-
-      {/* ===================== ADVOCACIES ===================== */}
-      <div className="max-w-[1200px] mx-auto px-8 pt-20">
-        <div className="space-y-24">
-          {ADVOCACIES.map((advocacy, idx) => (
-            <div key={advocacy.id} className="grid lg:grid-cols-[1fr_1fr] gap-12 lg:gap-24 items-start group" data-reveal>
-              
-              {/* Visual / Title side */}
-              <div className={`relative ${idx % 2 !== 0 ? 'lg:order-2' : ''}`}>
-                <div className="absolute top-[-2rem] left-[-1rem] font-display text-[9rem] md:text-[12rem] font-bold text-forest/[0.03] leading-none pointer-events-none select-none tracking-[-0.05em] z-0">
-                  {advocacy.num}
+        <div className="mt-20 space-y-24 lg:space-y-32">
+          {ADVOCACIES.map((a, idx) => {
+            const flip = idx % 2 === 1;
+            return (
+              <article
+                key={a.id}
+                id={a.id}
+                aria-labelledby={`${a.id}-title`}
+                className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start scroll-mt-28"
+                data-lp-era-end={idx === ADVOCACIES.length - 1 ? '' : undefined}
+              >
+                {/* Title side */}
+                <div className={`lg:col-span-5 relative ${flip ? 'lg:order-2 lg:col-start-8' : ''}`} data-lp-reveal>
+                  <span
+                    className="absolute -top-10 -left-2 font-display text-[8rem] sm:text-[10rem] leading-none font-semibold text-primary/[0.07] select-none pointer-events-none"
+                    aria-hidden="true"
+                  >
+                    {a.num}
+                  </span>
+                  <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="currentColor" strokeWidth="1.1" className="lp-draw text-primary relative" aria-hidden="true">
+                    <path d={a.icon} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <p className="lp-eyebrow text-primary mt-6 relative lp-lnum">
+                    Advocacy {a.num} · {a.subtitle}
+                  </p>
+                  <h3 id={`${a.id}-title`} className="lp-h2 mt-3 relative" style={{ fontSize: 'clamp(1.875rem, 3.2vw, 2.75rem)' }}>
+                    {a.title}
+                  </h3>
+                  <figure className="lp-doc mt-7 relative">
+                    <blockquote className="font-display italic text-[1.0625rem] leading-[1.6]">“{a.article}”</blockquote>
+                    <figcaption className="lp-eyebrow lp-ink-secondary mt-3">Constitution, Art. II §2</figcaption>
+                  </figure>
                 </div>
-                
-                <div className="relative z-10">
-                  {advocacy.icon}
-                  <h2 className="font-display font-medium text-[2rem] md:text-[2.75rem] text-forest leading-[1.1] mb-2 tracking-tight">
-                    {advocacy.title.split('&').map((part, i) => (
-                      <span key={i}>
-                        {part}
-                        {i === 0 && <span className="italic font-light text-primary mx-2">&amp;</span>}
-                      </span>
-                    ))}
-                  </h2>
-                  <div className="text-[0.875rem] font-semibold tracking-[0.1em] text-primary uppercase mt-4">
-                    {advocacy.subtitle}
+
+                {/* Content side */}
+                <div className={`lg:col-span-6 ${flip ? 'lg:order-1' : 'lg:col-start-7'}`}>
+                  <p className="lp-body lp-ink-muted" style={{ fontSize: '1.125rem', lineHeight: 1.8 }} data-lp-reveal>
+                    {a.desc}
+                  </p>
+
+                  <div className="lp-card p-6 sm:p-7 mt-8" data-lp-reveal>
+                    <h4 className="lp-eyebrow text-primary">Key initiatives &amp; programs</h4>
+                    <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-3 mt-5">
+                      {a.programs.map((p) => (
+                        <li key={p} className="flex items-start gap-3 text-[0.9375rem] font-medium">
+                          <span className="mt-[0.45rem] w-2 h-2 rotate-45 bg-primary shrink-0" aria-hidden="true" />
+                          {p}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="flex items-baseline gap-4 mt-8 pl-5 border-l-2 border-primary" data-lp-reveal>
+                    <span className="font-display text-[2.5rem] leading-none font-medium lp-lnum">{a.stat.value}</span>
+                    <span className="lp-eyebrow lp-ink-muted">{a.stat.label}</span>
                   </div>
                 </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-                {/* Stat Box */}
-                <div className="mt-10 inline-flex flex-col bg-white border border-forest/10 p-6 shadow-[0_4px_20px_rgba(20,39,24,0.03)] relative overflow-hidden group-[.is-visible]:animate-[slideInUp_0.8s_ease-out_both]">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
-                  <span className="font-display text-[2.5rem] font-medium text-forest leading-none mb-1">{advocacy.stat.value}</span>
-                  <span className="text-[0.75rem] font-semibold uppercase tracking-widest text-forest/60">{advocacy.stat.label}</span>
-                </div>
-              </div>
-
-              {/* Content side */}
-              <div className={`pt-4 ${idx % 2 !== 0 ? 'lg:order-1' : ''}`}>
-                <p className="text-forest/70 text-[1.125rem] leading-[1.8] mb-10">
-                  {advocacy.desc}
-                </p>
-
-                <div>
-                  <h4 className="text-[0.75rem] font-bold tracking-[0.15em] text-forest uppercase mb-5 font-display border-b border-forest/10 pb-2">Key Initiatives &amp; Programs</h4>
-                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-6">
-                    {advocacy.programs.map((prog, i) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="text-primary mt-1">
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </span>
-                        <span className="text-[0.9375rem] text-forest/80 font-medium">{prog}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              
-            </div>
+export default function AdvocaciesPage() {
+  return (
+    <PublicPage>
+      <PageMasthead
+        eyebrow="Our mandates"
+        title={
+          <>
+            Three pillars of <em className="text-primary">action.</em>
+          </>
+        }
+        lead="As defined by Article II of the USWAG Constitution, every organizational program and initiative must align with one of our three core advocacies."
+      >
+        <nav aria-label="Jump to an advocacy" className="flex flex-wrap gap-2">
+          {ADVOCACIES.map((a) => (
+            <a key={a.id} href={`#${a.id}`} className="lp-chip inline-flex items-center">
+              {a.num} · {a.title}
+            </a>
           ))}
-        </div>
-      </div>
-
-      {/* ===================== JOIN CTA ===================== */}
-      <div className="max-w-[1200px] mx-auto px-8 mt-32 mb-10">
-        <div className="bg-primary border border-primary-light p-12 text-center relative overflow-hidden group">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(152,203,176,0.1),transparent_70%)] pointer-events-none" />
-          <div className="relative z-10 max-w-[600px] mx-auto">
-            <h2 className="font-display font-medium text-[2rem] text-mist mb-4 tracking-tight">Ready to step up?</h2>
-            <p className="text-mist/70 text-[1.0625rem] leading-[1.75] mb-8">
-              Join USWAG and turn your advocacy into action. Membership is open to all NwSSU students.
-            </p>
-            <Link to="/join" className="inline-flex items-center gap-2 px-[1.875rem] py-[0.875rem] font-sans text-[0.875rem] font-semibold text-primary bg-mist hover:bg-white transition-colors">
-              Apply for Membership
-            </Link>
-          </div>
-        </div>
-      </div>
-
-    </div>
+        </nav>
+      </PageMasthead>
+      <Mandates />
+      <LandingCTA
+        id="adv-cta"
+        eyebrow="Turn a cause into action"
+        title="Ready to step up?"
+        body="Join USWAG and put your time behind the causes you care about. Membership is open to all NwSSU students."
+        secondary={{ to: '/events', label: 'See upcoming events' }}
+      />
+    </PublicPage>
   );
 }

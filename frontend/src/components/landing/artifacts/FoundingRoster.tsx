@@ -42,7 +42,7 @@ export default function FoundingRoster() {
           <tbody>
             {FOUNDING_OFFICERS.map((o) => (
               <tr key={o.position} className="border-t border-dotted" style={{ borderColor: 'rgb(122 98 66 / 0.45)' }}>
-                <th scope="row" className="font-display font-semibold text-[1rem] py-3.5 pr-4 align-top whitespace-nowrap">
+                <th scope="row" className="font-display font-semibold text-[1rem] py-3.5 pr-4 align-top w-[46%] sm:w-auto sm:whitespace-nowrap">
                   {o.position}
                 </th>
                 <td className="py-3.5 align-top">

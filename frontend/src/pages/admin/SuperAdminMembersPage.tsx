@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { listMembers, approveApplication, rejectApplication } from "@/services/memberService";
 import { ForbiddenError } from "@/services/api";
+import ApplicationReviewAids from "@/components/common/ApplicationReviewAids";
 import type { MemberProfile, MembershipStatus } from "@/types/member.types";
 
 function initials(name: string) {
@@ -171,6 +172,7 @@ export default function SuperAdminMembersPage() {
                         <div className="min-w-0">
                           <div className="text-[13px] font-bold text-forest truncate">{m.name || "Unnamed"}</div>
                           <div className="text-[11px] text-gray-500 truncate">{m.email}</div>
+                          <ApplicationReviewAids member={m} />
                         </div>
                       </div>
                     </td>

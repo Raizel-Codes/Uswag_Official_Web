@@ -19,6 +19,7 @@
   --lp-foxing: #C9B48F;         /* age stains & halftone — DECORATIVE ONLY (1.68:1) */
   --lp-ink: var(--color-deep);
   --lp-danger-ink: #8F322D;    /* --color-danger darkened so small error text reaches 6.7:1 on --color-danger-bg */
+  --lp-doorway: #0B160D;       /* Deep Forest in shadow: the inside of the mail doorway (MailDoor.tsx) */
 
   /* Motion — see §1.4 of the architecture doc; mirrored in lib/motion.ts */
   --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -291,6 +292,9 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
 }
+/* …except non-interactive targets focused by script (a result heading, the terms
+   heading): they aren't operable, so a ring there only looks like a stray box. */
+.lp [tabindex="-1"]:focus-visible { outline: none; }
 .lp-surface-deep :focus-visible,
 .lp-on-dark :focus-visible {
   outline-color: var(--color-sage); /* 8.63:1 on Deep Forest */
@@ -1002,6 +1006,72 @@ select.lp-input {
 }
 .lp-terms > * { overflow: hidden; }
 
+/* ---- Posting the application (ApplicationDropbox.tsx + MailDoor.tsx) ---- */
+/* Stage: door on top, envelope anchored to the bottom so it stays put while the
+   opened flap folds back down. Offsets are left/width (not transforms) so GSAP
+   owns every transform. */
+.lp-dropbox {
+  position: relative;
+  width: 100%;
+  /* Keep door + envelope on screen together, even on short laptop screens */
+  max-width: max(280px, min(560px, calc((100svh - 260px) / 1.1)));
+  margin-inline: auto;
+  aspect-ratio: 1 / 1.1;
+}
+.lp-dropbox__door { position: absolute; top: 0; left: 23%; width: 54%; }
+.lp-dropbox__slot { position: absolute; bottom: 0; left: 8%; width: 84%; transform-origin: 50% 50%; }
+.lp-dropbox__plate {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 76%;
+  text-align: center;
+  animation: lp-plate-in 700ms var(--lp-ease) 120ms both;
+}
+@keyframes lp-plate-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.lp-door {
+  position: relative;
+  aspect-ratio: 200 / 280;
+  perspective: 900px;
+  filter: drop-shadow(0 18px 22px rgb(90 72 50 / 0.2));
+}
+.lp-door > * { position: absolute; }
+.lp-door__frame { inset: 0; width: 100%; height: 100%; }
+/* Doorway = viewBox x 30–170, y 30–265 */
+.lp-door__mouth,
+.lp-door__leaf { left: 15%; top: 10.714%; width: 70%; height: 83.93%; }
+.lp-door__mouth { pointer-events: none; }
+.lp-door__leaf {
+  transform-origin: 0 50%;
+  filter: drop-shadow(2px 0 3px rgb(11 22 13 / 0.35));
+}
+.lp-door__bolt {
+  left: 79%;
+  top: 55%; /* above the knob (viewBox y 178 ≈ 63.6%) */
+  width: 11%;
+  height: 2.6%;
+  border-radius: 1px;
+  background: linear-gradient(180deg, var(--color-mist), var(--color-sage) 45%, var(--color-primary));
+  box-shadow: 0 1px 1px rgb(11 22 13 / 0.4);
+}
+
+/* Closed-door plate */
+.lp-door-plate {
+  display: inline-block;
+  padding: 0.9rem 1.5rem 1rem;
+  border-radius: 2px;
+  background: var(--lp-parchment);
+  box-shadow:
+    inset 0 0 0 1px rgb(90 72 50 / 0.45),
+    inset 0 0 0 4px var(--lp-parchment),
+    inset 0 0 0 5px rgb(90 72 50 / 0.25),
+    0 10px 18px -12px rgb(90 72 50 / 0.5);
+}
+
 /* ---- Login canvas ---- */
 .lp-login-canvas {
   min-height: 100%;
@@ -1021,7 +1091,8 @@ select.lp-input {
   .lp-envelope__seal,
   .lp-envelope,
   .lp-login-card { transition: none !important; }
-  .lp-terms { animation: none; }
+  .lp-terms,
+  .lp-dropbox__plate { animation: none; }
 }
 
 /* Inline links without the tap-target padding keep their underline under the text */

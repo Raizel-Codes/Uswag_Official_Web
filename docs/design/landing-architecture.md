@@ -376,3 +376,33 @@ At the owner's request, the Record style now runs through **About, Advocacies, O
 - At 390px there is no horizontal overflow on any page.
 - An automated AA contrast scan of every visible text node found 0 failures on every page, and each page has one `h1`.
 - The shared `index-*.css` has no `.lp` rules, and landing styles ship in a lazy chunk loaded only by the public pages.
+
+## 10. Sending an application: seal, door, one per student (2026-09-29)
+
+**The ceremony** (`ApplicationDropbox.tsx`, `MailDoor.tsx`). On submit, the page switches to a stage that runs in three phases:
+
+| Phase | What happens | When |
+|---|---|---|
+| `sealing` | The open envelope folds shut and the wax seal is pressed | While the request is in flight (at least 1.7s) |
+| `posting` | The mail door rises into view, swings open, takes in the envelope, shuts and bolts | Only after the server returns 201 |
+| `closed` | The shut door with a "Received · Pending review" plate | Final state, and the state shown on any later visit from the same device |
+
+- A failed request goes back to the form with the error message. The envelope never goes through the door.
+- The stage is `aria-hidden`. A live region announces each step, and focus moves to the result heading.
+- Reduced motion skips straight to each phase's end state.
+
+**One application per student**: the server enforces this, not the door.
+
+- **Email:** lowercased on apply; login and forgot-password match it case-insensitively.
+- **Student ID** (required): never stored in plaintext.
+  - `studentIdHash` is an HMAC-SHA256 under `STUDENT_ID_HASH_KEY`. It is permanent and unique, so a second application with the same ID gets a 409 whatever email or device it comes from.
+  - `studentIdCiphertext` is an AES-256-GCM copy under a separate `STUDENT_ID_ENC_KEY`. The Secretary can decrypt it one audited request at a time (`GET /members/:id/student-id`). It is set to null the moment the application is approved or rejected.
+- **Name:** never blocks. Pending applications that share a name with another member account are flagged "Same name as N other. Check ID" in the Secretary's list.
+- **The device's memory** (`localStorage`): only a courtesy that shows the shut door again. It is not a lock.
+
+**Applying for a friend** (the one exception): a friend who is present but has no device.
+
+- The helper gives their name, and the friend reads the terms and ticks the box themselves. The helper then confirms that the friend is present and asked them to submit.
+- No password is sent. The account gets an unguessable random password and `awaitingPasswordSetup = true`.
+- The Secretary generates a one-time, 1-hour setup link (`POST /members/:id/setup-link`). It is refused for any other account, audit-logged, and handed over in person until email delivery exists.
+- `proxyName` is deleted along with the ciphertext once the application is decided. The `submittedByProxy` flag remains.

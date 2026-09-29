@@ -55,6 +55,10 @@ interface MembershipEnvelopeProps {
   received?: boolean;
   /** id of the terms region the seal button controls. */
   controlsId?: string;
+  /** Wax seal is decoration, not a button (ApplicationDropbox animates `.lp-envelope__wax`). */
+  sealed?: boolean;
+  /** Drop in from above when scrolled into view. */
+  dropIn?: boolean;
 }
 
 /**
@@ -64,14 +68,14 @@ interface MembershipEnvelopeProps {
  * envelope is the ceremony, not the content. Reduced motion: every step is instant.
  */
 const MembershipEnvelope = forwardRef<HTMLButtonElement, MembershipEnvelopeProps>(function MembershipEnvelope(
-  { opened = false, onOpen, received = false, controlsId },
+  { opened = false, onOpen, received = false, controlsId, sealed = false, dropIn = true },
   sealRef
 ) {
   const root = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      if (!root.current || prefersReducedMotion()) return;
+      if (!dropIn || !root.current || prefersReducedMotion()) return;
       gsap.from(root.current, {
         y: -80,
         rotate: -5,
@@ -102,7 +106,13 @@ const MembershipEnvelope = forwardRef<HTMLButtonElement, MembershipEnvelopeProps
       </svg>
       <div className="lp-envelope__flap" />
 
-      {received ? (
+      {sealed ? (
+        <div className="lp-envelope__seal pointer-events-none" aria-hidden="true">
+          <div className="lp-envelope__wax w-full h-full">
+            <WaxSeal />
+          </div>
+        </div>
+      ) : received ? (
         <>
           <div className="lp-envelope__seal pointer-events-none" aria-hidden="true">
             <WaxSeal />

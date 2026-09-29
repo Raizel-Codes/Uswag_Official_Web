@@ -13,6 +13,7 @@ import {
 } from "@/services/memberService";
 import { ForbiddenError } from "@/services/api";
 import LockedState from "@/components/common/LockedState";
+import ApplicationReviewAids from "@/components/common/ApplicationReviewAids";
 import type { MemberProfile } from "@/types/member.types";
 import { createManualPost } from "@/services/postService";
 import { isSuperAdminEquivalent } from "@/utils/roles";
@@ -76,6 +77,7 @@ function MemberRow({
             Applied {formatDate(member.joinedAt)}
           </div>
         )}
+        <ApplicationReviewAids member={member} />
       </div>
 
       {/* Action buttons for pending; badge for active */}

@@ -152,7 +152,7 @@ export default function EventsPage() {
           <SectionHeading id="ev-heading" eyebrow="What’s coming up" title="Upcoming events" />
 
           <div className="mt-10 space-y-4" data-lp-reveal>
-            <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter by advocacy">
+            <div className="flex gap-2 overflow-x-auto uw-scroll-hidden pb-1" role="group" aria-label="Filter by advocacy">
               {PILLAR_FILTERS.map((f) => (
                 <button key={f.key} type="button" className="lp-chip" aria-pressed={activeFilter === f.key} onClick={() => setActiveFilter(f.key)}>
                   {f.label}

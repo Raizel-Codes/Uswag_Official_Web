@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useEraScroll } from '@/hooks/useEraScroll';
 import { ScrollTrigger, ensureGsapRegistered } from '@/lib/motion';
+import { LandingEraContext } from '@/context/LandingEraContext';
 import ChapterNav from './ChapterNav';
 import '@/styles/landing.css';
 
@@ -38,7 +39,7 @@ export default function PublicPage({
   surface = 'journey',
 }: PublicPageProps) {
   const root = useRef<HTMLDivElement>(null);
-  useEraScroll(root, { startSelector: eraStart, endSelector: eraEnd });
+  const era = useEraScroll(root, { startSelector: eraStart, endSelector: eraEnd });
 
   // Arriving on a new page of the record starts at its masthead, not mid-scroll from the
   // previous page (react-router keeps the old scroll position otherwise).
@@ -57,10 +58,12 @@ export default function PublicPage({
   }, refreshKeys);
 
   return (
-    <div ref={root} className={`lp ${surface === 'present' ? 'lp--present' : ''}`}>
-      {children}
-      {!hideChapterNav && <ChapterNav />}
-      {after}
-    </div>
+    <LandingEraContext.Provider value={era}>
+      <div ref={root} className={`lp ${surface === 'present' ? 'lp--present' : ''}`}>
+        {children}
+        {!hideChapterNav && <ChapterNav />}
+        {after}
+      </div>
+    </LandingEraContext.Provider>
   );
 }

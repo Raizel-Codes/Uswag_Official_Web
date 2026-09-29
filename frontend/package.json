@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@remotion/player": "4.0.530",
     "@tanstack/react-query": "^5.51.0",
     "axios": "^1.7.4",
     "gsap": "^3.15.0",
@@ -19,6 +20,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
+    "remotion": "4.0.530",
     "zustand": "^4.5.4"
   },
   "devDependencies": {

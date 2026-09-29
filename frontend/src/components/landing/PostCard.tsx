@@ -8,8 +8,8 @@ interface PostCardProps {
 
 /**
  * A synced Facebook / manual post in the public Record's present-day style. Used by the
- * front page's pulse and the News page. (components/feed/NewsFeedCard stays as-is for the
- * member portal.)
+ * front page's pulse and the News page. (The member portal renders posts itself, in
+ * MemberDashboardPage.)
  */
 export default function PostCard({ post, clamp = false }: PostCardProps) {
   const published = new Date(post.publishedAt);

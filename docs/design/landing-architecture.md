@@ -123,6 +123,7 @@ The page reads like a bound archive whose pages grow crisper as you scroll, and 
 | **S1** | **Archival hero: "The Record"** | 0 | Parchment with grain and vignette | A broadsheet front page. Nameplate: "THE USWAG RECORD · VOL. I · EST. [D2] · NORTHWEST SAMAR STATE UNIVERSITY". The H1 is set like a headline. There is an engraved single-ink crest, a lead paragraph, two CTAs, and a newspaper-clipping composition (HTML/CSS/SVG) on the right with a halftone illustration. The LCP element is the H1 text, not an image. |
 | **S2** | **Origin: "Where it began"** | 0 → 0.15 | Parchment | The Constitution **Preamble** (real text), typeset with a drop cap and ruled margins like a founding document. Next to it is a founding-era **flyer** mockup and, if D4 allows, the earlier graffiti mark as a sepia clipping. |
 | **S3** | **The years in between** | 0.15 → 0.6 | Parchment → Mist blend | A vertical ledger timeline (`<ol>`). The year markers use old-style numerals and the spine line changes from sepia to primary as you scroll. **It only renders entries you have verified (D2).** With fewer than 3 entries, it collapses to a single short "a decade of continuity" paragraph and the timeline is not shown. |
+| **S3.5** | **Interlude: "Before the rebirth"** (added 2026-09-30) | 0, until committed | Parchment | "The Rebirth of USWAG", a 90-second film in two parts in a full-width theatre. Forest-green velvet parts as the theatre scrolls in; a quill-signature button starts the film. At the intermission the velvet closes, the page commits to the present, and digital shutters open on Part Two. The film is code (Remotion + GSAP), not a video file. See §3.6. |
 | **S4** | **The rebirth** | 0.6 → 1 | Mist, with Deep Forest arriving | The hinge of the page. A **membership card** starts as a typewritten sepia paper card (square corners, foxing, a rubber-stamp "MEMBER") and, as you scroll, **resolves into the digital QR card**: a Deep Forest face, a sage QR frame and 12px radius. The engraved crest crossfades into the green `logo-uswag-on-dark` crest. Copy: "Reborn for the digital era", explaining the signed-QR membership and the PWA. |
 | **S5** | **Programs & impact** | 1 | Deep Forest (mandates), then Mist (pulse) | The three constitutional mandates (existing content, restyled and re-tokenized). A condensed "Today's stewards" officer row (live data, linking to `/officers`). The live **Pulse**: events plus synced Facebook posts (existing queries). |
 | **S6** | **Call to action** | 1 | Primary panel on Mist | "Write the next chapter." Join CTA plus a secondary "Read the Constitution" link (`/bylaws`). The existing mobile sticky bar is re-tokenized (no `bg-white`) and its safe-area bug is fixed. |
@@ -169,6 +170,54 @@ The Footer (shared, Deep Forest) closes the page in the present, so no change is
 - The rebirth card shows **both faces side by side** labelled "Then" and "Now" instead of the wipe.
 - Hover color and underline changes stay. Lifts, wipes and filter transitions become instant.
 - Grain stays static, and CountUp shows the final value (it already does).
+- The prequel's curtains fade instead of gathering, and the signature appears without the writing hand. The page does not jump to Mist at the intermission; each section keeps its static surface.
+
+### 3.6 The prequel theatre (S3.5) — added 2026-09-30, extended to 1:30 the same day
+Decisions confirmed by the organisation on 2026-09-30:
+- **The page turns modern whether or not the film is watched.** Scroll drives it for visitors who skip the film; the film's intermission drives it for those who watch.
+- **The adviser-founder reveal is confirmed.** The adviser agreed to be depicted, in silhouette and unnamed.
+- **The velvet is forest green, not red.** Red isn't in the palette.
+- **The film is coded, not rendered to MP4.** It is a Remotion composition choreographed with GSAP, and it stays click-to-play: it is not scrubbed by scroll, so it can carry a score and keep its pacing.
+- **One 1:30 film in two parts** — the prequel (the record, 2010 → 2025) and its sequel (the record, live) — with an intermission between them.
+- **Full-width curtains that part once on entry**, after the curtain past the hero on therecord.institute (two half-width panels with gilt edges, opening over ~1.8s with a fast-out, slow-settle curve), in the landing palette.
+- **The play button is a signing:** a quill signs "USWAG", a green seal comes down, and the film opens out of the seal.
+
+How it works:
+- **The theatre (`PrequelSection`, `CinemaCurtains`, `SignaturePlay`).**
+  - A full-bleed band under the section heading: a pleated velvet pelmet with a gilt braid, a 16:9 screen sized to fit the viewport, and an apron. `--screen-w` and `--wing` (the space each side of the screen) are computed in container units.
+  - The velvet drapes cover the whole band. When the band's top passes 70% of the viewport they gather to the wings (their `width` transitions to `--wing`, so the pleats bunch rather than slide). Scrolling back above it closes them and resets the film.
+  - Behind them the screen shows the signature card: "Sign the record to begin", the title, and a signature line with a resting quill ("Watch the prequel · 1:30"). Pressed, the film starts from that same click (iOS only lets a gesture start audio); the quill writes the signature along its own stroke (GSAP MotionPath); the seal lands; and a radial mask opens from the seal onto the film, whose first two seconds are a dark projector warm-up. If the film's code hasn't arrived yet, the ritual holds at the seal ("Loading the prequel…").
+- **The stage follows the film's frame** (`prequel.data.ts` → `MARKS`, `stageAt`):
+  - 0:57 — the velvet closes over the end of Part One; its hanging card reads "Intermission".
+  - 0:58 — behind it the page commits to the present (`useLandingEra`); the pelmet and screen trim turn sage.
+  - 0:58.8 — digital shutters fold across the velvet; unseen behind them, the velvet returns to the wings with a digital face.
+  - 1:00 — the shutters open on Part Two.
+  - 1:28 — the shutters close for the finale; focus moves to "Continue to the rebirth". "Watch again" replays with the signing, and the page returns to parchment for Part One.
+  - "Skip to Part Two" jumps to 1:00 while Part One is playing.
+- **The era has two inputs, and the page shows whichever is further along:** the scroll scrub (from `#lp-rebirth`) and the commit (`useEraScroll` → `EraControls`, via `LandingEraContext`). Scrolling back above the theatre releases the commit.
+- **The film (`components/landing/prequel/`):** `PrequelFilm.tsx`, 1920 × 1080, 30 fps, 2700 frames; scene frames are in `SCENES`.
+  - Part One plays in a 1440 × 1080 (4:3) gate on parchment with grain, vignette, seeded flicker and gate weave, iris cuts (`Iris`) and light leaks (`LightLeak`):
+    - Prologue: lamp, countdown, title card.
+    - Act I, The Founding: a multi-plane dawn over the arch (sky, hills, arch and grass move at different rates); the quill signs the charter; the stamp shakes the frame.
+    - Act II, The Quiet Years: a time-lapse of days and rain; the founders drift apart; the charter ages as grass creeps in.
+    - Act III, The Return: the charter restored; a new generation; focus racks to the adviser; the quill crosses the split; a new student countersigns and a green stamp comes down.
+    - Act IV, The Turning: the stamp's ink breaks into QR-like modules and the page into a grid; the frame opens to 16:9; the card and the three advocacies.
+  - Part Two plays on Deep Forest with the sage grid:
+    - Reach: a notification from the officers; phones light up across the campus.
+    - Connect: a post on the Facebook Page, carried by the sync into the site's feed; an RSVP.
+    - The Three Pillars: Article II's advocacies; a QR check-in at the seedling.
+    - The Years Ahead: tree rings for 2010, the quiet years, each year since 2025 (solid) and the years ahead (dashed); then the name.
+  - **Remotion owns the clock; GSAP only describes the motion.** Each scene builds a paused GSAP timeline that `useFilmTimeline` seeks to the current frame on every render. Captions, fades, dust, the iris and the time-lapse sky are pure functions of the frame.
+  - GSAP's SVG transform-origin maths misplaced SVG shapes that start from `scale: 0` inside the Player, so the rings grow by their `r` attribute and the QR modules fade in instead.
+  - **Compact mode:** below a 640px screen the film sets captions and titles larger (about 12–16px on screen) and drops small print (the text inside the phone, post and pillar illustrations).
+- **What Part Two may show:** only what the site does — push notifications, the read-only Facebook Page sync, RSVP, signed-QR check-in — with generic text ("A new announcement from your officers") and placeholder lines. No invented events, dates or numbers. The QR patterns are decorative, never real codes.
+- **Player (`PrequelPlayer`, `usePrequelPlayer`):** `@remotion/player` with no built-in controls, loaded in its own chunk (about 101 kB gzipped) when the theatre comes within 800px. States: idle → (loading) → playing ⇄ paused → closing → ended, plus error. It pauses when less than 25% of the theatre is on screen or the tab is hidden, and never resumes by itself.
+- **No pinning, no scroll lock, no autoplay.** "Skip to the rebirth" is always present, and the controls (with a two-part progress bar) sit under the picture.
+- **Accessibility:** the film layer is `aria-hidden`; the section's introduction paragraph is its only description. The page used to carry a full "Read the story" transcript (the WCAG 1.2.3 alternative); the organisation removed it on 2026-09-30 because its scene-by-scene wording read like production notes and shouldn't be public. Without it, the film's on-screen text and visual story aren't available to screen-reader users — if a text version returns, write it as plain public copy. A polite live region announces status and the intermission. The signature is a real `<button>` named "Watch the prequel, 1 minute 30 seconds". Under reduced motion the curtains fade, the signature appears without the writing hand, and the card fades to the film.
+- **Sound:** optional. `VITE_PREQUEL_MUSIC_URL` (a licensed 90-second track) adds a score and a mute button. Without it the film is silent and the stage says "No sound".
+- **Licence:** Remotion is source-available, not MIT. It is free for individuals, non-profits and companies of up to 3 people. Once the organisation has confirmed it qualifies, pass `acknowledgeRemotionLicense` to the Player.
+- **Storyboard and copy:** `components/landing/prequel.data.ts`. Act II gives no years or causes for the break-up; none are on record. The adviser should approve Part Two's script.
+- **New landing tones:** `--lp-gilt` (decorative only) and `--lp-gilt-light` (text on Deep Forest only), in the `.lp` block of `landing.css` with the other `--lp-*` tones.
 
 ---
 

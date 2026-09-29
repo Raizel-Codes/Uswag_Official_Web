@@ -11,6 +11,8 @@ interface RubberStampProps {
   /** Static tilt in degrees — stamps are never applied perfectly straight. */
   tilt?: number;
   className?: string;
+  /** Ink colour; Primary Green unless the stamp belongs to the archive (the prequel's 2010 stamp is sepia). */
+  ink?: string;
 }
 
 /**
@@ -18,7 +20,15 @@ interface RubberStampProps {
  * displacement filter so the edges look pressed rather than vector-perfect. Decorative:
  * whatever it says must also exist in the surrounding real text.
  */
-export default function RubberStamp({ ring, center, sub, size = 132, tilt = -8, className = '' }: RubberStampProps) {
+export default function RubberStamp({
+  ring,
+  center,
+  sub,
+  size = 132,
+  tilt = -8,
+  className = '',
+  ink = 'var(--color-primary)',
+}: RubberStampProps) {
   const uid = useId().replace(/:/g, '');
   const ringPath = `stamp-ring-${uid}`;
   const rough = `stamp-rough-${uid}`;
@@ -29,7 +39,7 @@ export default function RubberStamp({ ring, center, sub, size = 132, tilt = -8, 
       height={size}
       viewBox="0 0 140 140"
       className={className}
-      style={{ transform: `rotate(${tilt}deg)`, color: 'var(--color-primary)' }}
+      style={{ transform: `rotate(${tilt}deg)`, color: ink }}
       aria-hidden="true"
     >
       <defs>

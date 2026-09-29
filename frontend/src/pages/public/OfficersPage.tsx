@@ -7,7 +7,8 @@ import PublicPage from '@/components/landing/PublicPage';
 import PageMasthead from '@/components/landing/PageMasthead';
 import SectionHeading from '@/components/landing/SectionHeading';
 import LandingCTA from '@/components/landing/sections/LandingCTA';
-import FoundingRoster from '@/components/landing/artifacts/FoundingRoster';
+import OfficerRosterSheet from '@/components/landing/artifacts/OfficerRosterSheet';
+import { FIRST_BATCH, SECOND_BATCH, SECOND_BATCH_YEAR } from '@/components/landing/firstOfficers.data';
 import { FOUNDED_YEAR } from '@/components/landing/timeline.data';
 import { academicYearLabel } from '@/components/landing/academicYear';
 
@@ -77,7 +78,41 @@ function FirstBatch() {
           />
         </div>
         <div className="lg:col-span-7" data-lp-reveal>
-          <FoundingRoster />
+          <OfficerRosterSheet
+            batch={FIRST_BATCH}
+            captionLabel="founding officers"
+            pendingNote="Names pending confirmation with the USWAG adviser"
+            edgeSeed={2011}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SecondBatch() {
+  const ref = useRef<HTMLElement>(null);
+  useLandingReveal(ref);
+  return (
+    <section ref={ref} aria-labelledby="off-second" data-era="past" className="lp-section lp-grain lp-grain--fade">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-8 grid lg:grid-cols-12 gap-12 lg:gap-14 items-start">
+        <div className="lg:col-span-5 lg:order-2">
+          <SectionHeading
+            id="off-second"
+            tone="past"
+            eyebrow={`The second batch · ${SECOND_BATCH_YEAR}`}
+            title="The officers who followed"
+            lead="Six executive officers and three college commissioners. Each commissioner is the Public Relations Officer of their college."
+          />
+        </div>
+        <div className="lg:col-span-7 lg:order-1" data-lp-reveal>
+          <OfficerRosterSheet
+            batch={SECOND_BATCH}
+            captionLabel="second-batch officers"
+            pendingNote="Names pending confirmation with the USWAG adviser"
+            edgeSeed={SECOND_BATCH_YEAR}
+            tilt={6}
+          />
         </div>
       </div>
     </section>
@@ -194,6 +229,7 @@ export default function OfficersPage() {
         lead="Seven constitutional positions carry USWAG forward — each one set out, with its duties, in Article VI of our Constitution."
       />
       <FirstBatch />
+      <SecondBatch />
       <CurrentOfficers />
       <LandingCTA
         id="off-cta"

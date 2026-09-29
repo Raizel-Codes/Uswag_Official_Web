@@ -22,6 +22,23 @@ const IRIS: IrisMove[] = [
   { from: 960, to: 986, r: [0, IRIS_OPEN], at: [720, 500] },
 ];
 
+/**
+ * Mounting a scene costs a hitch (its DOM plus its GSAP timeline): about 100 ms for Act IV and
+ * 50 ms for Reach on a desktop, several times that on a phone. Part One's cuts hide it under an
+ * iris or a light leak; these two don't, so they mount early, invisibly (Remotion premounts at
+ * opacity 0 with the scene frozen on its first frame), at a moment the viewer can't see:
+ * - Act IV at frame 950, while the iris is closed between Acts II and III;
+ * - Reach at frame 1775, while the velvet and the shutters are both closed (stageAt).
+ */
+const PREMOUNT = {
+  turning: SCENES.turning.from - 950,
+  reach: SCENES.reach.from - 1775,
+};
+// Constant elements, so a premounted scene (its frame frozen) isn't re-rendered on every frame of
+// the scene still playing; React skips an unchanged element whose context hasn't changed.
+const TURNING = <ActDigitalShift />;
+const REACH = <ActReach />;
+
 export interface PrequelFilmProps extends Record<string, unknown> {
   /**
    * The stage is phone-sized. The 1920px frame is then scaled to about a fifth, so the film
@@ -74,14 +91,16 @@ export default function PrequelFilm({ compact }: PrequelFilmProps) {
         {archive && <div className="pf-flicker" style={{ opacity: flicker }} />}
       </div>
 
-      <Sequence layout="none" {...scene('turning')} name="Act IV · The Turning">
-        <ActDigitalShift />
+      {/* Premounted scenes take Remotion's absolute-fill wrapper (premounting needs one); the
+          scenes are absolute-fill themselves, so nothing moves. */}
+      <Sequence {...scene('turning')} premountFor={PREMOUNT.turning} name="Act IV · The Turning">
+        {TURNING}
       </Sequence>
 
       {frame >= SCENES.reach.from && <div className="pf-sequel-grid" />}
-      <Sequence layout="none" {...scene('reach')} name="Part Two · Reach">
+      <Sequence {...scene('reach')} premountFor={PREMOUNT.reach} name="Part Two · Reach">
         <Fade duration={SCENES.reach.duration} fadeOut={10}>
-          <ActReach />
+          {REACH}
         </Fade>
       </Sequence>
       <Sequence layout="none" {...scene('connect')} name="Part Two · Connect">

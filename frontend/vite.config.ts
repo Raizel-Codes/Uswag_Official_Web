@@ -59,10 +59,22 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        // Only link-preview crawlers fetch the share card; don't precache it for every visitor.
-        globIgnores: [`**${OG_IMAGE}`],
+        // Precaching downloads every listed file on a visitor's first load, on their data. Left out:
+        // the share card (only crawlers fetch it), the prequel film (loaded as the visitor nears it)
+        // and the officer scan console (camera library; scanning needs the network anyway). These
+        // two chunks were about 40% of the precache; the /assets/ rule below caches them on first use.
+        globIgnores: [`**${OG_IMAGE}`, '**/assets/PrequelPlayer-*.js', '**/assets/ScanConsolePage-*.js'],
         navigateFallback: '/index.html',
         runtimeCaching: [
+          {
+            // Build chunks are content-hashed, so a cached copy never goes stale.
+            urlPattern: /\/assets\/.*\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'chunk-cache',
+              expiration: { maxEntries: 30, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            },
+          },
           {
             urlPattern: /\/api\/scan/,
             handler: 'NetworkOnly', // Scan verification must require a live network call

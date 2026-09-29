@@ -51,15 +51,14 @@ export default function MyQRPage() {
         }
       />
 
-      <div className="grid lg:grid-cols-[minmax(0,400px)_1fr] gap-10 lg:gap-14 mt-8 items-start">
+      <div className="grid lg:grid-cols-[minmax(0,360px)_1fr] gap-10 lg:gap-14 mt-8 items-start">
         <div>
           {profileLoading || (active && card.isLoading) ? (
-            <div className="mp-skeleton mx-auto w-full max-w-[380px] aspect-[0.66]" aria-busy="true" aria-label="Loading your card" />
+            <div className="mp-skeleton mx-auto w-full max-w-[340px] aspect-[336/520]" aria-busy="true" aria-label="Loading your card" />
           ) : !profile ? (
             <p className="mp-alert">We couldn’t load your membership. Refresh the page to try again.</p>
           ) : active && card.isError ? (
             <div className="space-y-4">
-              <MembershipCard profile={profile} />
               <p role="alert" className="mp-alert">{errorMessage(card.error, 'We couldn’t load your card. Check your connection and try again.')}</p>
               <button type="button" onClick={() => card.refetch()} className="mp-btn mp-btn--primary">Try again</button>
             </div>

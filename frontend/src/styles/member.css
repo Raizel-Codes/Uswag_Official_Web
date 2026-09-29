@@ -335,35 +335,189 @@
 }
 @keyframes mp-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
 
-/* ---------- The membership card ---------- */
-.mp-idcard {
-  position: relative;
+/* ---------- The membership card (MembershipCard.tsx) ----------
+   Structure after the id_card_v2.html member tier — slant foil bands, hatched security
+   texture, inner frame, crest + org header, MEMBER chip, circular QR medallion with a dashed
+   ring, name / role / ID / A.Y. footer — rendered strictly in the brand tokens (Deep Forest,
+   Primary, Sage, Mist) with Poppins + Inter. Sized in container units so it keeps the
+   336 × 520 proportions at any width. */
+/* The stage is the size container: container units inside .mp-idcard (radius included)
+   resolve against the card's own width, since a container can't size-query itself. */
+.mp-idcard-stage {
+  container-type: inline-size;
   width: 100%;
-  max-width: 380px;
+  max-width: 340px;
   margin-inline: auto;
-  border-radius: 10px;
-  overflow: hidden;
-  /* clears the vault's inset double frame (clamp(10px,1.6vw,18px)) */
-  padding: 2rem 2rem 1.75rem;
+  perspective: 1100px;
 }
-.mp-idcard__qr {
+.mp-idcard {
+  --rx: 0deg;           /* pointer tilt (MembershipCard sets these; 0 on touch / reduced motion) */
+  --ry: 0deg;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 336 / 520;
+  border-radius: 5.4cqw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-mist);
+  /* starts at Primary (not lighter) so small Mist text holds ≥4.5:1 even under the foil's peak */
+  background: linear-gradient(155deg, var(--color-primary) 0%, var(--color-primary) 30%, var(--color-deep) 76%, var(--color-deep) 100%);
+  box-shadow:
+    0 30px 60px -24px rgb(20 39 24 / 0.75),
+    0 2px 6px rgb(20 39 24 / 0.25),
+    inset 0 1px 0 rgb(231 239 228 / 0.18);
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 500ms var(--lp-ease);
+}
+/* Hatched security texture (fine diagonal engraving) */
+.mp-idcard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(125deg, rgb(152 203 176 / 0.05) 0 1px, transparent 1px 8px);
+}
+/* Inner frame */
+.mp-idcard::before {
+  content: '';
+  position: absolute;
+  inset: 2.7cqw;
+  z-index: 6;
+  pointer-events: none;
+  border-radius: 3.9cqw;
+  border: 1px solid rgb(152 203 176 / 0.38);
+}
+/* Slant foil bands (the card's signature) */
+.mp-idcard__band {
+  position: absolute;
+  left: -60%;
+  width: 220%;
+  z-index: 1;
+  pointer-events: none;
+  transform: rotate(-32deg);
+  background: linear-gradient(100deg, transparent 0%, rgb(152 203 176 / 0.03) 30%, rgb(152 203 176 / 0.11) 46%, rgb(231 239 228 / 0.12) 50%, rgb(152 203 176 / 0.11) 54%, rgb(152 203 176 / 0.03) 70%, transparent 100%);
+}
+.mp-idcard__band--one { top: -12cqw; height: 45cqw; }
+.mp-idcard__band--two { top: 101cqw; height: 27cqw; opacity: 0.6; }
+/* Moving foil sheen: follows the pointer, and sweeps once when the card is issued/shown */
+.mp-idcard__sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  background: linear-gradient(115deg, transparent calc(var(--mp-sheen) - 22%), rgb(231 239 228 / 0.55) var(--mp-sheen), transparent calc(var(--mp-sheen) + 22%));
+  /* fill-mode backwards only: once the sweep ends the pointer-driven value takes over */
+  animation: mp-foil-sweep 1.8s var(--lp-ease) 0.3s backwards;
+}
+/* Registered so the sheen position can animate (and follow the pointer smoothly) */
+@property --mp-sheen {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 130%;
+}
+@keyframes mp-foil-sweep {
+  from { --mp-sheen: -30%; }
+  to { --mp-sheen: 130%; }
+}
+
+.mp-idcard__top,
+.mp-idcard__seal,
+.mp-idcard__bottom { position: relative; z-index: 3; }
+
+.mp-idcard__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 6.5cqw 7cqw 0;
+}
+.mp-idcard__crest {
   display: grid;
   place-items: center;
-  padding: 14px;
-  border-radius: 6px;
-  background: #fff;
-  /* QR frame: Sage double rule (tokens.css: "QR frame") */
-  box-shadow: 0 0 0 1px rgb(152 203 176 / 0.9), 0 0 0 5px rgb(255 255 255 / 0.08), 0 0 0 6px rgb(152 203 176 / 0.45);
+  width: 12.5cqw;
+  height: 12.5cqw;
+  border-radius: 999px;
+  border: 1px solid rgb(152 203 176 / 0.55);
+  background: radial-gradient(circle at 32% 28%, rgb(152 203 176 / 0.2), transparent 60%), linear-gradient(155deg, var(--color-primary), var(--color-deep));
+  box-shadow: 0 3px 8px rgb(20 39 24 / 0.4);
 }
-.mp-idcard__qr canvas { display: block; width: 100% !important; height: auto !important; max-width: 240px; }
-/* Locked card: the same card, face down — no QR exists for this member yet */
-.mp-idcard--locked .mp-idcard__qr {
-  background: rgb(231 239 228 / 0.06);
-  box-shadow: inset 0 0 0 1px rgb(152 203 176 / 0.35);
+.mp-idcard__crest img { width: 64%; height: auto; }
+.mp-idcard__org { text-align: right; }
+.mp-idcard__org-name { font-family: var(--font-heading); font-weight: 600; font-size: 5.4cqw; line-height: 1.1; letter-spacing: 0.02em; }
+.mp-idcard__org-sub { font-size: max(11px, 3.3cqw); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-mist); margin-top: 0.8cqw; }
+
+.mp-idcard__seal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3.4cqw;
+}
+.mp-idcard__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.8cqw;
+  padding: 1.6cqw 4.8cqw;
+  border-radius: 999px;
+  font-size: max(11px, 3.3cqw);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-mist);
+  border: 1px solid rgb(152 203 176 / 0.6);
+  background: linear-gradient(90deg, rgb(152 203 176 / 0.22), rgb(231 239 228 / 0.08));
+}
+.mp-idcard__chip::before { content: ''; width: 1.8cqw; height: 1.8cqw; border-radius: 99px; background: var(--color-sage); }
+.mp-idcard__chip--pending,
+.mp-idcard__chip--expired { color: var(--mp-warn-ink); background: var(--color-warn-bg); border-color: rgb(201 138 46 / 0.6); }
+.mp-idcard__chip--pending::before,
+.mp-idcard__chip--expired::before { background: currentColor; }
+.mp-idcard__chip--rejected { color: var(--mp-danger-ink); background: var(--color-danger-bg); border-color: rgb(179 69 63 / 0.5); }
+.mp-idcard__chip--rejected::before { background: currentColor; }
+
+/* Round QR medallion. The square code is 68% of the disc, so its corners stay inside it
+   (68% × √2 ≈ 96%); light modules are Mist, not a tint, so scanners read it first time. */
+.mp-idcard__medallion {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 62cqw;
   aspect-ratio: 1;
-  max-width: 268px;
-  width: 100%;
-  margin-inline: auto;
+  border-radius: 999px;
+  background: var(--color-mist);
+  box-shadow:
+    0 0 0 1px rgb(152 203 176 / 0.6),
+    0 0 0 1.8cqw var(--color-deep),
+    0 0 0 calc(1.8cqw + 1px) rgb(152 203 176 / 0.6),
+    0 5cqw 10cqw -4cqw rgb(20 39 24 / 0.7);
+}
+.mp-idcard__medallion::before {
+  content: '';
+  position: absolute;
+  inset: -4cqw;
+  border-radius: 999px;
+  border: 1.5px dashed rgb(152 203 176 / 0.4);
+}
+.mp-idcard__medallion canvas { width: 68% !important; height: auto !important; aspect-ratio: 1; display: block; }
+.mp-idcard__hint { font-size: max(11px, 3cqw); font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-mist); margin-top: 1cqw; }
+/* Face-down medallion: no QR exists for this member */
+.mp-idcard--locked .mp-idcard__medallion { background: radial-gradient(circle at 35% 30%, var(--color-primary), var(--color-deep)); }
+
+.mp-idcard__bottom { padding: 2cqw 7cqw 7cqw; }
+.mp-idcard__divider { height: 1px; margin-bottom: 4cqw; background: linear-gradient(90deg, transparent, rgb(152 203 176 / 0.6), transparent); }
+.mp-idcard__name { font-family: var(--font-heading); font-weight: 600; font-size: 6.6cqw; line-height: 1.15; text-align: center; }
+.mp-idcard__role { font-size: max(12px, 3.7cqw); font-weight: 600; letter-spacing: 0.04em; color: var(--color-sage); text-align: center; margin-top: 0.8cqw; }
+.mp-idcard__meta { display: flex; justify-content: space-between; align-items: flex-end; gap: 3cqw; margin-top: 4.2cqw; }
+.mp-idcard__meta-label { font-size: max(11px, 2.8cqw); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-mist); }
+.mp-idcard__meta-value { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: max(12px, 3.9cqw); font-weight: 600; letter-spacing: 0.04em; margin-top: 0.8cqw; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-idcard { transform: none !important; transition: none; }
+  .mp-idcard__sheen { animation: none; }
 }
 
 /* ---------- Attendance ledger ---------- */

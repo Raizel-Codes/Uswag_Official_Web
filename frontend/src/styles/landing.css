@@ -72,21 +72,6 @@
   z-index: 1;
 }
 
-/* Sepia vignette at the page edges of the archival hero */
-.lp-vignette::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  /* Side edges only — a top/bottom vignette leaves a visible seam against the next section */
-  background: linear-gradient(to right, rgb(122 98 66 / 0.12), transparent 14%, transparent 86%, rgb(122 98 66 / 0.12));
-}
-
-.lp-surface-deep {
-  background-color: var(--color-deep);
-  color: var(--color-mist);
-}
-
 /* ---------- Typography (Lora display + Inter body; D5) ---------- */
 
 .lp :where(.lp-masthead) {
@@ -299,7 +284,6 @@
 /* …except non-interactive targets focused by script (a result heading, the terms
    heading): they aren't operable, so a ring there only looks like a stray box. */
 .lp [tabindex="-1"]:focus-visible { outline: none; }
-.lp-surface-deep :focus-visible,
 .lp-on-dark :focus-visible {
   outline-color: var(--color-sage); /* 8.63:1 on Deep Forest */
 }

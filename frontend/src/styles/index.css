@@ -48,11 +48,4 @@ h1, h2, h3, h4, h5, h6 {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
-
-  /* data-reveal content should still end up in its final, visible state */
-  [data-reveal], .draw-path {
-    opacity: 1 !important;
-    transform: none !important;
-    stroke-dashoffset: 0 !important;
-  }
 }

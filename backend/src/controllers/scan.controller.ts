@@ -9,5 +9,15 @@ import { ok } from '../utils/response.js';
 export async function verifyScan(req: Request, res: Response) {
   const { rawQrValue, eventId } = req.body;
   const { outcome, record } = await recordScan(rawQrValue, eventId, req.user!.id);
-  return ok(res, { status: outcome.status, reason: 'reason' in outcome ? outcome.reason : undefined, scannedAt: record.scannedAt, member: record.member?.user });
+  const member = record.member;
+  return ok(res, {
+    status: outcome.status,
+    reason: 'reason' in outcome ? outcome.reason : undefined,
+    scannedAt: record.scannedAt,
+    // Only what the scan console shows. Never the User row itself: it carries the password
+    // hash, the reset-token hash and the session version.
+    member: member
+      ? { id: member.id, name: member.user.name, serialNumber: member.serialNumber, collegeOrDept: member.user.collegeOrDept }
+      : undefined,
+  });
 }

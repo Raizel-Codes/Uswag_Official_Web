@@ -98,7 +98,7 @@ export async function approveApplication(req: Request, res: Response) {
   if (!pending.ok) return fail(res, pending.message, pending.status);
   const updated = await memberService.approveApplication(memberId, req.body.academicYear);
   await logAction(req.user!.id, 'member.approve', 'MemberProfile', memberId, { viaProxy: pending.profile.submittedByProxy });
-  return ok(res, updated);
+  return ok(res, decisionDTO(updated));
 }
 
 export async function rejectApplication(req: Request, res: Response) {
@@ -107,7 +107,13 @@ export async function rejectApplication(req: Request, res: Response) {
   if (!pending.ok) return fail(res, pending.message, pending.status);
   const updated = await memberService.rejectApplication(memberId);
   await logAction(req.user!.id, 'member.reject', 'MemberProfile', memberId, { reason: req.body.reason });
-  return ok(res, updated);
+  return ok(res, decisionDTO(updated));
+}
+
+// What an approve/reject response carries — not the raw row (it holds the student-ID
+// fingerprint and QR bookkeeping the client has no use for).
+function decisionDTO(p: { id: string; status: string; serialNumber: string; academicYear: string }) {
+  return { id: p.id, status: p.status.toLowerCase(), serialNumber: p.serialNumber, academicYear: p.academicYear };
 }
 
 // Secretary only. Decrypts the student ID of an application under review so

@@ -213,7 +213,7 @@ How it works:
 - **What Part Two may show:** only what the site does — push notifications, the read-only Facebook Page sync, RSVP, signed-QR check-in — with generic text ("A new announcement from your officers") and placeholder lines. No invented events, dates or numbers. The QR patterns are decorative, never real codes.
 - **Player (`PrequelPlayer`, `usePrequelPlayer`):** `@remotion/player` with no built-in controls, loaded in its own chunk (about 101 kB gzipped) when the theatre comes within 800px. States: idle → (loading) → playing ⇄ paused → closing → ended, plus error. It pauses when less than 25% of the theatre is on screen or the tab is hidden, and never resumes by itself.
 - **No pinning, no scroll lock, no autoplay.** "Skip to the rebirth" is always present, and the controls (with a two-part progress bar) sit under the picture.
-- **Accessibility:** the film layer is `aria-hidden`; the section's introduction paragraph is its only description. The page used to carry a full "Read the story" transcript (the WCAG 1.2.3 alternative); the organisation removed it on 2026-09-30 because its scene-by-scene wording read like production notes and shouldn't be public. Without it, the film's on-screen text and visual story aren't available to screen-reader users — if a text version returns, write it as plain public copy. A polite live region announces status and the intermission. The signature is a real `<button>` named "Watch the prequel, 1 minute 30 seconds". Under reduced motion the curtains fade, the signature appears without the writing hand, and the card fades to the film.
+- **Accessibility:** the film layer is `aria-hidden`. The page used to carry a full "Read the story" transcript; the organisation removed it on 2026-09-30 because its scene-by-scene wording read like production notes and shouldn’t be public. It was replaced the same day by a short plain-language summary in the figure’s screen-reader-only `<figcaption>` (the WCAG 1.2.3 alternative) — keep it plain public copy, and update it if the film’s story changes. A polite live region announces status and the intermission. The signature is a real `<button>` named "Watch the prequel, 1 minute 30 seconds". Under reduced motion the curtains fade, the signature appears without the writing hand, and the card fades to the film.
 - **Sound:** optional. `VITE_PREQUEL_MUSIC_URL` (a licensed 90-second track) adds a score and a mute button. Without it the film is silent and the stage says "No sound".
 - **Licence:** Remotion is source-available, not MIT. It is free for individuals, non-profits and companies of up to 3 people. Once the organisation has confirmed it qualifies, pass `acknowledgeRemotionLicense` to the Player.
 - **Storyboard and copy:** `components/landing/prequel.data.ts`. Act II gives no years or causes for the break-up; none are on record. The adviser should approve Part Two's script.
@@ -330,7 +330,7 @@ AVIF variants are generated alongside the WebP files, with `loading="lazy"`, exp
 - `prefers-reduced-motion` has full parity (§3.5), and nothing essential depends on motion.
 - There is no content in `::before`/`::after` that screen readers need.
 - Images that carry meaning get honest alt text. Decorative ones get `alt=""`.
-- Shared-scope issues flagged but **not** fixed here: `maximum-scale=1.0` in `index.html`, the missing skip link in `PublicLayout`, and footer text at 30–40% alpha.
+- Shared-scope issues flagged here were fixed since: `PublicLayout` has a skip link, footer text is at 80–85% alpha, and `index.html` no longer sets `maximum-scale` (2026-09-30).
 
 ---
 
@@ -380,7 +380,7 @@ Other implementation details:
 ### Open items
 - Timeline entries 2–4 are **placeholders pending adviser confirmation** (`components/landing/timeline.data.ts`).
 - Photo placeholders are in `frontend/public/assets/placeholders/` (see `ASSETS.md`).
-- Shared-scope issues are unchanged and flagged: `maximum-scale=1.0` in `index.html`, no skip link in `PublicLayout`, and low-alpha footer text.
+- Shared-scope issues: resolved (see above).
 
 ---
 

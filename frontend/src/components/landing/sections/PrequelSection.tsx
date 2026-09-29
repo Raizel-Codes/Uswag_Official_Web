@@ -252,7 +252,14 @@ export default function PrequelSection() {
         </div>
 
         <figcaption className="lp-sr-only">
-          The USWAG prequel, a 90-second animated film in two parts, as introduced above.
+          The USWAG prequel, a 90-second animated film in two parts. Part One: in 2010, students
+          sign USWAG&rsquo;s charter and stand together as its first members. The years pass and
+          the organization goes quiet. In 2025 a new generation brings it back, and one of the
+          people who started it signs the charter again beside them. Part Two: today, news and
+          events reach members on their phones, posts from USWAG&rsquo;s Facebook Page appear on
+          this site, and members check in to events with a QR code. The film closes on the three
+          causes USWAG works for &mdash; youth voice and participation, mental health and
+          wellness, and environmental leadership &mdash; and on the years still ahead.
         </figcaption>
 
         <div className="lp-stage-bar lp-theatre__measure">

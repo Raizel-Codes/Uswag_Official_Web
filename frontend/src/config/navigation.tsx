@@ -5,7 +5,26 @@ export interface NavItem {
   roles: string[];
   hideOnMobile?: boolean;
   section?: string; // sidebar group heading (desktop) — see super-admin.html prototype
+  centre?: boolean; // member tab bar: the raised centre tab
+  activeOnly?: boolean; // member: needs an ACTIVE membership (Article III) — locked otherwise
 }
+
+const CardIcon = (props: any) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" />
+  </svg>
+);
+
+const LedgerIcon = (props: any) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M9 11l2 2 4-4" />
+    <rect x="4" y="3" width="16" height="18" rx="2" />
+    <path d="M8 17h8" />
+  </svg>
+);
 
 const HomeIcon = (props: any) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -78,12 +97,14 @@ const DocumentIcon = (props: any) => (
 );
 
 export const NAV_ITEMS: NavItem[] = [
-  // Member specific — mirrors prototype/member.html bottom nav exactly:
-  // Home · Events · QR (center) · Profile. Attendance history lives inside
-  // the QR page (see MyQRPage.tsx "View all" link), not its own nav tab.
+  // Member — rendered by components/member/MemberLayout.tsx (not Sidebar/BottomNav).
+  // Five tabs with the card in the centre; the card and attendance are separate
+  // destinations (docs/design/member-portal.md). `activeOnly` tabs stay visible to
+  // pending/expired/rejected members but show a lock and explain why.
   { name: 'Home', href: '/dashboard', icon: HomeIcon, roles: ['member'] },
-  { name: 'Events', href: '/dashboard/events', icon: CalendarIcon, roles: ['member'] },
-  { name: 'QR', href: '/dashboard/qr', icon: ScanIcon, roles: ['member'] },
+  { name: 'Events', href: '/dashboard/events', icon: CalendarIcon, roles: ['member'], activeOnly: true },
+  { name: 'Card', href: '/dashboard/qr', icon: CardIcon, roles: ['member'], centre: true, activeOnly: true },
+  { name: 'Attendance', href: '/dashboard/attendance', icon: LedgerIcon, roles: ['member'] },
   { name: 'Profile', href: '/dashboard/profile', icon: UserIcon, roles: ['member'] },
 
   // Officer Admin

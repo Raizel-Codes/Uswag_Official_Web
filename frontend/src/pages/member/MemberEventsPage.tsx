@@ -1,161 +1,64 @@
-import { useState } from "react";
-import { useEvents, useRsvp } from "@/hooks/useEvents";
-import { PILLAR_LABELS } from "@/types/event.types";
-import type { UswagEvent } from "@/types/event.types";
+// Member portal — Events. RSVP to in-campus events; apply for out-of-campus ones (limited
+// slots, recorded as "applied" for the officers to confirm). Sign-ups come from the server
+// (GET /events/me/rsvps), so "Going ✓" survives a reload. Only active members can sign up —
+// everyone else sees the events with the action locked and the reason above the list.
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useEvents } from '@/hooks/useEvents';
+import { useMyProfile } from '@/hooks/useMyProfile';
+import { useMyRsvps } from '@/hooks/useMyRsvps';
+import type { UswagEvent } from '@/types/event.types';
+import PageHeader from '@/components/member/PageHeader';
+import StandingNote from '@/components/member/StandingNote';
+import EventRow from '@/components/member/EventRow';
+import { isActive, errorMessage } from '@/components/member/standing';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  return {
-    day: d.getDate().toString().padStart(2, "0"),
-    month: d.toLocaleString("default", { month: "short" }).toUpperCase(),
-    time: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-  };
-}
+type Filter = 'upcoming' | 'mine' | 'past';
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'mine', label: 'My sign-ups' },
+  { key: 'past', label: 'Past' },
+];
 
-const PILLAR_COLORS: Record<string, string> = {
-  YOUTH_VOICE: "text-blue-600",
-  MENTAL_HEALTH: "text-rose-600",
-  ENVIRONMENTAL: "text-green-700",
-};
-
-// ---------------------------------------------------------------------------
-// Skeletons
-// ---------------------------------------------------------------------------
-function EventCardSkeleton() {
-  return (
-    <div className="mb-3 flex gap-3 rounded-2xl bg-white p-3 shadow-sm border-l-4 border-sage animate-pulse">
-      <div className="h-12 w-12 shrink-0 rounded-xl bg-mist" />
-      <div className="flex-1 space-y-1.5">
-        <div className="h-2.5 w-20 rounded bg-gray-200" />
-        <div className="h-3.5 w-40 rounded bg-gray-200" />
-        <div className="h-2.5 w-32 rounded bg-gray-100" />
-      </div>
-      <div className="h-7 w-16 shrink-0 rounded-full bg-mist" />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// EventCard
-// ---------------------------------------------------------------------------
-interface EventCardProps {
-  event: UswagEvent;
-  isGoing: boolean;
-  isPending: boolean;
-  onRsvp: (id: string) => void;
-  onApply: (id: string) => void;
-}
-
-function EventCard({ event, isGoing, isPending, onRsvp, onApply }: EventCardProps) {
-  const dt = formatDate(event.startsAt);
-  const isOutOfCampus = event.scope === "OUT_OF_CAMPUS";
-  const borderColor = isOutOfCampus ? "border-amber-400" : "border-sage";
-  const isPast = event.status === "COMPLETED" || event.status === "CANCELLED";
+function ApplyDialog({ event, busy, error, onClose, onConfirm }: { event: UswagEvent; busy: boolean; error?: string; onClose: () => void; onConfirm: () => void }) {
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  // Focus the confirm button once on open (not on every re-render); Escape closes.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    confirmRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCloseRef.current();
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      opener?.focus?.();
+    };
+  }, []);
 
   return (
-    <div
-      className={
-        "mb-3 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm border-l-4 transition-shadow hover:shadow-md " +
-        borderColor +
-        (isPast ? " opacity-60" : "")
-      }
-    >
-      {/* Date */}
-      <div className="flex h-12 min-w-12 flex-col items-center justify-center rounded-xl bg-mist font-heading text-primary">
-        <span className="text-[17px] font-extrabold leading-none">{dt.day}</span>
-        <span className="text-[9.5px] font-bold uppercase tracking-wide">{dt.month}</span>
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div
-          className={
-            "text-[9.5px] font-bold uppercase tracking-widest " +
-            (PILLAR_COLORS[event.pillar] ?? "text-primary")
-          }
-        >
-          {PILLAR_LABELS[event.pillar]}
-          {isOutOfCampus && <span className="ml-1 text-amber-600">&middot; Limited</span>}
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-[rgb(20_39_24/0.45)]" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="apply-title"
+        className="mp-card w-full max-w-md p-6 sm:p-7"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="mp-eyebrow">Out of campus · Limited slots</p>
+        <h2 id="apply-title" className="mp-h1 mt-2" style={{ fontSize: '1.375rem' }}>{event.title}</h2>
+        {event.description && <p className="mp-muted mt-3 text-[0.9375rem] leading-relaxed">{event.description}</p>}
+        <div className="mp-note mp-note--warn mt-5 text-[0.875rem]">
+          <p>
+            {event.limitedSlots ? <>This event has <strong>{event.limitedSlots}</strong> slots. </> : null}
+            Applying doesn’t guarantee a slot; the officers confirm who goes, with priority by attendance standing.
+          </p>
         </div>
-        <h4 className="font-heading mt-0.5 truncate text-[13.5px] font-bold text-forest">{event.title}</h4>
-        <div className="mt-0.5 truncate text-[11.5px] text-gray-500">
-          {event.location} &middot; {dt.time}
-        </div>
-      </div>
-
-      {/* Action button */}
-      {!isPast && (
-        <button
-          id={"btn-event-" + (isOutOfCampus ? "apply" : "rsvp") + "-" + event.id}
-          disabled={isGoing || isPending}
-          onClick={() => (isOutOfCampus ? onApply(event.id) : onRsvp(event.id))}
-          className={
-            "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition-colors focus:outline-none " +
-            (isGoing
-              ? "bg-primary text-white cursor-default"
-              : isPending
-              ? "bg-mist text-primary/50 cursor-wait"
-              : isOutOfCampus
-              ? "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-500 hover:text-white hover:border-transparent"
-              : "bg-mist text-primary hover:bg-primary hover:text-white")
-          }
-        >
-          {isGoing ? "Going \u2713" : isPending ? "\u2026" : isOutOfCampus ? "Apply" : "RSVP"}
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Apply modal for out-of-campus events
-// ---------------------------------------------------------------------------
-function ApplyModal({
-  event,
-  onClose,
-  onConfirm,
-  isPending,
-}: {
-  event: UswagEvent;
-  onClose: () => void;
-  onConfirm: () => void;
-  isPending: boolean;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
-        <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-600">
-          Out-of-Campus &middot; Limited Slots
-        </div>
-        <h3 className="font-heading text-[17px] font-bold text-forest">{event.title}</h3>
-        <p className="mt-2 text-[12.5px] text-gray-600 leading-relaxed">{event.description}</p>
-        {event.limitedSlots != null && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
-            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 stroke-amber-600">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <p className="text-[11.5px] text-amber-700 font-medium">
-              This event has <strong>{event.limitedSlots}</strong> slots. Slots are prioritized by attendance standing.
-            </p>
-          </div>
-        )}
-        <div className="mt-5 flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-2xl border border-gray-200 bg-white py-3 text-[13px] font-bold text-forest hover:bg-mist"
-          >
-            Cancel
-          </button>
-          <button
-            id="btn-confirm-apply"
-            disabled={isPending}
-            onClick={onConfirm}
-            className="flex-1 rounded-2xl bg-amber-500 py-3 text-[13px] font-bold text-white hover:bg-amber-600 disabled:opacity-50"
-          >
-            {isPending ? "Applying\u2026" : "Confirm Application"}
+        {error && <p role="alert" className="mp-alert mt-4">{error}</p>}
+        <div className="flex gap-3 mt-6">
+          <button type="button" onClick={onClose} className="mp-btn mp-btn--ghost flex-1">Cancel</button>
+          <button ref={confirmRef} type="button" onClick={onConfirm} disabled={busy} className="mp-btn mp-btn--primary flex-1">
+            {busy ? 'Applying…' : 'Apply for a slot'}
           </button>
         </div>
       </div>
@@ -163,169 +66,102 @@ function ApplyModal({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 export default function MemberEventsPage() {
-  const { data: events, isLoading } = useEvents();
-  const rsvpMutation = useRsvp();
-  const [rsvpedIds, setRsvpedIds] = useState<Set<string>>(new Set());
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { data: events, isLoading, isError } = useEvents();
+  const { data: profile } = useMyProfile();
+  const active = isActive(profile?.status);
+  const { byEvent, rsvp } = useMyRsvps(active);
+  const [filter, setFilter] = useState<Filter>('upcoming');
   const [applyTarget, setApplyTarget] = useState<UswagEvent | null>(null);
 
-  function handleRsvp(eventId: string) {
-    rsvpMutation.mutate(eventId, {
-      onSuccess: () => setRsvpedIds((prev) => new Set(prev).add(eventId)),
-    });
+  // Home's "Apply" on an out-of-campus event lands here with the dialog open.
+  const applyId = (location.state as { apply?: string } | null)?.apply;
+  useEffect(() => {
+    if (!applyId || !events || !active) return;
+    const ev = events.find((e) => e.id === applyId);
+    if (ev) setApplyTarget(ev);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [applyId, events, active, navigate, location.pathname]);
+
+  const all = events ?? [];
+  const byDate = (a: UswagEvent, b: UswagEvent) => +new Date(a.startsAt) - +new Date(b.startsAt);
+  // An event is past once it's completed/cancelled or its date has gone by (with a few hours'
+  // grace for events still running) — same rule as Home's "Coming up".
+  const cutoff = Date.now() - 6 * 3600_000;
+  const isPast = (e: UswagEvent) => e.status === 'COMPLETED' || e.status === 'CANCELLED' || +new Date(e.startsAt) < cutoff;
+  const lists: Record<Filter, UswagEvent[]> = {
+    upcoming: all.filter((e) => !isPast(e)).sort(byDate),
+    mine: all.filter((e) => byEvent.has(e.id)).sort(byDate),
+    past: all.filter(isPast).sort((a, b) => byDate(b, a)),
+  };
+  const shown = lists[filter];
+
+  function act(event: UswagEvent) {
+    rsvp.reset();
+    if (event.scope === 'OUT_OF_CAMPUS') setApplyTarget(event);
+    else rsvp.mutate(event.id);
   }
-
-  function handleApply(event: UswagEvent) {
-    setApplyTarget(event);
-  }
-
-  function confirmApply() {
-    if (!applyTarget) return;
-    rsvpMutation.mutate(applyTarget.id, {
-      onSuccess: () => {
-        setRsvpedIds((prev) => new Set(prev).add(applyTarget.id));
-        setApplyTarget(null);
-      },
-      onError: () => setApplyTarget(null),
-    });
-  }
-
-  const upcoming = (events ?? [])
-    .filter((e) => e.status !== "COMPLETED" && e.status !== "CANCELLED")
-    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-
-  const thisMonth = upcoming.filter((e) => {
-    const evMonth = new Date(e.startsAt).getMonth();
-    return evMonth === new Date().getMonth();
-  });
-
-  const later = upcoming.filter((e) => {
-    const evMonth = new Date(e.startsAt).getMonth();
-    return evMonth !== new Date().getMonth();
-  });
-
-  const outOfCampus = upcoming.filter((e) => e.scope === "OUT_OF_CAMPUS");
-
-  const past = (events ?? [])
-    .filter((e) => e.status === "COMPLETED")
-    .sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime())
-    .slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-mist pb-24 md:pb-8">
-      <div className="px-5 pt-6 pb-2">
-        <h1 className="font-heading text-[19px] font-bold text-forest">Events</h1>
-        <p className="text-[12px] text-gray-500 mt-0.5">RSVP and track your participation</p>
+    <div className="mp-page space-y-8">
+      <PageHeader
+        eyebrow="Events"
+        title="What’s on"
+        lead="RSVP to campus events. Out-of-campus activities have limited slots, so you apply and the officers confirm."
+      />
+
+      {profile && !active && <StandingNote profile={profile} what="Signing up is for active members" />}
+
+      <div role="group" aria-label="Show" className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+        {FILTERS.filter((f) => f.key !== 'mine' || active).map((f) => (
+          <button key={f.key} type="button" className="mp-chip" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>
+            {f.label}
+            {f.key === 'mine' && byEvent.size > 0 ? ` · ${byEvent.size}` : ''}
+          </button>
+        ))}
       </div>
 
-      <div className="px-5 pt-3">
-        {/* This Month */}
-        <div className="my-4 flex items-center justify-between">
-          <h3 className="font-heading text-[15px] font-bold text-forest">This Month</h3>
+      {rsvp.isError && !applyTarget && (
+        <p role="alert" className="mp-alert">{errorMessage(rsvp.error, 'Could not save your RSVP. Please try again.')}</p>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-3" aria-busy="true">
+          {[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-24" />)}
         </div>
-        {isLoading ? (
-          <><EventCardSkeleton /><EventCardSkeleton /></>
-        ) : thisMonth.length === 0 ? (
-          <div className="mb-4 rounded-2xl bg-white p-6 text-center shadow-sm border border-gray-100">
-            <p className="text-[12.5px] text-gray-500">No events this month.</p>
-          </div>
-        ) : (
-          thisMonth.filter((e) => e.scope === "IN_CAMPUS").map((e) => (
-            <EventCard
+      ) : isError ? (
+        <p role="alert" className="mp-alert">We couldn’t load events. Refresh the page to try again.</p>
+      ) : shown.length === 0 ? (
+        <p className="mp-card p-8 text-center mp-muted">
+          {filter === 'mine' ? 'You haven’t signed up for anything yet.' : filter === 'past' ? 'No past events yet.' : 'No upcoming events yet. Check back soon.'}
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {shown.map((e) => (
+            <EventRow
               key={e.id}
               event={e}
-              isGoing={rsvpedIds.has(e.id)}
-              isPending={rsvpMutation.isPending && rsvpMutation.variables === e.id}
-              onRsvp={handleRsvp}
-              onApply={() => handleApply(e)}
+              rsvp={byEvent.get(e.id)}
+              locked={!active}
+              busy={rsvp.isPending && rsvp.variables === e.id}
+              onAction={act}
             />
-          ))
-        )}
+          ))}
+        </ul>
+      )}
 
-        {/* Later this year */}
-        {!isLoading && later.filter((e) => e.scope === "IN_CAMPUS").length > 0 && (
-          <>
-            <div className="my-4 flex items-center justify-between">
-              <h3 className="font-heading text-[15px] font-bold text-forest">Coming Up</h3>
-            </div>
-            {later.filter((e) => e.scope === "IN_CAMPUS").map((e) => (
-              <EventCard
-                key={e.id}
-                event={e}
-                isGoing={rsvpedIds.has(e.id)}
-                isPending={rsvpMutation.isPending && rsvpMutation.variables === e.id}
-                onRsvp={handleRsvp}
-                onApply={() => handleApply(e)}
-              />
-            ))}
-          </>
-        )}
-
-        {/* Out-of-Campus */}
-        {(isLoading || outOfCampus.length > 0) && (
-          <>
-            <div className="my-4 flex items-center justify-between">
-              <h3 className="font-heading text-[15px] font-bold text-forest">Out-of-Campus</h3>
-              <span className="text-[11px] font-semibold text-amber-600">
-                Limited slots &middot; apply to join
-              </span>
-            </div>
-            {isLoading ? (
-              <EventCardSkeleton />
-            ) : (
-              outOfCampus.map((e) => (
-                <EventCard
-                  key={e.id}
-                  event={e}
-                  isGoing={rsvpedIds.has(e.id)}
-                  isPending={rsvpMutation.isPending && rsvpMutation.variables === e.id}
-                  onRsvp={handleRsvp}
-                  onApply={() => handleApply(e)}
-                />
-              ))
-            )}
-          </>
-        )}
-
-        {/* Past */}
-        {past.length > 0 && (
-          <>
-            <div className="my-4 flex items-center justify-between">
-              <h3 className="font-heading text-[15px] font-bold text-forest">Past Events</h3>
-            </div>
-            {past.map((e) => (
-              <EventCard
-                key={e.id}
-                event={e}
-                isGoing={false}
-                isPending={false}
-                onRsvp={() => {}}
-                onApply={() => {}}
-              />
-            ))}
-          </>
-        )}
-
-        {/* RSVP error */}
-        {rsvpMutation.isError && (
-          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] text-red-600">
-            Could not process your RSVP. Please try again.
-          </div>
-        )}
-
-        <div className="h-4" />
-      </div>
-
-      {/* Apply modal */}
       {applyTarget && (
-        <ApplyModal
+        <ApplyDialog
           event={applyTarget}
-          onClose={() => setApplyTarget(null)}
-          onConfirm={confirmApply}
-          isPending={rsvpMutation.isPending}
+          busy={rsvp.isPending}
+          error={rsvp.isError ? errorMessage(rsvp.error, 'Could not send your application. Please try again.') : undefined}
+          onClose={() => {
+            setApplyTarget(null);
+            rsvp.reset();
+          }}
+          onConfirm={() => rsvp.mutate(applyTarget.id, { onSuccess: () => setApplyTarget(null) })}
         />
       )}
     </div>

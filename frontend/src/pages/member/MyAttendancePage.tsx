@@ -1,163 +1,124 @@
-import { useQuery } from "@tanstack/react-query";
-import { getMyAttendance } from "@/services/attendanceService";
-import type { AttendanceHistoryEntry, MemberAttendanceHistory } from "@/types/event.types";
+// Member portal — Attendance. Its own tab (no longer inside the card page): every scan of the
+// member's card, as a ledger, with the summary above it. Available to every member — a
+// pending member simply has no scans yet, and the page says why.
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { getMyAttendance } from '@/services/attendanceService';
+import { useMyProfile } from '@/hooks/useMyProfile';
+import { PILLAR_LABELS, type AttendanceHistoryEntry, type MemberAttendanceHistory } from '@/types/event.types';
+import PageHeader from '@/components/member/PageHeader';
+import { isActive } from '@/components/member/standing';
 
-// Per-pillar icon, matching prototype/member.html's .attend-icon set.
-const PILLAR_ICON: Record<string, JSX.Element> = {
-  ENVIRONMENTAL: (
-    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
-  ),
-  MENTAL_HEALTH: (
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-  ),
-  YOUTH_VOICE: (
-    <>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-    </>
-  ),
+const RESULT: Record<AttendanceHistoryEntry['result'], { cls: string; label: string }> = {
+  VALID: { cls: 'mp-standing--active', label: 'Present' },
+  EXPIRED: { cls: 'mp-standing--expired', label: 'Expired card' },
+  INVALID: { cls: 'mp-standing--rejected', label: 'Not accepted' },
 };
 
-const RESULT_STYLES: Record<AttendanceHistoryEntry["result"], { badge: string; label: string }> = {
-  VALID: { badge: "bg-successBg text-success", label: "Present" },
-  EXPIRED: { badge: "bg-amber-50 text-amber-600", label: "Expired" },
-  INVALID: { badge: "bg-red-50 text-red-600", label: "Invalid" },
-};
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function AttendanceRow({ entry }: { entry: AttendanceHistoryEntry }) {
-  const pillarIcon = entry.event ? PILLAR_ICON[entry.event.pillar] : null;
-  const style = RESULT_STYLES[entry.result];
-
-  return (
-    <div className="mb-2.5 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-mist">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-[18px] w-[18px] stroke-primary"
-        >
-          {pillarIcon ?? <circle cx="12" cy="12" r="9" />}
-        </svg>
-      </div>
-      <div className="min-w-0 flex-1">
-        <h5 className="font-heading truncate text-[13px] font-bold text-forest">
-          {entry.event?.title ?? "Unknown Event"}
-        </h5>
-        <span className="text-[11px] text-gray-500">
-          {formatDate(entry.scannedAt)}
-          {entry.reason ? ` · ${entry.reason}` : ""}
-        </span>
-      </div>
-      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${style.badge}`}>
-        {style.label}
-      </span>
-    </div>
-  );
+function formatWhen(iso: string) {
+  const d = new Date(iso);
+  return {
+    date: d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }),
+    time: d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' }),
+  };
 }
 
 export default function MyAttendancePage() {
-  const { data, isLoading, error } = useQuery<MemberAttendanceHistory>({
-    queryKey: ["member", "attendance"],
+  const { data: profile } = useMyProfile();
+  const { data, isLoading, isError, refetch } = useQuery<MemberAttendanceHistory>({
+    queryKey: ['member', 'attendance'],
     queryFn: getMyAttendance,
     staleTime: 60 * 1000,
   });
 
+  const summary = data
+    ? [
+        { label: 'Present', value: String(data.validScans) },
+        { label: 'Attendance rate', value: `${data.attendanceRate}%` },
+        { label: 'Total scans', value: String(data.totalScans) },
+      ]
+    : null;
+
   return (
-    <div className="min-h-screen bg-mist pb-24 md:pb-8">
-      <div className="px-5 pt-6 pb-2">
-        <h1 className="font-heading text-[19px] font-bold text-forest">My Attendance</h1>
-        <p className="text-[12px] text-gray-500 mt-0.5">
-          Every scan of your membership QR, logged in real time
-        </p>
-      </div>
+    <div className="mp-page space-y-10">
+      <PageHeader
+        eyebrow="Attendance"
+        title="Your attendance"
+        lead="Every time an officer scans your card at an event, it’s recorded here — accepted or not."
+      />
 
-      <div className="px-5 pt-4">
-        {/* Summary stats */}
+      <section aria-label="Summary" className="mp-vault mp-vault--panel mp-on-dark p-6 sm:p-8">
         {isLoading ? (
-          <div className="grid grid-cols-3 gap-2.5 mb-5">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />
+          <div className="grid grid-cols-3 gap-4" aria-busy="true">
+            {[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-16" />)}
+          </div>
+        ) : summary ? (
+          <dl className="relative grid grid-cols-3 gap-4 divide-x divide-[rgb(152_203_176/0.25)]">
+            {summary.map((s, i) => (
+              <div key={s.label} className={i ? 'pl-4' : ''}>
+                <dt className="text-[0.6875rem] sm:text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-sage">{s.label}</dt>
+                <dd className="mp-stat text-mist mt-2">{s.value}</dd>
+              </div>
             ))}
-          </div>
-        ) : data ? (
-          <div className="grid grid-cols-3 gap-2.5 mb-5">
-            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <div className="font-heading text-[18px] font-extrabold text-primary">
-                {data.totalScans}
-              </div>
-              <div className="text-[10px] text-gray-500 font-semibold mt-0.5">Total Scans</div>
-            </div>
-            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <div className="font-heading text-[18px] font-extrabold text-success">
-                {data.validScans}
-              </div>
-              <div className="text-[10px] text-gray-500 font-semibold mt-0.5">Present</div>
-            </div>
-            <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-              <div className="font-heading text-[18px] font-extrabold text-forest">
-                {data.attendanceRate}%
-              </div>
-              <div className="text-[10px] text-gray-500 font-semibold mt-0.5">Attendance Rate</div>
-            </div>
-          </div>
-        ) : null}
+          </dl>
+        ) : (
+          <p className="relative">Your summary will appear here once your history loads.</p>
+        )}
+      </section>
 
-        {/* Error state */}
-        {error && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] text-red-600">
-            Couldn&apos;t load your attendance history. Try again shortly.
+      <section aria-labelledby="att-history">
+        <h2 id="att-history" className="mp-h2">History</h2>
+
+        {isError && (
+          <div className="mt-4 space-y-3">
+            <p role="alert" className="mp-alert">We couldn’t load your attendance history.</p>
+            <button type="button" onClick={() => refetch()} className="mp-btn mp-btn--ghost">Try again</button>
           </div>
         )}
 
-        {/* History list */}
-        <div className="mb-2.5 flex items-center justify-between">
-          <h3 className="font-heading text-[14px] font-bold text-forest">History</h3>
-        </div>
-
         {isLoading ? (
-          <div className="space-y-2.5">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />
-            ))}
+          <div className="mt-4 space-y-3" aria-busy="true">
+            {[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-16" />)}
           </div>
-        ) : !data || data.records.length === 0 ? (
-          <div className="rounded-2xl bg-white p-6 text-center shadow-sm border border-gray-100">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mx-auto mb-2 h-8 w-8 stroke-gray-300"
-            >
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            <p className="text-[12.5px] font-medium text-gray-500">No attendance records yet.</p>
-            <p className="mt-0.5 text-[11px] text-gray-400">
-              Events you attend will appear here after your QR is scanned.
+        ) : data && data.records.length > 0 ? (
+          <ol className="mp-card mp-ledger mt-4 px-5 sm:px-6">
+            {data.records.map((entry) => {
+              const when = formatWhen(entry.scannedAt);
+              const r = RESULT[entry.result];
+              return (
+                <li key={entry.id} className="py-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+                  <div className="sm:w-32 shrink-0">
+                    <p className="mp-num text-[0.9375rem] font-semibold">{when.date}</p>
+                    <p className="mp-muted text-[0.8125rem]">{when.time}</p>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold truncate">{entry.event?.title ?? 'Event no longer listed'}</p>
+                    <p className="mp-muted text-[0.875rem]">
+                      {entry.event ? PILLAR_LABELS[entry.event.pillar] : 'USWAG event'}
+                      {entry.result !== 'VALID' && entry.reason ? ` · ${entry.reason}` : ''}
+                    </p>
+                  </div>
+                  <span className={`mp-standing ${r.cls} self-start sm:self-center`}>{r.label}</span>
+                </li>
+              );
+            })}
+          </ol>
+        ) : !isError ? (
+          <div className="mp-card p-8 mt-4 text-center">
+            <p className="mp-h3">No scans yet</p>
+            <p className="mp-muted mt-2 text-[0.9375rem] max-w-[46ch] mx-auto">
+              {isActive(profile?.status) ? (
+                <>
+                  Show your card at the next event and it will be recorded here.{' '}
+                  <Link to="/dashboard/events" className="mp-link">See upcoming events</Link>
+                </>
+              ) : (
+                <>Attendance starts once your membership is active and your card is issued.</>
+              )}
             </p>
           </div>
-        ) : (
-          data.records.map((entry) => <AttendanceRow key={entry.id} entry={entry} />)
-        )}
-
-        <div className="h-4" />
-      </div>
+        ) : null}
+      </section>
     </div>
   );
 }

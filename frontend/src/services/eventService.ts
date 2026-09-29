@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { UswagEvent, RsvpRecord } from '@/types/event.types';
+import type { UswagEvent, RsvpRecord, MyRsvp } from '@/types/event.types';
 
 export async function listEvents(): Promise<UswagEvent[]> {
   const { data } = await api.get<{ success: boolean; data: UswagEvent[] }>('/events');
@@ -25,5 +25,11 @@ export async function rsvpToEvent(eventId: string): Promise<RsvpRecord> {
   const { data } = await api.post<{ success: boolean; data: RsvpRecord }>(
     `/events/${eventId}/rsvp`,
   );
+  return data.data;
+}
+
+/** The signed-in member's own RSVPs / applications. */
+export async function listMyRsvps(): Promise<MyRsvp[]> {
+  const { data } = await api.get<{ success: boolean; data: MyRsvp[] }>('/events/me/rsvps');
   return data.data;
 }

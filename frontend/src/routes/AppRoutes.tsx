@@ -4,6 +4,7 @@ import PublicLayout from '@/components/layout/PublicLayout';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
+import PortalLayout, { PortalProfilePage } from './PortalLayout';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 // Every page below is lazy-loaded so Vite splits the bundle into separate
@@ -34,7 +35,6 @@ const MemberDashboardPage = lazy(() => import('@/pages/member/MemberDashboardPag
 const MyQRPage = lazy(() => import('@/pages/member/MyQRPage'));
 const MyAttendancePage = lazy(() => import('@/pages/member/MyAttendancePage'));
 const MemberEventsPage = lazy(() => import('@/pages/member/MemberEventsPage'));
-const ProfilePage = lazy(() => import('@/pages/member/ProfilePage'));
 
 // Admin pages
 const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'));
@@ -80,14 +80,15 @@ export default function AppRoutes() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
-        {/* Member portal — any authenticated user */}
+        {/* Member portal — any authenticated user. Members get the member portal shell;
+            officers reaching /dashboard/profile keep DashboardLayout (PortalLayout.tsx). */}
         <Route element={<ProtectedRoute />}>
-          <Route element={<DashboardLayout />}>
+          <Route element={<PortalLayout />}>
             <Route path="/dashboard" element={<MemberDashboardPage />} />
             <Route path="/dashboard/qr" element={<MyQRPage />} />
             <Route path="/dashboard/attendance" element={<MyAttendancePage />} />
             <Route path="/dashboard/events" element={<MemberEventsPage />} />
-            <Route path="/dashboard/profile" element={<ProfilePage />} />
+            <Route path="/dashboard/profile" element={<PortalProfilePage />} />
           </Route>
         </Route>
 

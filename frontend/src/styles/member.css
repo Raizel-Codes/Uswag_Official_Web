@@ -1,0 +1,379 @@
+/*
+  USWAG member portal — the present-day half of the public Record, as an app.
+  Spec: docs/design/member-portal.md.
+
+  Imported only by components/member/MemberLayout.tsx (a lazy route chunk), and every rule is
+  scoped under `.mp` or an `.mp-*` class, so the officer / Super Admin dashboards — which keep
+  DashboardLayout — are untouched. Shared primitives (plate card, vault, seal, cameo, date
+  plate, chips, lift) come from premium.css. No classical layer here: no parchment, sepia or
+  serif. Headings are Poppins (--font-heading, CLAUDE.md portal typography), body Inter.
+*/
+@import './premium.css';
+
+.mp {
+  /* Motion — same values as the public site (landing.css / lib/motion.ts) */
+  --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --lp-dur-micro: 180ms;
+  --lp-dur-ui: 420ms;
+
+  /* Status inks: tokens.css semantic colors darkened so small text passes AA on their
+     own -bg tints (the base tokens are for icons / large text only). */
+  --mp-success-ink: #1F6B3F;  /* 5.9:1 on --color-success-bg */
+  --mp-warn-ink: #7D5314;     /* 6.3:1 on --color-warn-bg */
+  --mp-danger-ink: #8F322D;   /* 6.7:1 on --color-danger-bg (= landing --lp-danger-ink) */
+
+  --mp-tabbar-h: 68px;
+
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--color-deep);
+  font-family: var(--font-body);
+  background-color: var(--color-mist);
+  /* The same fine green grain as the public site's present layer */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .08 0 0 0 0 .15 0 0 0 0 .09 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+.mp ::selection { background: var(--color-sage); color: var(--color-deep); }
+.mp :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+.mp-on-dark :focus-visible { outline-color: var(--color-sage); }
+.mp [tabindex='-1']:focus-visible { outline: none; }
+
+/* ---------- Page frame ---------- */
+.mp-page {
+  width: 100%;
+  max-width: 1080px;
+  margin-inline: auto;
+  padding: 1.5rem 1rem calc(var(--mp-tabbar-h) + 2rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 640px) { .mp-page { padding-inline: 1.5rem; } }
+@media (min-width: 768px) { .mp-page { padding: 2.5rem 2.5rem 3.5rem; } }
+.mp--sidebar .mp-page { padding-bottom: 3.5rem; }
+.mp--tabbar .mp-page { padding-bottom: calc(var(--mp-tabbar-h) + 2rem + env(safe-area-inset-bottom)); }
+
+/* ---------- Typography (Poppins headings, Inter body) ---------- */
+.mp :where(.mp-eyebrow) {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+.mp :where(.mp-h1) {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.125rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+/* Section heading with an engraved rule running out to the edge */
+.mp :where(.mp-h2) {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  line-height: 1.3;
+}
+.mp :where(.mp-h2)::after {
+  content: '';
+  flex: 1;
+  height: 5px;
+  border-top: 1px solid rgb(20 39 24 / 0.16);
+  border-bottom: 1px solid rgb(152 203 176 / 0.55);
+}
+.mp :where(.mp-h3) { font-family: var(--font-heading); font-weight: 600; font-size: 1rem; line-height: 1.35; }
+.mp :where(.mp-muted) { color: rgb(20 39 24 / 0.75); }           /* 7.4:1 on Mist */
+.mp-on-dark :where(.mp-muted) { color: rgb(231 239 228 / 0.82); } /* on Deep Forest */
+.mp-num { font-family: var(--font-heading); font-variant-numeric: lining-nums tabular-nums; }
+.mp-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- Buttons ---------- */
+.mp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.625rem 1.125rem;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition:
+    background-color var(--lp-dur-ui) var(--lp-ease),
+    border-color var(--lp-dur-ui) var(--lp-ease),
+    color var(--lp-dur-ui) var(--lp-ease),
+    transform var(--lp-dur-micro) var(--lp-ease);
+}
+.mp-btn:active { transform: translateY(1px); }
+.mp-btn:disabled { cursor: not-allowed; opacity: 0.6; transform: none; }
+/* White on Primary 7.8:1 → on Deep 15.9:1; engraved Sage hairline */
+.mp-btn--primary { background: var(--color-primary); color: #fff; box-shadow: inset 0 0 0 1px rgb(152 203 176 / 0.35); }
+.mp-btn--primary:hover:not(:disabled) { background: var(--color-deep); }
+.mp-btn--ghost { border-color: rgb(20 39 24 / 0.3); color: var(--color-deep); background: transparent; }
+.mp-btn--ghost:hover:not(:disabled) { border-color: var(--color-deep); background: rgb(20 39 24 / 0.04); }
+.mp-btn--light { background: var(--color-mist); color: var(--color-deep); box-shadow: inset 0 0 0 1px rgb(20 39 24 / 0.2); }
+.mp-btn--light:hover:not(:disabled) { background: #fff; }
+.mp-btn--done { background: var(--color-success-bg); color: var(--mp-success-ink); border-color: rgb(47 158 92 / 0.35); cursor: default; }
+.mp-btn--sm { min-height: 40px; padding: 0.5rem 0.875rem; font-size: 0.8125rem; }
+
+.mp-link {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgb(46 91 65 / 0.35);
+  text-underline-offset: 4px;
+  transition: text-decoration-color var(--lp-dur-ui) var(--lp-ease), color var(--lp-dur-ui) var(--lp-ease);
+}
+.mp-link:hover { color: var(--color-deep); text-decoration-color: currentColor; }
+.mp-on-dark .mp-link { color: var(--color-sage); text-decoration-color: rgb(152 203 176 / 0.4); }
+.mp-on-dark .mp-link:hover { color: #fff; }
+
+/* ---------- Standing (membership status) ---------- */
+.mp-standing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3125rem 0.75rem;
+  border-radius: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+.mp-standing::before { content: ''; width: 7px; height: 7px; border-radius: 99px; background: currentColor; }
+.mp-standing--active { color: var(--mp-success-ink); background: var(--color-success-bg); border-color: rgb(47 158 92 / 0.35); }
+.mp-standing--pending,
+.mp-standing--expired { color: var(--mp-warn-ink); background: var(--color-warn-bg); border-color: rgb(201 138 46 / 0.4); }
+.mp-standing--rejected { color: var(--mp-danger-ink); background: var(--color-danger-bg); border-color: rgb(179 69 63 / 0.35); }
+/* On the vault the chip reads as a light plate */
+.mp-on-dark .mp-standing { border-color: rgb(152 203 176 / 0.45); }
+
+/* Locked-state notice: why something is unavailable, and what to do next (CLAUDE.md:
+   a permission boundary is shown and explained, never silently hidden). */
+.mp-note {
+  position: relative;
+  display: flex;
+  gap: 0.875rem;
+  align-items: flex-start;
+  padding: 1rem 1.125rem;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.55);
+  border: 1px solid rgb(20 39 24 / 0.14);
+  box-shadow: inset 3px 0 0 var(--color-sage);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.mp-note--warn { box-shadow: inset 3px 0 0 var(--color-warn); }
+.mp-note--danger { box-shadow: inset 3px 0 0 var(--color-danger); }
+.mp-alert {
+  border: 1px solid rgb(179 69 63 / 0.35);
+  background: var(--color-danger-bg);
+  color: var(--mp-danger-ink);
+  border-radius: 3px;
+  padding: 0.875rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+/* Hollow numerals for big stats on the vault (from the public site's outline numerals) */
+.mp-stat {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);
+  line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Portal typography is Poppins: the shared outline numerals default to the public site's Lora */
+.mp-outline-num { font-family: var(--font-heading); font-weight: 600; }
+
+.mp-skeleton { background: rgb(20 39 24 / 0.07); border-radius: 3px; }
+.mp-on-dark .mp-skeleton { background: rgb(231 239 228 / 0.12); }
+
+/* ---------- Desktop rail (sidebar) ---------- */
+.mp-rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  width: 264px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.75rem 1.25rem 1.5rem;
+}
+.mp-rail__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 44px;
+  padding: 0.5rem 0.875rem;
+  border-radius: 3px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(231 239 228 / 0.82);
+  transition: color var(--lp-dur-ui) var(--lp-ease), background-color var(--lp-dur-ui) var(--lp-ease);
+}
+.mp-rail__link:hover { color: #fff; background: rgb(231 239 228 / 0.06); }
+.mp-rail__link[aria-current='page'] {
+  color: #fff;
+  background: rgb(152 203 176 / 0.12);
+  box-shadow: inset 0 0 0 1px rgb(152 203 176 / 0.3);
+}
+.mp-rail__link[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: -1.25rem;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  background: var(--color-sage);
+}
+.mp-rail__lock { margin-left: auto; opacity: 0.8; }
+
+/* ---------- Mobile tab bar (five tabs, card in the middle) ---------- */
+.mp-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(var(--mp-tab-count, 5), minmax(0, 1fr));
+  align-items: end;
+  height: calc(var(--mp-tabbar-h) + env(safe-area-inset-bottom));
+  padding: 0 0.25rem env(safe-area-inset-bottom);
+  background: rgb(231 239 228 / 0.94);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  /* the public header's engraved double rule, flipped to the top edge */
+  box-shadow: 0 -1px 0 rgb(20 39 24 / 0.14), 0 -4px 0 -3px rgb(152 203 176 / 0.9), 0 -14px 30px -22px rgb(20 39 24 / 0.35);
+}
+.mp-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: var(--mp-tabbar-h);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgb(20 39 24 / 0.75);
+  transition: color var(--lp-dur-ui) var(--lp-ease);
+}
+.mp-tab svg { width: 22px; height: 22px; stroke-width: 1.8; }
+.mp-tab[aria-current='page'] { color: var(--color-primary); }
+.mp-tab[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 28%;
+  right: 28%;
+  height: 3px;
+  background: var(--color-primary);
+}
+/* The centre tab (the card) is a raised seal, like a social app's create button */
+.mp-tab--centre { justify-content: flex-end; padding-bottom: 8px; }
+.mp-tab--centre::before { display: none; }
+.mp-tab__seal {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin-top: -22px;
+  border-radius: 999px;
+  color: var(--color-mist);
+  background: radial-gradient(circle at 35% 30%, rgb(61 116 85), var(--color-primary) 55%, var(--color-deep));
+  box-shadow:
+    inset 0 0 0 2px var(--color-primary),
+    inset 0 0 0 3px rgb(152 203 176 / 0.7),
+    0 0 0 4px var(--color-mist),
+    0 10px 20px -8px rgb(20 39 24 / 0.55);
+  transition: transform var(--lp-dur-ui) var(--lp-ease);
+}
+.mp-tab--centre[aria-current='page'] .mp-tab__seal { transform: translateY(-2px); box-shadow: inset 0 0 0 2px var(--color-primary), inset 0 0 0 3px var(--color-sage), 0 0 0 4px var(--color-mist), 0 14px 24px -8px rgb(20 39 24 / 0.6); }
+.mp-tab__pip {
+  position: absolute;
+  top: 10px;
+  right: calc(50% - 20px);
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+  background: var(--color-warn-bg);
+  color: var(--mp-warn-ink);
+  box-shadow: 0 0 0 2px var(--color-mist);
+}
+.mp-tab--centre .mp-tab__pip { top: -20px; right: calc(50% - 30px); }
+.mp-tab__pip svg { width: 10px; height: 10px; stroke-width: 2.4; }
+
+/* "More" sheet — only rendered when a role has more than five destinations */
+.mp-sheet-backdrop { position: fixed; inset: 0; z-index: 45; background: rgb(20 39 24 / 0.35); }
+.mp-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
+  border-radius: 6px 6px 0 0;
+  animation: mp-sheet-in var(--lp-dur-ui) var(--lp-ease);
+}
+@keyframes mp-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+
+/* ---------- The membership card ---------- */
+.mp-idcard {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  margin-inline: auto;
+  border-radius: 10px;
+  overflow: hidden;
+  /* clears the vault's inset double frame (clamp(10px,1.6vw,18px)) */
+  padding: 2rem 2rem 1.75rem;
+}
+.mp-idcard__qr {
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  border-radius: 6px;
+  background: #fff;
+  /* QR frame: Sage double rule (tokens.css: "QR frame") */
+  box-shadow: 0 0 0 1px rgb(152 203 176 / 0.9), 0 0 0 5px rgb(255 255 255 / 0.08), 0 0 0 6px rgb(152 203 176 / 0.45);
+}
+.mp-idcard__qr canvas { display: block; width: 100% !important; height: auto !important; max-width: 240px; }
+/* Locked card: the same card, face down — no QR exists for this member yet */
+.mp-idcard--locked .mp-idcard__qr {
+  background: rgb(231 239 228 / 0.06);
+  box-shadow: inset 0 0 0 1px rgb(152 203 176 / 0.35);
+  aspect-ratio: 1;
+  max-width: 268px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+/* ---------- Attendance ledger ---------- */
+.mp-ledger > li + li { border-top: 1px solid rgb(20 39 24 / 0.1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-btn,
+  .mp-tab,
+  .mp-tab__seal,
+  .mp-rail__link,
+  .mp-link { transition: none; }
+  .mp-sheet { animation: none; }
+}

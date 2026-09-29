@@ -26,6 +26,13 @@ export interface RsvpRecord {
   status: 'going' | 'applied' | 'waitlisted';
 }
 
+/** GET /events/me/rsvps — one row per event the member signed up for. */
+export interface MyRsvp {
+  eventId: string;
+  status: 'going' | 'applied' | 'waitlisted';
+  createdAt: string;
+}
+
 export interface AttendanceRecord {
   eventId: string;
   memberId: string;

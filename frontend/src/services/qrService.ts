@@ -11,7 +11,9 @@ export async function verifyScan(rawQrValue: string, eventId: string): Promise<S
   return data;
 }
 
+// Active members only — the server answers 403 (ForbiddenError, with the reason) for
+// pending, expired and rejected members, and never generates their QR.
 export async function getMyDigitalCard(): Promise<{ qrValue: string; serialNumber: string }> {
-  const { data } = await api.get('/members/me/qr');
-  return data;
+  const { data } = await api.get<{ success: boolean; data: { qrValue: string; serialNumber: string } }>('/members/me/qr');
+  return data.data;
 }

@@ -12,7 +12,9 @@ function hashResetToken(rawToken: string) {
 }
 
 export async function validateCredentials(email: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { email } });
+  // Case-insensitive: applications now store emails lowercased, but older
+  // accounts may have capitals, and people type their email either way.
+  const user = await prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: 'insensitive' } } });
   if (!user) return null;
   const matches = await bcrypt.compare(password, user.passwordHash);
   return matches ? user : null;
@@ -88,6 +90,7 @@ export async function consumePasswordResetToken(rawToken: string, newPassword: s
       passwordHash,
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
+      awaitingPasswordSetup: false, // a friend-assisted applicant's first password
       tokenVersion: { increment: 1 },
     },
   });

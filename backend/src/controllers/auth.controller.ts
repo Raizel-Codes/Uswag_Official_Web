@@ -96,7 +96,7 @@ export async function logout(req: Request, res: Response) {
 // the link, which is the real gap flagged for follow-up.
 export async function forgotPassword(req: Request, res: Response) {
   const { email } = req.body;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: 'insensitive' } } });
 
   const genericMessage = "If an account exists for that email, we've sent a password reset link.";
 

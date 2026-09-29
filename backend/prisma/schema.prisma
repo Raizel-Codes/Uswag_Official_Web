@@ -85,6 +85,13 @@ model User {
   passwordResetTokenHash  String?
   passwordResetExpiresAt  DateTime?
 
+  // True for an account created by a friend-assisted application (the
+  // helper never sets the applicant's password). The only password is an
+  // unguessable random one until the applicant uses the one-time setup link
+  // the Secretary gives them in person (member.controller.ts
+  // createSetupLink); consumePasswordResetToken() clears this flag.
+  awaitingPasswordSetup   Boolean  @default(false)
+
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -114,6 +121,25 @@ model MemberProfile {
 
   joinedAt         DateTime          @default(now())
   expiresAt        DateTime?
+
+  // Student ID (Article III applications). The raw ID is never stored in
+  // plaintext — see utils/crypto.ts:
+  // - studentIdHash: keyed HMAC of the normalized ID. Permanent. Only lets
+  //   the server ask "has this ID applied before?"; it can't be turned back
+  //   into the ID without STUDENT_ID_HASH_KEY. Unique = one application per
+  //   student, even if they use a different email.
+  // - studentIdCiphertext: AES-256-GCM, so the Secretary can read the ID
+  //   while verifying the application. Temporary: set to null the moment
+  //   the application is approved or rejected.
+  // Both are null for members who joined before this field existed.
+  studentIdHash       String?  @unique
+  studentIdCiphertext String?
+
+  // Friend-assisted application: someone else's device, the applicant
+  // present. proxyName (who helped) is temporary like the ciphertext and is
+  // cleared on approval/rejection; the boolean stays for the record.
+  submittedByProxy Boolean  @default(false)
+  proxyName        String?
 
   rsvps            EventRsvp[]
   attendance       AttendanceRecord[]

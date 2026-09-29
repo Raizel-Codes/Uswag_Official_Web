@@ -27,5 +27,9 @@ router.get('/me/attendance', attendanceController.getMyAttendance);
 router.get('/', requireOfficerPosition('SECRETARY'), memberController.listMembers);
 router.post('/:memberId/approve', requireOfficerPosition('SECRETARY'), validateBody(approveApplicationSchema), memberController.approveApplication);
 router.post('/:memberId/reject', requireOfficerPosition('SECRETARY'), validateBody(rejectApplicationSchema), memberController.rejectApplication);
+// Application review aids (Secretary): the temporary, encrypted student ID,
+// and the one-time password-setup link for friend-assisted applicants.
+router.get('/:memberId/student-id', requireOfficerPosition('SECRETARY'), memberController.revealStudentId);
+router.post('/:memberId/setup-link', requireOfficerPosition('SECRETARY'), memberController.createSetupLink);
 
 export default router;

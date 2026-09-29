@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { prisma } from '../config/db.js';
 import { buildQrValue } from './qr.service.js';
+import { hashStudentId, encryptStudentId } from '../utils/crypto.js';
 
 // Serial number format: UW-<academicYearStart>-<zero-padded sequence>.
 // Never sequential in a way that's guessable per-member without a DB lookup —
@@ -22,14 +23,27 @@ export function getCurrentAcademicYear(): string {
   return `${startYear}-${startYear + 1}`;
 }
 
-export async function approveApplication(userId: string, academicYear?: string) {
+// Approve/reject are the moment the Secretary "handles" an application, so
+// both also delete the temporary data held only for that review: the
+// encrypted student ID and the helper's name. The permanent studentIdHash
+// stays (it's what stops a second application with the same ID).
+const CLEAR_REVIEW_DATA = { studentIdCiphertext: null, proxyName: null } as const;
+
+export async function approveApplication(profileId: string, academicYear?: string) {
   const year = academicYear || getCurrentAcademicYear();
   const [yearStart] = year.split('-');
   const serialNumber = await generateSerialNumber(Number(yearStart));
 
   return prisma.memberProfile.update({
-    where: { userId },
-    data: { status: 'ACTIVE', serialNumber, academicYear: year, qrIssuedAt: new Date() },
+    where: { id: profileId },
+    data: { status: 'ACTIVE', serialNumber, academicYear: year, qrIssuedAt: new Date(), ...CLEAR_REVIEW_DATA },
+  });
+}
+
+export async function rejectApplication(profileId: string) {
+  return prisma.memberProfile.update({
+    where: { id: profileId },
+    data: { status: 'REJECTED', ...CLEAR_REVIEW_DATA },
   });
 }
 
@@ -45,6 +59,8 @@ export async function submitApplication(data: {
   passwordHash: string;
   collegeOrDept: string;
   yearLevel?: string;
+  studentId: string;
+  proxyName?: string;
 }) {
   const placeholderSerial = `UW-PENDING-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
   return prisma.user.create({
@@ -52,6 +68,7 @@ export async function submitApplication(data: {
       name: data.name,
       email: data.email,
       passwordHash: data.passwordHash,
+      awaitingPasswordSetup: Boolean(data.proxyName),
       role: 'MEMBER',
       collegeOrDept: data.collegeOrDept,
       yearLevel: data.yearLevel,
@@ -60,6 +77,10 @@ export async function submitApplication(data: {
           status: 'PENDING',
           serialNumber: placeholderSerial,
           academicYear: getCurrentAcademicYear(),
+          studentIdHash: hashStudentId(data.studentId),
+          studentIdCiphertext: encryptStudentId(data.studentId),
+          submittedByProxy: Boolean(data.proxyName),
+          proxyName: data.proxyName ?? null,
         },
       },
     },

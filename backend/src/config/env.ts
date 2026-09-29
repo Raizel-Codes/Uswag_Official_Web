@@ -9,6 +9,13 @@ function required(key: string): string {
   return value;
 }
 
+// A 32-byte key, base64-encoded (generate: `openssl rand -base64 32`).
+function requiredKey(key: string): Buffer {
+  const buf = Buffer.from(required(key), 'base64');
+  if (buf.length !== 32) throw new Error(`${key} must be 32 random bytes, base64-encoded`);
+  return buf;
+}
+
 export const env = {
   port: Number(process.env.PORT ?? 4000),
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -24,6 +31,14 @@ export const env = {
   },
 
   qrSigningSecret: required('QR_SIGNING_SECRET'),
+
+  // Student ID protection (utils/crypto.ts). Two separate keys, 32 random
+  // bytes each, base64. Losing HASH_KEY breaks duplicate detection for every
+  // stored ID; losing ENC_KEY makes pending applications' IDs unreadable.
+  studentId: {
+    hashKey: requiredKey('STUDENT_ID_HASH_KEY'),
+    encKey: requiredKey('STUDENT_ID_ENC_KEY'),
+  },
 
   facebook: {
     pageId: process.env.FACEBOOK_PAGE_ID ?? '',

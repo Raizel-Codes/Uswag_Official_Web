@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+// NwSSU student ID: YY-NNNNN or YY-NNNNNN, hyphen optional when typed.
+const STUDENT_ID_PATTERN = /^\d{2}-?\d{5,6}$/;
+
 // Public self-service membership application — POST /members/apply.
 // Article III: any bona fide NwSSU undergraduate may apply; the account is
 // created up front in PENDING status and only gains real member access
@@ -9,12 +12,19 @@ export const submitApplicationSchema = z
     name: z.string().trim().min(2, 'Full name is required'),
     // Lowercased so "Juan@…" and "juan@…" can't become two accounts.
     email: z.string().trim().toLowerCase().email('A valid email is required'),
-    // Format is left loose (campuses differ); normalized + protected in
-    // utils/crypto.ts before anything is stored.
+    // NwSSU format YY-NNNNN (or 6 digits): the enrollment year's last two
+    // digits, then the student's number that year, e.g. 23-00877. Typed with
+    // or without the hyphen; always canonicalized to "YY-NNNNN" before it is
+    // hashed/encrypted (utils/crypto.ts), so both spellings are one student.
     studentId: z
       .string()
-      .trim()
-      .regex(/^[A-Za-z0-9][A-Za-z0-9 -]{2,23}$/, 'Enter your student ID number as it appears on your school ID'),
+      .transform((s) => s.replace(/\s+/g, ''))
+      .pipe(z.string().regex(STUDENT_ID_PATTERN, 'Enter your student ID like 23-00877 (year, hyphen, then 5 or 6 digits)'))
+      .transform((s) => {
+        const digits = s.replace('-', '');
+        return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+      })
+      .refine((s) => Number(s.slice(0, 2)) <= new Date().getFullYear() % 100, 'That enrollment year hasn’t happened yet. Check the first two digits'),
     // Required for your own application; omitted when a friend submits for
     // you (you set it later via the Secretary's setup link).
     password: z.string().min(8, 'Password must be at least 8 characters').optional(),

@@ -30,7 +30,11 @@ export function verifySignature(memberId: string, signature: string): boolean {
 //   Deleted as soon as the application is approved or rejected.
 // ---------------------------------------------------------------------------
 
-/** Uppercase, no spaces or hyphens: "21-0123 4" and "2101234" are the same ID. */
+/**
+ * Digits only: "23-00877" and "2300877" are the same ID. Input already passed
+ * memberSchemas.ts (NwSSU format YY-NNNNN/NNNNNN); this is a second line of
+ * defence so the hash never depends on how the ID was typed.
+ */
 export function normalizeStudentId(raw: string): string {
   return raw.replace(/[\s-]/g, '').toUpperCase();
 }

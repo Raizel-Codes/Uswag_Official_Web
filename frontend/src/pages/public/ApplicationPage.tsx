@@ -27,8 +27,15 @@ const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year']
 
 const COLLEGES = ['CEA', 'CCIS', 'CCJS', 'COM', 'CAT', 'CON', 'COED'];
 
-// Mirrors submitApplicationSchema.studentId on the backend.
-const STUDENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 -]{2,23}$/;
+// NwSSU student ID: YY-NNNNN (or 6 digits) — enrollment year, then the student's
+// number that year, e.g. 23-00877. Mirrors submitApplicationSchema.studentId.
+const STUDENT_ID_PATTERN = /^\d{2}-\d{5,6}$/;
+
+/** Digits only, hyphen inserted after the year: "2300877" → "23-00877". */
+function formatStudentId(raw: string) {
+  const digits = raw.replace(/\D/g, '').slice(0, 8);
+  return digits.length > 2 ? `${digits.slice(0, 2)}-${digits.slice(2)}` : digits;
+}
 
 /** Minimum time the envelope spends sealing, so a fast response doesn't cut the ceremony. */
 const SEALING_MS = 1700;
@@ -180,8 +187,12 @@ export default function ApplicationPage() {
     e.preventDefault();
     setError(null);
 
-    if (!STUDENT_ID_PATTERN.test(studentId.trim())) {
-      setError('Enter the student ID number exactly as it appears on the school ID.');
+    if (!STUDENT_ID_PATTERN.test(studentId)) {
+      setError('Enter the student ID like 23-00877: the two-digit enrollment year, a hyphen, then 5 or 6 digits.');
+      return;
+    }
+    if (Number(studentId.slice(0, 2)) > new Date().getFullYear() % 100) {
+      setError('That enrollment year hasn’t happened yet. Check the first two digits of the student ID.');
       return;
     }
     if (forFriend) {
@@ -226,7 +237,7 @@ export default function ApplicationPage() {
         submitApplication({
           name: name.trim(),
           email: email.trim(),
-          studentId: studentId.trim(),
+          studentId,
           collegeOrDept: collegeOrDept.trim(),
           yearLevel: yearLevel || undefined,
           website,
@@ -415,17 +426,20 @@ export default function ApplicationPage() {
                 <input
                   id="apply-student-id"
                   type="text"
+                  inputMode="numeric"
                   autoComplete="off"
                   spellCheck={false}
                   required
-                  maxLength={24}
+                  maxLength={9}
+                  placeholder="23-00877"
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
+                  onChange={(e) => setStudentId(formatStudentId(e.target.value))}
                   aria-describedby="apply-student-id-hint"
                   className="lp-input"
                 />
                 <p id="apply-student-id-hint" className="lp-hint">
-                  As printed on the NwSSU school ID. It’s stored encrypted and only the Secretary can read it while reviewing.
+                  As printed on the NwSSU school ID: the year enrolled, then the student number (e.g. 23-00877). It’s stored
+                  encrypted and only the Secretary can read it while reviewing.
                   That readable copy is deleted once the application is decided; only a one-way fingerprint is kept, so the
                   same ID can’t apply twice.
                 </p>

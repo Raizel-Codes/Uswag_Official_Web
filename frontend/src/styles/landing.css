@@ -7,7 +7,11 @@
   here is scoped under `.lp` — nothing may leak into other public pages or the portals.
   The four brand tokens come from tokens.css (--color-*); the --lp-* tones below are
   supporting "archival" colors used only on this page.
+
+  The present-day primitives (engraved plate card, vault, seal, cameo, date plate, chips,
+  lift) live in premium.css, shared with the member portal (member.css).
 */
+@import './premium.css';
 
 .lp {
   /* PAST — warm parchment tinted toward Mist; Deep Forest is the ink */
@@ -455,16 +459,7 @@
 
 /* ---------- Present-day cards ---------- */
 
-.lp-lift {
-  transition:
-    transform var(--lp-dur-ui) var(--lp-ease),
-    box-shadow var(--lp-dur-ui) var(--lp-ease);
-}
-.lp-lift:hover,
-.lp-lift:focus-within {
-  transform: translateY(-3px);
-  box-shadow: var(--lp-lift-shadow, 0 10px 28px rgb(20 39 24 / 0.1));
-}
+/* (moved to premium.css — shared with the member portal) */
 
 /* Mandate icons draw themselves once their card is revealed */
 .lp-draw path {
@@ -531,26 +526,7 @@
    Inner public pages (About → Join) — same Record, one continuous style
    ====================================================================== */
 
-/* Present-day "engraved plate": crisp corners, hairline border with an inner Sage rule 5px in —
-   the archival flyer's double rule re-cut in the brand greens. The 4px Mist band (first inset
-   shadow) masks the Sage band beneath it, leaving a single 1px inner line. */
-.lp-card {
-  --lp-plate: var(--color-mist);
-  background: var(--lp-plate);
-  border: 1px solid rgb(20 39 24 / 0.16);
-  border-radius: 3px;
-  box-shadow:
-    inset 0 0 0 4px var(--lp-plate),
-    inset 0 0 0 5px rgb(152 203 176 / 0.6),
-    0 1px 2px rgb(20 39 24 / 0.05),
-    0 14px 32px -24px rgb(20 39 24 / 0.35);
-  /* On hover the inner rule warms to Primary and the plate lifts off the page */
-  --lp-lift-shadow:
-    inset 0 0 0 4px var(--lp-plate),
-    inset 0 0 0 5px var(--color-primary),
-    0 2px 4px rgb(20 39 24 / 0.06),
-    0 26px 44px -26px rgb(20 39 24 / 0.5);
-}
+/* (moved to premium.css — shared with the member portal) */
 /* Archival card on parchment: same construction in sepia */
 .lp-card--past {
   --lp-plate: var(--lp-parchment);
@@ -612,30 +588,7 @@
 .lp-chapter-link--next .lp-ink-muted { color: rgb(231 239 228 / 0.82); }
 .lp-chapter-link--next .text-primary { color: var(--color-sage); }
 
-/* Filter chips (Events) */
-.lp-chip {
-  flex-shrink: 0;
-  min-height: 40px;
-  padding: 0.5rem 1.125rem;
-  border: 1px solid rgb(20 39 24 / 0.25);
-  border-radius: 2px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-deep);
-  background: transparent;
-  transition:
-    background-color var(--lp-dur-ui) var(--lp-ease),
-    border-color var(--lp-dur-ui) var(--lp-ease),
-    color var(--lp-dur-ui) var(--lp-ease);
-}
-.lp-chip:hover { border-color: var(--color-deep); }
-.lp-chip[aria-pressed='true'] {
-  background: var(--color-deep);
-  border-color: var(--color-deep);
-  color: var(--color-mist);
-}
+/* (moved to premium.css — shared with the member portal) */
 
 /* Text inputs on Mist */
 .lp-field {
@@ -686,79 +639,7 @@
 .lp-btn--primary { box-shadow: inset 0 0 0 1px rgb(152 203 176 / 0.35); }
 .lp-btn--light { box-shadow: inset 0 0 0 1px rgb(20 39 24 / 0.2); }
 
-/* ---- The vault: Deep Forest showcase surface ----
-   A lit, grained dark room with an inset Sage double frame. Used for the mandates, every
-   closing call to action, and the "next chapter" link, so the present has rhythm and flows
-   straight into the Deep Forest footer. */
-.lp-vault {
-  position: relative;
-  isolation: isolate;
-  color: var(--color-mist);
-  background:
-    radial-gradient(80% 70% at 12% 0%, rgb(46 91 65 / 0.85), transparent 62%),
-    radial-gradient(70% 60% at 100% 100%, rgb(46 91 65 / 0.55), transparent 60%),
-    var(--color-deep);
-}
-.lp-vault::before {
-  /* fine light grain so the dark isn't flat */
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.5;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .6 0 0 0 0 .8 0 0 0 0 .69 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
-}
-.lp-vault--framed::after {
-  /* inset double Sage rule */
-  content: '';
-  position: absolute;
-  inset: clamp(10px, 1.6vw, 18px);
-  pointer-events: none;
-  border: 1px solid rgb(152 203 176 / 0.4);
-  box-shadow: inset 0 0 0 4px transparent, inset 0 0 0 5px rgb(152 203 176 / 0.18);
-}
-.lp-vault--panel { border-radius: 3px; overflow: hidden; }
-
-/* Engraved outline numerals (Sage stroke, hollow) — mandate numbers, section marks */
-.lp-outline-num {
-  font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 1;
-  color: transparent;
-  -webkit-text-stroke: 1px rgb(152 203 176 / 0.45);
-  user-select: none;
-  pointer-events: none;
-}
-.lp-outline-num--light { -webkit-text-stroke-color: rgb(46 91 65 / 0.22); }
-
-/* Seal: circular Primary medallion with an inset Sage ring — replaces rounded icon squares */
-.lp-seal {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: radial-gradient(circle at 35% 30%, rgb(61 116 85), var(--color-primary) 55%, var(--color-deep));
-  color: var(--color-mist);
-  box-shadow: inset 0 0 0 2px var(--color-primary), inset 0 0 0 3px rgb(152 203 176 / 0.7), 0 6px 14px -8px rgb(20 39 24 / 0.6);
-}
-
-/* Cameo: portrait in a double Sage ring */
-.lp-cameo {
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--color-mist);
-  box-shadow: 0 0 0 3px var(--color-mist), 0 0 0 4px var(--color-sage), 0 10px 22px -12px rgb(20 39 24 / 0.5);
-}
-
-/* Date plate (Events): a small vault tile with an inner Sage rule */
-.lp-plate {
-  border-radius: 3px;
-  color: var(--color-mist);
-  background: radial-gradient(120% 100% at 20% 0%, var(--color-primary), var(--color-deep) 70%);
-  box-shadow: inset 0 0 0 3px transparent, inset 0 0 0 4px rgb(152 203 176 / 0.45);
-}
+/* (moved to premium.css — shared with the member portal) */
 
 /* ---- Timeline clock (TimelineClock.tsx) ---- */
 .lp-clock-track {

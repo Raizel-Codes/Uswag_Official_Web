@@ -61,7 +61,8 @@ export async function getMyProfile(req: Request, res: Response) {
   const profile = await prisma.memberProfile.findUnique({ where: { userId: req.user!.id }, include: { user: true } });
   if (!profile) return fail(res, 'Member profile not found', 404);
   const rates = await attendanceService.getAttendanceRatesByMember([profile.id]);
-  return ok(res, toMemberDTO(profile, rates[profile.id] ?? 0));
+  // standingNote: why the card / event sign-ups are locked (null when active).
+  return ok(res, { ...toMemberDTO(profile, rates[profile.id] ?? 0), standingNote: memberService.standingBlock(profile.status) });
 }
 
 export async function listMembers(req: Request, res: Response) {
@@ -196,7 +197,14 @@ export async function submitApplication(req: Request, res: Response) {
   }
 }
 
+// Only ACTIVE members are issued a signed QR (Article III). A pending,
+// expired or rejected member gets 403 + the reason; the QR is never
+// generated for them, not just hidden by the frontend.
 export async function getMyQr(req: Request, res: Response) {
+  const profile = await prisma.memberProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!profile) return fail(res, 'Member profile not found', 404);
+  const blocked = memberService.standingBlock(profile.status);
+  if (blocked) return fail(res, blocked, 403, { standing: profile.status.toLowerCase() });
   const card = await memberService.getDigitalCard(req.user!.id);
   return ok(res, card);
 }

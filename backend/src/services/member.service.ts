@@ -88,6 +88,24 @@ export async function submitApplication(data: {
   });
 }
 
+// Member standing (Article III). Only an ACTIVE member — approved, fee paid,
+// oriented, within the current academic year — may hold a digital card or
+// join events. Everyone else gets a plain-language reason, which the member
+// portal shows in place of the card / RSVP button (never a silent hide).
+const STANDING_BLOCKED: Record<'PENDING' | 'EXPIRED' | 'REJECTED', string> = {
+  PENDING:
+    'Your application is still pending. Your digital card and event sign-ups open once the Secretary approves it (Article III: submit the form, pay the membership fee, attend orientation).',
+  EXPIRED:
+    'Your membership has expired. Membership lasts one academic year (Article III §3). Renew with the Secretary to get a new card and join events.',
+  REJECTED:
+    'Your membership application was not approved. Contact the Secretary if you have questions or want to apply again.',
+};
+
+/** null when the member is in good standing; otherwise why they aren't. */
+export function standingBlock(status: string): string | null {
+  return status === 'ACTIVE' ? null : STANDING_BLOCKED[status as keyof typeof STANDING_BLOCKED] ?? 'Your membership is not active.';
+}
+
 export async function getDigitalCard(userId: string) {
   const profile = await prisma.memberProfile.findUnique({ where: { userId } });
   if (!profile) throw new Error('Member profile not found');

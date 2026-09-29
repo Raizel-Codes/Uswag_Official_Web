@@ -1,6 +1,6 @@
 import cron from 'node-cron';
-import { fetchRecentPagePosts } from '../services/facebook.service.js';
-import { upsertSyncedPost } from '../services/post.service.js';
+import { fetchRecentPagePosts, isFacebookConfigured } from '../services/facebook.service.js';
+import { deleteMockSyncedPosts, upsertSyncedPost } from '../services/post.service.js';
 import { logger } from '../utils/logger.js';
 
 // In-memory sync status — a single persistent backend process (per claude.md,
@@ -31,6 +31,7 @@ export async function runFacebookSync() {
         publishedAt: new Date(post.created_time),
       });
     }
+    await deleteMockSyncedPosts();
     lastSyncedAt = new Date().toISOString();
     lastSyncCount = posts.length;
     lastSyncError = null;
@@ -49,6 +50,11 @@ export async function runFacebookSync() {
 // See claude.md "Facebook sync" — this is the only place the Graph API
 // should be called from.
 export function startFacebookSyncJob() {
+  if (!isFacebookConfigured()) {
+    // A manual "Sync Now" still reports the missing config; the schedule just doesn't spam errors.
+    logger.warn('Facebook sync not scheduled: FACEBOOK_PAGE_ID / FACEBOOK_PAGE_ACCESS_TOKEN are not set.');
+    return;
+  }
   cron.schedule('*/30 * * * *', () => {
     void runFacebookSync();
   });

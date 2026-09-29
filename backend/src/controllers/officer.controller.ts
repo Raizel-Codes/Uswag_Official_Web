@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import type { OfficerPosition } from '@prisma/client';
 import { prisma } from '../config/db.js';
 import { logAction } from '../services/audit.service.js';
+import { OFFICER_POSITIONS, OfficerError, assertActiveMembers, installTerm, listNominees, roleForPosition } from '../services/officer.service.js';
+import { buildOfficerQrValue } from '../services/qr.service.js';
 import { ok, fail } from '../utils/response.js';
 
 // Only what the console shows. Never the full User row: it carries the password hash, the
@@ -16,10 +18,12 @@ const OFFICER_FIELDS = {
   createdAt: true,
 } as const;
 
-// Article VI positions. The President is the Super Admin; every other position (including the
-// VP, who is Super-Admin-equivalent through officerPosition — see role.middleware.ts) is an
-// Officer Admin.
-const POSITIONS: OfficerPosition[] = ['PRESIDENT', 'VICE_PRESIDENT', 'SECRETARY', 'TREASURER', 'AUDITOR', 'BUSINESS_MANAGER', 'PRO'];
+// Turns a rule the Super Admin can fix (not an active member, duplicate position…) into a 4xx
+// with its message; anything else is a real error and falls through to the error handler.
+function failOfficer(res: Response, err: unknown) {
+  if (err instanceof OfficerError) return fail(res, err.message, err.status);
+  throw err;
+}
 
 // SUPER ADMIN ONLY — see role.middleware.ts requireRole('SUPER_ADMIN')
 // applied in officer.routes.ts.
@@ -33,19 +37,47 @@ export async function listOfficers(_req: Request, res: Response) {
 
 export async function assignOfficer(req: Request, res: Response) {
   const { userId, officerPosition } = req.body;
-  if (!POSITIONS.includes(officerPosition)) {
+  if (!OFFICER_POSITIONS.includes(officerPosition)) {
     return fail(res, 'Choose one of the officer positions in Article VI.', 400);
   }
   const user = await prisma.user.findUnique({ where: { id: String(userId ?? '') } });
   if (!user) return fail(res, 'That account no longer exists.', 404);
 
+  try {
+    await assertActiveMembers([user.id]);
+  } catch (err) {
+    return failOfficer(res, err);
+  }
+
   const updated = await prisma.user.update({
     where: { id: user.id },
-    data: { role: officerPosition === 'PRESIDENT' ? 'SUPER_ADMIN' : 'OFFICER_ADMIN', officerPosition },
+    data: { role: roleForPosition(officerPosition as OfficerPosition), officerPosition },
     select: OFFICER_FIELDS,
   });
   await logAction(req.user!.id, 'officer.assign', 'User', user.id, { officerPosition, previous: user.officerPosition });
   return ok(res, updated);
+}
+
+// Active members who can be put in office — the only people the term form offers.
+export async function listNomineesHandler(_req: Request, res: Response) {
+  return ok(res, await listNominees());
+}
+
+// Installs an elected batch for a new term (see officer.service.ts installTerm).
+export async function installOfficerTerm(req: Request, res: Response) {
+  try {
+    return ok(res, await installTerm(req.user!.id, req.body.assignments));
+  } catch (err) {
+    return failOfficer(res, err);
+  }
+}
+
+// Any officer (Officer Admin or Super Admin) — their own signed identity QR, for meetings and
+// forums they conduct. Self-scoped from the JWT, same as GET /members/me/qr. Not tied to a
+// UswagEvent: scanning it verifies "this is officer X, position Y" and logs to the audit
+// trail (see scan.controller.ts), it does not create an AttendanceRecord.
+export async function getMyOfficerQr(req: Request, res: Response) {
+  return ok(res, { qrValue: buildOfficerQrValue(req.user!.id) });
 }
 
 // PUBLIC READ — for landing pages and public officer roster

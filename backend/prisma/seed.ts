@@ -21,6 +21,7 @@ async function main() {
       role: 'SUPER_ADMIN',
       officerPosition: 'PRESIDENT',
       collegeOrDept: 'BS Political Science',
+      memberProfile: { create: { status: 'ACTIVE', serialNumber: 'UW-2026-009000', academicYear: '2026-2027' } },
     },
   });
 
@@ -34,6 +35,9 @@ async function main() {
     { name: 'Grace Tolentino', email: 'grace.tolentino@nwssu.edu.ph', role: 'OFFICER_ADMIN', officerPosition: 'PRO', collegeOrDept: 'College of Business' },
   ];
 
+  // Officers are members first (Article III), so each gets an ACTIVE profile — the officer
+  // routes only accept active members.
+  let officerSerial = 1;
   for (const officer of officers) {
     await prisma.user.create({
       data: {
@@ -41,6 +45,9 @@ async function main() {
         passwordHash,
         role: officer.role as any,
         officerPosition: officer.officerPosition as any,
+        memberProfile: {
+          create: { status: 'ACTIVE', serialNumber: `UW-2026-0090${String(officerSerial++).padStart(2, '0')}`, academicYear: '2026-2027' },
+        },
       },
     });
   }

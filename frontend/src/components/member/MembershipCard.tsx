@@ -4,7 +4,7 @@ import crestOnDark from '@/assets/images/logo-uswag-on-dark.svg';
 import { prefersReducedMotion } from '@/lib/motion';
 import type { MemberProfile } from '@/types/member.types';
 import { STANDING_LABEL } from './standing';
-import { LockGlyph } from './MemberTabBar';
+import LockGlyph from '@/components/portal/LockGlyph';
 
 /** Brand token → hex for the QR renderer (it can't take CSS variables). */
 function token(name: string, fallback: string) {

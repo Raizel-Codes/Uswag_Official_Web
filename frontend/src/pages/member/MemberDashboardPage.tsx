@@ -12,7 +12,7 @@ import { useMyRsvps } from '@/hooks/useMyRsvps';
 import type { UswagEvent, MemberAttendanceHistory } from '@/types/event.types';
 import type { NewsPost } from '@/types/post.types';
 import NotificationBell from '@/components/pwa/NotificationBell';
-import PageHeader from '@/components/member/PageHeader';
+import PageHeader from '@/components/portal/PageHeader';
 import StandingNote from '@/components/member/StandingNote';
 import EventRow from '@/components/member/EventRow';
 import { STANDING_LABEL, isActive, errorMessage } from '@/components/member/standing';

@@ -1,373 +1,236 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { listEvents, createEvent } from "@/services/eventService";
-import type { CreateEventPayload } from "@/services/eventService";
-import { PILLAR_LABELS, STATUS_LABELS } from "@/types/event.types";
-import type { UswagEvent } from "@/types/event.types";
+// Events — create and review the org's activities (/admin/events; the Super Admin's
+// Operations section). POST /events is limited to SUPER_ADMIN / OFFICER_ADMIN on the server.
+// `?new=1` opens the create form (the dashboard's "+ New event").
+// Board layout: events by advocacy as a chart, then Upcoming / Past / Cancelled groups, each
+// with a status summary and a sign-ups meter per event.
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-const STATUS_BADGE: Record<string, string> = {
-  CONFIRMED: "bg-green-50 text-green-700",
-  DRAFT: "bg-amber-50 text-amber-700",
-  COMPLETED: "bg-gray-100 text-gray-500",
-  CANCELLED: "bg-red-50 text-red-500",
-};
+import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { usePortalToast } from '@/hooks/usePortalToast';
+import { listEvents, createEvent, type CreateEventPayload } from '@/services/eventService';
+import { PILLAR_LABELS, STATUS_LABELS, type EventStatus, type UswagEvent } from '@/types/event.types';
+import PageHeader from '@/components/portal/PageHeader';
+import Panel from '@/components/portal/Panel';
+import PortalToast from '@/components/portal/PortalToast';
+import StackedBar, { type BarSegment, type BarTone } from '@/components/admin/StackedBar';
+import BarList from '@/components/admin/BarList';
+import BoardGroup from '@/components/admin/BoardGroup';
+import Meter from '@/components/admin/Meter';
+import { EVENT_BADGE, signupMeter } from '@/components/admin/events';
+import { apiError, formatDate } from '@/components/admin/format';
 
-function formatShortDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
-}
+const COLS = 'minmax(15rem,2.4fr) minmax(7rem,0.9fr) minmax(10rem,1.2fr) 8rem';
+const STATUS_ORDER: EventStatus[] = ['CONFIRMED', 'DRAFT', 'COMPLETED', 'CANCELLED'];
+const STATUS_TONE: Record<EventStatus, BarTone> = { CONFIRMED: 'success', DRAFT: 'warn', COMPLETED: 'grey', CANCELLED: 'danger' };
+const statusSegments = (list: UswagEvent[]): BarSegment[] =>
+  STATUS_ORDER.map((s) => ({ label: STATUS_LABELS[s], value: list.filter((e) => e.status === s).length, tone: STATUS_TONE[s] }));
 
-// ---------------------------------------------------------------------------
-// Create Event Form
-// ---------------------------------------------------------------------------
-const EMPTY_FORM: CreateEventPayload = {
-  title: "",
-  description: "",
-  pillar: "YOUTH_VOICE",
-  scope: "IN_CAMPUS",
-  location: "",
-  startsAt: "",
-  limitedSlots: null,
-};
+const EMPTY: CreateEventPayload = { title: '', description: '', pillar: 'YOUTH_VOICE', scope: 'IN_CAMPUS', location: '', startsAt: '', limitedSlots: null };
 
 function CreateEventForm({ onCreated }: { onCreated: () => void }) {
-  const [form, setForm] = useState<CreateEventPayload>(EMPTY_FORM);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [form, setForm] = useState<CreateEventPayload>(EMPTY);
+  const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
-
   const mutation = useMutation({
-    mutationFn: (payload: CreateEventPayload) => createEvent(payload),
+    mutationFn: createEvent,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      setForm(EMPTY_FORM);
-      setFormError(null);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      setForm(EMPTY);
       onCreated();
     },
-    onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : "Failed to create event";
-      setFormError(msg);
-    },
+    onError: (err) => setError(apiError(err, 'Could not create the event. Please try again.')),
   });
+  const set = (patch: Partial<CreateEventPayload>) => setForm((f) => ({ ...f, ...patch }));
+  const outOfCampus = form.scope === 'OUT_OF_CAMPUS';
 
-  function handleSubmit(e: React.FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
-    setFormError(null);
-    if (!form.title.trim()) return setFormError("Event title is required.");
-    if (!form.location.trim()) return setFormError("Location is required.");
-    if (!form.startsAt) return setFormError("Date & time is required.");
-    if (!form.description.trim()) return setFormError("Description is required.");
-
-    const payload: CreateEventPayload = {
+    setError(null);
+    if (!form.title.trim()) return setError('Give the event a title.');
+    if (!form.startsAt) return setError('Choose the date and time.');
+    if (!form.location.trim()) return setError('Add a location.');
+    if (!form.description.trim()) return setError('Add a short description.');
+    if (outOfCampus && !form.limitedSlots) return setError('Out-of-campus events need a number of slots.');
+    mutation.mutate({
       ...form,
-      // Convert local datetime-local value to ISO string
+      title: form.title.trim(),
+      location: form.location.trim(),
+      description: form.description.trim(),
       startsAt: new Date(form.startsAt).toISOString(),
-      limitedSlots:
-        form.scope === "OUT_OF_CAMPUS" && form.limitedSlots
-          ? Number(form.limitedSlots)
-          : null,
-    };
-    mutation.mutate(payload);
+      limitedSlots: outOfCampus ? Number(form.limitedSlots) : null,
+    });
   }
 
-  const isOutOfCampus = form.scope === "OUT_OF_CAMPUS";
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      {/* Title */}
+    <form onSubmit={submit} className="space-y-4" noValidate>
       <div>
-        <label className="mb-1 block text-[11.5px] font-bold text-gray-600">Event Title</label>
-        <input
-          id="input-event-title"
-          type="text"
-          placeholder="e.g. Coastal Cleanup Drive"
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[13px] text-forest shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
+        <label htmlFor="ev-title" className="ap-label">Title</label>
+        <input id="ev-title" value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. Coastal Cleanup Drive" className="ap-input" />
       </div>
-
-      {/* Pillar */}
-      <div>
-        <label className="mb-1 block text-[11.5px] font-bold text-gray-600">Advocacy Pillar</label>
-        <select
-          id="select-event-pillar"
-          value={form.pillar}
-          onChange={(e) => setForm({ ...form, pillar: e.target.value as CreateEventPayload["pillar"] })}
-          className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[13px] text-forest shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          <option value="YOUTH_VOICE">Youth Voice &amp; Participation</option>
-          <option value="MENTAL_HEALTH">Mental Health &amp; Wellness</option>
-          <option value="ENVIRONMENTAL">Environmental Leadership</option>
-        </select>
-      </div>
-
-      {/* Type / Scope */}
-      <div>
-        <label className="mb-1 block text-[11.5px] font-bold text-gray-600">Type</label>
-        <select
-          id="select-event-scope"
-          value={form.scope}
-          onChange={(e) => setForm({ ...form, scope: e.target.value as CreateEventPayload["scope"], limitedSlots: null })}
-          className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[13px] text-forest shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          <option value="IN_CAMPUS">In-Campus</option>
-          <option value="OUT_OF_CAMPUS">Out-of-Campus (limited slots)</option>
-        </select>
-      </div>
-
-      {/* Limited slots — only when out-of-campus */}
-      {isOutOfCampus && (
+      <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-[11.5px] font-bold text-gray-600">Number of Slots</label>
-          <input
-            id="input-event-slots"
-            type="number"
-            min={1}
-            placeholder="e.g. 30"
-            value={form.limitedSlots ?? ""}
-            onChange={(e) => setForm({ ...form, limitedSlots: e.target.value ? Number(e.target.value) : null })}
-            className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[13px] text-forest shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
+          <label htmlFor="ev-pillar" className="ap-label">Advocacy</label>
+          <select id="ev-pillar" value={form.pillar} onChange={(e) => set({ pillar: e.target.value as CreateEventPayload['pillar'] })} className="ap-input">
+            <option value="YOUTH_VOICE">Youth Voice &amp; Participation</option>
+            <option value="MENTAL_HEALTH">Mental Health &amp; Wellness</option>
+            <option value="ENVIRONMENTAL">Environmental Leadership</option>
+          </select>
         </div>
-      )}
-
-      {/* Date & time */}
-      <div>
-        <label className="mb-1 block text-[11.5px] font-bold text-gray-600">Date &amp; Time</label>
-        <input
-          id="input-event-date"
-          type="datetime-local"
-          value={form.startsAt}
-          onChange={(e) => setForm({ ...form, startsAt: e.target.value })}
-          className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[13px] text-forest shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </div>
-
-      {/* Location */}
-      <div>
-        <label className="mb-1 block text-[11.5px] font-bold text-gray-600">Location</label>
-        <input
-          id="input-event-location"
-          type="text"
-          placeholder="e.g. Gymnasium, NwSSU Main Campus"
-          value={form.location}
-          onChange={(e) => setForm({ ...form, location: e.target.value })}
-          className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[13px] text-forest shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </div>
-
-      {/* Description */}
-      <div>
-        <label className="mb-1 block text-[11.5px] font-bold text-gray-600">Description</label>
-        <textarea
-          id="input-event-description"
-          rows={3}
-          placeholder="What is this event about?"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-[13px] text-forest shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </div>
-
-      {/* Error */}
-      {formError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-600">
-          {formError}
+        <div>
+          <label htmlFor="ev-scope" className="ap-label">Type</label>
+          <select id="ev-scope" value={form.scope} onChange={(e) => set({ scope: e.target.value as CreateEventPayload['scope'], limitedSlots: null })} className="ap-input">
+            <option value="IN_CAMPUS">In campus (RSVP)</option>
+            <option value="OUT_OF_CAMPUS">Out of campus (limited slots)</option>
+          </select>
         </div>
-      )}
-
-      {/* Submit */}
-      <button
-        id="btn-publish-event"
-        type="submit"
-        disabled={mutation.isPending}
-        className="w-full rounded-2xl bg-primary py-3.5 text-[13px] font-bold text-white transition-colors hover:bg-primary-light disabled:opacity-50 focus:outline-none"
-      >
-        {mutation.isPending ? "Publishing\u2026" : "Publish Event"}
+      </div>
+      <div className={`grid gap-4 ${outOfCampus ? 'sm:grid-cols-2' : ''}`}>
+        <div>
+          <label htmlFor="ev-date" className="ap-label">Date &amp; time</label>
+          <input id="ev-date" type="datetime-local" value={form.startsAt} onChange={(e) => set({ startsAt: e.target.value })} className="ap-input" />
+        </div>
+        {outOfCampus && (
+          <div>
+            <label htmlFor="ev-slots" className="ap-label">Slots</label>
+            <input id="ev-slots" type="number" inputMode="numeric" min={1} value={form.limitedSlots ?? ''} onChange={(e) => set({ limitedSlots: e.target.value ? Number(e.target.value) : null })} placeholder="e.g. 30" className="ap-input" />
+          </div>
+        )}
+      </div>
+      <div>
+        <label htmlFor="ev-location" className="ap-label">Location</label>
+        <input id="ev-location" value={form.location} onChange={(e) => set({ location: e.target.value })} placeholder="e.g. Gymnasium, NwSSU Main Campus" className="ap-input" />
+      </div>
+      <div>
+        <label htmlFor="ev-desc" className="ap-label">Description</label>
+        <textarea id="ev-desc" rows={3} value={form.description} onChange={(e) => set({ description: e.target.value })} placeholder="What is this event about?" className="ap-input" />
+      </div>
+      {error && <p role="alert" className="mp-alert">{error}</p>}
+      <button type="submit" disabled={mutation.isPending} className="mp-btn mp-btn--primary w-full sm:w-auto">
+        {mutation.isPending ? 'Publishing…' : 'Publish event'}
       </button>
     </form>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Events Table
-// ---------------------------------------------------------------------------
-function EventsTable({ events }: { events: UswagEvent[] }) {
-  if (events.length === 0) {
-    return (
-      <div className="rounded-2xl bg-white p-8 text-center shadow-sm border border-gray-100">
-        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 h-8 w-8 stroke-gray-300">
-          <rect x="3" y="4" width="18" height="18" rx="2" />
-          <line x1="16" y1="2" x2="16" y2="6" />
-          <line x1="8" y1="2" x2="8" y2="6" />
-          <line x1="3" y1="10" x2="21" y2="10" />
-        </svg>
-        <p className="text-[12.5px] text-gray-500">No events yet. Create one using the form.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="overflow-x-auto rounded-2xl shadow-sm">
-      <table className="min-w-full bg-white text-[12.5px]">
-        <thead>
-          <tr className="border-b border-gray-100 text-left">
-            <th className="px-4 py-3 font-bold text-gray-600 text-[11px] uppercase tracking-wide">Event</th>
-            <th className="px-4 py-3 font-bold text-gray-600 text-[11px] uppercase tracking-wide">Date</th>
-            <th className="hidden px-4 py-3 font-bold text-gray-600 text-[11px] uppercase tracking-wide md:table-cell">RSVPs</th>
-            <th className="px-4 py-3 font-bold text-gray-600 text-[11px] uppercase tracking-wide">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {events.map((event) => (
-            <tr
-              key={event.id}
-              className={
-                "border-b border-gray-50 transition-colors hover:bg-mist " +
-                (event.status === "COMPLETED" || event.status === "CANCELLED" ? "opacity-55" : "")
-              }
-            >
-              <td className="px-4 py-3">
-                <div className="font-bold text-forest truncate max-w-[180px]">{event.title}</div>
-                <div className="text-[10.5px] text-gray-500 mt-0.5">
-                  {PILLAR_LABELS[event.pillar]}
-                  {event.scope === "OUT_OF_CAMPUS" && " \u00b7 Out-of-campus"}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                {formatShortDate(event.startsAt)}
-              </td>
-              <td className="hidden px-4 py-3 text-gray-600 md:table-cell">
-                {event._count?.rsvps ?? "\u2014"}
-              </td>
-              <td className="px-4 py-3">
-                <span
-                  className={
-                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold " +
-                    (STATUS_BADGE[event.status] ?? "bg-gray-100 text-gray-500")
-                  }
-                >
-                  <span
-                    className={
-                      "h-1.5 w-1.5 rounded-full " +
-                      (event.status === "CONFIRMED" ? "bg-green-500" :
-                       event.status === "DRAFT" ? "bg-amber-400" :
-                       event.status === "COMPLETED" ? "bg-gray-400" : "bg-red-400")
-                    }
-                  />
-                  {STATUS_LABELS[event.status]}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 export default function EventManagementPage() {
   const { user } = useAuth();
-  const [showForm, setShowForm] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const showForm = params.get('new') === '1';
+  const { toast, show } = usePortalToast();
+  const { data: events, isLoading } = useQuery<UswagEvent[]>({ queryKey: ['events'], queryFn: listEvents, staleTime: 2 * 60 * 1000 });
+  const canCreate = user?.role === 'super_admin' || user?.role === 'officer_admin';
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set(['cancelled']));
 
-  const { data: events, isLoading } = useQuery<UswagEvent[]>({
-    queryKey: ["events"],
-    queryFn: listEvents,
-    staleTime: 2 * 60 * 1000,
-  });
+  const all = events ?? [];
+  const now = Date.now();
+  const byDate = (dir: 1 | -1) => (a: UswagEvent, b: UswagEvent) => dir * (+new Date(a.startsAt) - +new Date(b.startsAt));
+  const groups = [
+    { key: 'upcoming', title: 'Upcoming', accent: 0, list: all.filter((e) => e.status !== 'CANCELLED' && +new Date(e.startsAt) >= now).sort(byDate(1)) },
+    { key: 'past', title: 'Past', accent: 5, list: all.filter((e) => e.status !== 'CANCELLED' && +new Date(e.startsAt) < now).sort(byDate(-1)) },
+    { key: 'cancelled', title: 'Cancelled', accent: 2, list: all.filter((e) => e.status === 'CANCELLED').sort(byDate(-1)) },
+  ].filter((g) => g.list.length > 0);
+  const busiest = Math.max(0, ...all.map((e) => e._count?.rsvps ?? 0));
+  const pillars = (Object.keys(PILLAR_LABELS) as UswagEvent['pillar'][]).map((p) => ({
+    key: p,
+    label: PILLAR_LABELS[p],
+    segments: statusSegments(all.filter((e) => e.pillar === p)),
+  }));
 
-  const canCreate = user?.role === "super_admin" || user?.role === "officer_admin";
-
-  const sorted = (events ?? []).sort(
-    (a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
-  );
-
-  function handleCreated() {
-    setShowForm(false);
-    setSuccessMsg("Event published successfully!");
-    setTimeout(() => setSuccessMsg(null), 4000);
-  }
+  const toggle = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const toggleForm = (open: boolean) => setParams(open ? { new: '1' } : {}, { replace: true });
 
   return (
-    <div className="min-h-screen bg-mist pb-8">
-      {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4 shadow-sm">
-        <div>
-          <h1 className="font-heading text-[19px] font-bold text-forest">Events</h1>
-          <p className="text-[12px] text-gray-500">Create and manage org activities</p>
-        </div>
-        {canCreate && (
-          <button
-            id="btn-new-event"
-            onClick={() => setShowForm((v) => !v)}
-            className={
-              "flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-bold transition-colors " +
-              (showForm
-                ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                : "bg-primary text-white hover:bg-primary-light")
-            }
-          >
-            {showForm ? (
-              "Cancel"
-            ) : (
-              <>
-                <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.5" strokeLinecap="round" className="h-4 w-4 stroke-current">
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                New Event
-              </>
-            )}
+    <div className="mp-page !max-w-[1240px] space-y-8">
+      <PageHeader
+        eyebrow="Operations · Events"
+        title="Events"
+        lead="Create the org’s activities and see sign-ups at a glance."
+        actions={canCreate && (
+          <button type="button" onClick={() => toggleForm(!showForm)} className={`mp-btn ${showForm ? 'mp-btn--ghost' : 'mp-btn--primary'}`} aria-expanded={showForm} aria-controls="new-event">
+            {showForm ? 'Close form' : '+ New event'}
           </button>
         )}
-      </div>
+      />
 
-      {/* Success toast */}
-      {successMsg && (
-        <div className="mx-6 mt-4 flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-[12.5px] text-green-700 font-semibold">
-          <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 stroke-green-600 shrink-0">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          {successMsg}
-        </div>
+      {showForm && canCreate && (
+        <Panel title="New event" id="new-event" className="max-w-2xl">
+          <CreateEventForm
+            onCreated={() => {
+              toggleForm(false);
+              show('Event published');
+            }}
+          />
+        </Panel>
       )}
 
-      <div className="mx-auto max-w-6xl px-6 py-6">
-        <div className={showForm ? "grid gap-6 lg:grid-cols-[360px_1fr]" : ""}>
-          {/* Create form */}
-          {showForm && canCreate && (
-            <div className="rounded-2xl bg-white p-5 shadow-sm self-start">
-              <h3 className="mb-4 font-heading text-[15px] font-bold text-forest">Create Event</h3>
-              <CreateEventForm onCreated={handleCreated} />
-            </div>
-          )}
-
-          {/* Events table */}
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-heading text-[15px] font-bold text-forest">All Events</h3>
-              <span className="text-[11px] font-semibold text-gray-500">
-                {events?.length ?? 0} total
-              </span>
-            </div>
-            {isLoading ? (
-              <div className="space-y-2">
-                {[0,1,2].map((i) => (
-                  <div key={i} className="h-14 rounded-2xl bg-white animate-pulse shadow-sm" />
-                ))}
-              </div>
-            ) : (
-              <EventsTable events={sorted} />
-            )}
+      {isLoading ? (
+        <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-14" />)}</div>
+      ) : all.length === 0 ? (
+        <p className="mp-card p-10 mp-muted text-center">No events yet.{canCreate ? ' Create the first one with “New event”.' : ''}</p>
+      ) : (
+        <>
+          <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6 items-start">
+            <Panel title="Events by advocacy">
+              <BarList label="Events by advocacy, split by status" rows={pillars} />
+            </Panel>
+            <Panel title="Status">
+              <p className="mp-stat">{all.length}</p>
+              <p className="mp-muted text-[0.8125rem] mt-1">events on record</p>
+              <StackedBar className="mt-5" label="Events by status" segments={statusSegments(all)} legend size="lg" />
+            </Panel>
           </div>
-        </div>
-      </div>
+
+          <div className="ap-board" style={{ ['--ap-cols' as string]: COLS }}>
+            {groups.map((g) => (
+              <BoardGroup
+                key={g.key}
+                id={`events-${g.key}`}
+                title={g.title}
+                count={`${g.list.length} event${g.list.length === 1 ? '' : 's'}`}
+                accent={g.accent}
+                summary={<StackedBar label={`${g.title} events by status`} segments={statusSegments(g.list)} />}
+                open={!collapsed.has(g.key)}
+                onToggle={() => toggle(g.key)}
+                columns={
+                  <>
+                    <span>Event</span>
+                    <span>Date</span>
+                    <span>Sign-ups</span>
+                    <span>Status</span>
+                  </>
+                }
+              >
+                {g.list.map((e) => {
+                  const meter = signupMeter(e, busiest);
+                  return (
+                    <div key={e.id} className="ap-board-row">
+                      <div>
+                        <p className="font-semibold">{e.title}</p>
+                        <p className="mp-muted text-[0.8125rem]">
+                          {PILLAR_LABELS[e.pillar]} · {e.scope === 'OUT_OF_CAMPUS' ? 'Out of campus' : 'In campus'} · {e.location}
+                        </p>
+                      </div>
+                      <div data-label="Date" className="mp-muted whitespace-nowrap text-[0.875rem]">{formatDate(e.startsAt)}</div>
+                      <div data-label="Sign-ups"><Meter percent={meter.percent} text={meter.text} label="Sign-ups" tone={meter.tone} /></div>
+                      <div data-label="Status"><span className={`mp-standing ${EVENT_BADGE[e.status]}`}>{STATUS_LABELS[e.status]}</span></div>
+                    </div>
+                  );
+                })}
+              </BoardGroup>
+            ))}
+          </div>
+        </>
+      )}
+
+      <PortalToast toast={toast} />
     </div>
   );
 }

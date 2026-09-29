@@ -83,7 +83,7 @@ export default function NotificationBell() {
             </div>
 
             {/* Notification list — full scrollable list, no pagination/cap */}
-            <div className="overflow-y-auto p-4 space-y-2 flex-1">
+            <div className="overflow-y-auto uw-scroll p-4 space-y-2 flex-1">
               {notifications.length === 0 ? (
                 <div className="text-center py-8 text-gray-400 text-sm">No notifications yet.</div>
               ) : (

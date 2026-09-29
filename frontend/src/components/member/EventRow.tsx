@@ -1,5 +1,5 @@
 import { PILLAR_LABELS, type UswagEvent, type MyRsvp } from '@/types/event.types';
-import { LockGlyph } from './MemberTabBar';
+import LockGlyph from '@/components/portal/LockGlyph';
 
 function dateParts(iso: string) {
   const d = new Date(iso);

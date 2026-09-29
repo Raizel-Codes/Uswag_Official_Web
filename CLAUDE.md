@@ -14,6 +14,8 @@ Two companion documents carry design intent and must stay in sync with what gets
 
 The `prototype/` folder holds four static, dependency-light HTML files (`member.html`, `officer-admin.html`, `super-admin.html`, `landingDesktop.html`) that are the **approved visual and interaction reference**. They are not throwaway mockups — component structure, copy, empty/locked states, and interaction patterns in `frontend/` should trace back to them. When a prototype and a verbal request disagree on interaction design, ask which one wins rather than assuming the newer instruction overrides the prototype.
 
+**Override — `super-admin.html` is superseded for visual/layout design (decided 2026-09-29).** The Super Admin console no longer traces its look to that prototype: it uses a modern, data-forward "board" style (monday.com-like grouped boards, e.g. members grouped by college with collapsible groups and per-group standing summary bars, plus horizontal/stacked bar charts on Dashboard, Events, Finance and Audit Log). Charts are hand-built SVG/CSS bars in the brand tokens, not a chart library. The prototype still documents **scope and permissions** (what the Super Admin can do) — only its visual/interaction design is overridden. `member.html` and `officer-admin.html` remain the approved references. The Officer ID card follows the **officer tier of `id_card_v2.html`**, and the member card follows its member tier.
+
 ## Tech stack (do not substitute without asking)
 
 **Frontend**: React + Vite + TypeScript, Tailwind CSS, React Query (server state) + Zustand (UI state), react-router, `qrcode` for generation, `html5-qrcode` for camera scanning, Workbox for the service worker. Deploys to Vercel.

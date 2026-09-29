@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { MemberProfile } from '@/types/member.types';
-import { LockGlyph } from './MemberTabBar';
+import LockGlyph from '@/components/portal/LockGlyph';
 
 /**
  * Why a destination is locked, in the server's own words (MemberProfile.standingNote), plus

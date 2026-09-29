@@ -1,482 +1,361 @@
-// Officer Admin Dashboard — mobile-first, one view per officer position.
-// Every stat/action-sub/activity entry below is fetched from a real
-// endpoint; nothing here is a hardcoded literal (see punch-list item 5).
-// Where the org genuinely has no backing data for a prototype stat (e.g.
-// "Drafts" — the Post model has no draft state), the stat is relabeled to
-// something the schema actually supports rather than faking a number.
+// Officer Admin Home — mobile-first, one view per officer position (Article VI §2).
+// Every stat / action / activity entry is fetched from a real endpoint. Where the org has no
+// backing data for something (audit reports, discrepancy tracking), it isn't shown as a
+// number — it's either replaced by a real figure or left out.
 
-import type { ReactNode } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import KpiCard from "@/components/common/KpiCard";
-import { getFinanceSummary, listFinanceEntries } from "@/services/financeService";
-import { getAttendanceStats } from "@/services/attendanceService";
-import { listNewsPosts } from "@/services/postService";
-import { listPurchaseRequests } from "@/services/procurementService";
-import type { FinanceSummary, FinanceEntry } from "@/types/finance.types";
-import type { AttendanceStats } from "@/types/event.types";
-import type { NewsPost } from "@/types/post.types";
-import type { PurchaseRequest } from "@/types/procurement.types";
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { getFinanceSummary, listFinanceEntries } from '@/services/financeService';
+import { getAttendanceStats } from '@/services/attendanceService';
+import { listNewsPosts } from '@/services/postService';
+import { listPurchaseRequests } from '@/services/procurementService';
+import { listMembers } from '@/services/memberService';
+import type { MemberProfile } from '@/types/member.types';
+import type { FinanceSummary, FinanceEntry } from '@/types/finance.types';
+import type { AttendanceStats } from '@/types/event.types';
+import type { NewsPost } from '@/types/post.types';
+import type { PurchaseRequest } from '@/types/procurement.types';
+import NotificationBell from '@/components/pwa/NotificationBell';
+import PageHeader from '@/components/portal/PageHeader';
+import Panel from '@/components/portal/Panel';
+import StatPlate, { type StatTone } from '@/components/portal/StatPlate';
+import { positionLabel } from '@/components/admin/positions';
+import { currency, currentAcademicYear, isThisMonth, timeAgo } from '@/components/admin/format';
 
 // ---------------------------------------------------------------------------
-// Icons
+// Icons (stroke, currentColor)
 // ---------------------------------------------------------------------------
-const ICONS = {
-  application: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-  members: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>,
-  document: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
-  peso: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
-  checkBadge: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
-  alert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-  attendance: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-  shield: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
-  box: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
-  clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-  edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>,
-  chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>,
-  facebook: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12a10 10 0 1 0-11.5 9.87v-6.98H7.9V12h2.6V9.8c0-2.56 1.52-3.98 3.86-3.98"/></svg>,
-  megaphone: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg>,
-  scan: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
-  suppliers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
+const svg = (children: ReactNode) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </svg>
+);
+const I = {
+  people: svg(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>),
+  doc: svg(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M9 13h6M9 17h6" /></>),
+  peso: svg(<><path d="M7 21V4h6a4.5 4.5 0 0 1 0 9H7" /><path d="M4 8h14M4 11h14" /></>),
+  check: svg(<><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></>),
+  alert: svg(<><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><path d="M12 9v4M12 17h.01" /></>),
+  ledger: svg(<><path d="M9 11l2 2 4-4" /><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 17h8" /></>),
+  box: svg(<><path d="M21 8 12 3 3 8v8l9 5 9-5z" /><path d="M3 8l9 5 9-5M12 13v8" /></>),
+  clock: svg(<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>),
+  pen: svg(<><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" /></>),
+  chart: svg(<><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></>),
+  sync: svg(<><path d="M21 12a9 9 0 0 1-15.5 6.2M3 12a9 9 0 0 1 15.5-6.2" /><path d="M3 20v-5h5M21 4v5h-5" /></>),
+  megaphone: svg(<><path d="m3 11 18-5v12L3 13v-2z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>),
+  scan: svg(<><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" /><path d="M7 12h10" /></>),
+  store: svg(<><path d="M3 9l1-5h16l1 5" /><path d="M4 9v11h16V9M9 20v-6h6v6" /></>),
 };
 
-function iconEl(node: ReactNode) {
-  return <span className="w-4 h-4 stroke-primary [&>svg]:w-full [&>svg]:h-full">{node}</span>;
-}
+interface Stat { icon: ReactNode; label: string; value: ReactNode; tone: StatTone; hint?: string }
+interface Action { icon: ReactNode; title: string; sub: string; to: string }
+interface Activity { icon: ReactNode; text: ReactNode; time: string }
 
 // ---------------------------------------------------------------------------
-// Shared shapes + helpers
+// Shell — layout only; each position component fetches its own data.
 // ---------------------------------------------------------------------------
-interface StatItem {
-  icon: ReactNode;
-  value: ReactNode;
-  label: string;
-  tone: "primary" | "warn" | "danger" | "neutral";
-  hint?: string;
-}
-
-interface ActionItem {
-  icon: ReactNode;
-  title: string;
-  sub: string;
-  link: string;
-}
-
-interface ActivityItem {
-  icon: ReactNode;
-  text: ReactNode;
-  time: string;
-}
-
-function timeAgo(iso: string) {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const mins = Math.round(diffMs / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min${mins === 1 ? "" : "s"} ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.round(hours / 24);
-  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
-  const weeks = Math.round(days / 7);
-  return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
-}
-
-function currency(n: number) {
-  return `₱${Math.abs(n).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
-
-function isThisMonth(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-}
-
-// ---------------------------------------------------------------------------
-// Shell — layout only. Every role component below fetches its own data and
-// hands it to this.
-// ---------------------------------------------------------------------------
-function DashboardShell({
-  title,
+function OfficerHome({
   scope,
+  lead,
   stats,
   statsLoading,
   actions,
   activity,
   activityLoading,
 }: {
-  title: string;
-  scope: string;
-  stats: StatItem[];
+  scope: string[];
+  lead: string;
+  stats: Stat[];
   statsLoading: boolean;
-  actions: ActionItem[];
-  activity: ActivityItem[];
+  actions: Action[];
+  activity: Activity[];
   activityLoading: boolean;
 }) {
   const { user } = useAuth();
   if (!user) return null;
+  const h = new Date().getHours();
+  const greeting = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 
+  // Mobile-first order (most officers are on a phone): who you are, then what you came to do,
+  // then the numbers. The first action is the position's main task and gets the dark tile.
   return (
-    <div className="min-h-screen bg-mist px-5 pt-6 pb-24">
-      {/* App Bar */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-light to-forest text-white font-heading font-extrabold text-[15px] flex items-center justify-center shadow-md shrink-0">
-            {user.name.split(" ").map((n) => n[0]).join("").substring(0, 2)}
-          </div>
-          <div className="min-w-0">
-            <div className="text-[15px] font-bold leading-tight text-forest truncate">{user.name}</div>
-            <div className="text-[11px] text-gray-500 font-medium truncate">{user.collegeOrDept}</div>
-          </div>
-        </div>
-      </div>
+    <div className="mp-page space-y-8 sm:space-y-10">
+      <PageHeader
+        eyebrow={`Officer console · A.Y. ${currentAcademicYear()}`}
+        title={`${greeting}, ${user.name.trim().split(/\s+/)[0]}.`}
+        actions={<NotificationBell />}
+      />
 
-      {/* Hero Card */}
-      <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-primary to-forest px-5 py-5 text-white mb-5 shadow-md">
-        <div className="absolute -right-10 -top-10 h-[150px] w-[150px] rounded-full bg-sage/20" />
-        <div className="relative">
-          <div className="text-[10.5px] font-bold tracking-wider uppercase text-sage">Officer Admin</div>
-          <div className="text-[19px] font-bold mt-1">{title}</div>
-          <div className="text-[12px] text-white/75 mt-1">USWAG · A.Y. 2026–2027 Term</div>
-
-          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[11px] font-semibold">
-            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 stroke-sage shrink-0"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span>{scope}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {statsLoading
-          ? [1, 2, 3].map((n) => <div key={n} className="h-[104px] rounded-2xl bg-gray-100 animate-pulse" />)
-          : stats.map((stat, i) => (
-              <KpiCard key={i} icon={stat.icon} value={stat.value} label={stat.label} tone={stat.tone} hint={stat.hint} />
+      {/* Office plate: the position and exactly what it covers (Article VI §2) */}
+      <section aria-label="Your office" className="mp-vault mp-vault--framed mp-vault--panel mp-on-dark px-6 py-6 sm:p-9">
+        <div className="relative max-w-[52ch]">
+          <p className="mp-eyebrow" style={{ color: 'var(--color-sage)' }}>Office of the</p>
+          <p className="font-heading font-semibold text-[1.5rem] sm:text-[2rem] leading-tight text-mist mt-1">
+            {positionLabel(user.officerPosition)}
+          </p>
+          <p className="mp-muted mt-2 text-[0.875rem] sm:text-[0.9375rem]">{lead}</p>
+          <ul className="ap-snap-row flex gap-2 mt-4 sm:mt-5 sm:flex-wrap" aria-label="Scope">
+            {scope.map((s) => (
+              <li key={s} className="mp-standing mp-standing--active shrink-0">{s}</li>
             ))}
-      </div>
+          </ul>
+        </div>
+      </section>
 
-      {/* Quick Actions */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-heading text-[14.5px] font-bold text-forest">Quick Actions</h3>
-      </div>
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        {actions.map((action, i) => (
-          <Link key={i} to={action.link} className="bg-white rounded-2xl p-3.5 shadow-sm border border-forest/5 flex flex-col gap-2.5 text-left hover:shadow-md hover:border-primary/15 transition-all">
-            <div className="w-8 h-8 rounded-lg bg-mist flex items-center justify-center shrink-0">{action.icon}</div>
-            <div>
-              <h4 className="font-heading text-[12.5px] font-bold text-forest leading-snug">{action.title}</h4>
-              <p className="text-[10.5px] text-gray-500 mt-0.5">{action.sub}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
+      <section aria-labelledby="oh-actions">
+        <h2 id="oh-actions" className="mp-h2">Quick actions</h2>
+        <ul className="ap-tiles mt-4">
+          {actions.map((a, i) => (
+            <li key={a.title}>
+              <Link to={a.to} className={`ap-tile mp-lift ${i === 0 ? 'ap-tile--primary mp-on-dark' : 'mp-card'}`}>
+                <span className="mp-seal ap-tile__seal [&>svg]:w-5 [&>svg]:h-5" aria-hidden="true">{a.icon}</span>
+                <span className="min-w-0">
+                  <span className="ap-tile__title">{a.title}</span>
+                  <span className="ap-tile__sub mp-muted">{a.sub}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-      {/* Recent Activity */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-heading text-[14.5px] font-bold text-forest">Recent Activity</h3>
-      </div>
-      <div className="flex flex-col gap-2.5">
-        {activityLoading ? (
-          [1, 2, 3].map((n) => <div key={n} className="h-[54px] rounded-2xl bg-gray-100 animate-pulse" />)
-        ) : activity.length === 0 ? (
-          <div className="bg-white rounded-2xl p-5 text-center shadow-sm border border-forest/5">
-            <p className="text-[12px] text-gray-500">Nothing to show yet — activity will appear here as it happens.</p>
+      <section aria-labelledby="oh-numbers">
+        <h2 id="oh-numbers" className="mp-h2">At a glance</h2>
+        {statsLoading ? (
+          <div className="ap-stats-row mt-4" aria-busy="true">
+            {[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-28" />)}
           </div>
         ) : (
-          activity.map((act, i) => (
-            <div key={i} className="flex gap-3 bg-white rounded-2xl p-3 shadow-sm border border-forest/5 items-center">
-              <div className="w-9 h-9 rounded-xl bg-mist flex items-center justify-center shrink-0">{act.icon}</div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-heading text-[12.5px] font-semibold text-forest leading-snug">{act.text}</h4>
-                <div className="text-[11px] text-gray-500 mt-0.5">{act.time}</div>
-              </div>
-            </div>
-          ))
+          <dl className="ap-stats-row mt-4">
+            {stats.map((s) => (
+              <StatPlate key={s.label} icon={s.icon} label={s.label} value={s.value} tone={s.tone} hint={s.hint} />
+            ))}
+          </dl>
         )}
-      </div>
+      </section>
+
+      <Panel title="Recent activity" id="oh-activity" flush>
+        {activityLoading ? (
+          <div className="p-5 space-y-3" aria-busy="true">
+            {[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-12" />)}
+          </div>
+        ) : activity.length === 0 ? (
+          <p className="p-6 mp-muted text-center">Nothing yet. Activity in your area appears here as it happens.</p>
+        ) : (
+          <ul className="ap-list">
+            {activity.map((a, i) => (
+              <li key={i} className="ap-row">
+                <span className="ap-avatar [&>svg]:w-4 [&>svg]:h-4" aria-hidden="true">{a.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.9375rem] leading-snug truncate">{a.text}</p>
+                  <p className="mp-muted text-[0.8125rem] mt-0.5">{a.time}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Secretary — Scope: Members · Minutes · Announcements · Scan
+// Secretary — Members · Minutes · Announcements · Scan
 // ---------------------------------------------------------------------------
-function SecretaryDashboard() {
-  const { data: summary, isLoading: isSummaryLoading } = useQuery<FinanceSummary>({
-    queryKey: ["finance", "summary"],
-    queryFn: getFinanceSummary,
-    staleTime: 60_000,
-  });
-  const { data: posts, isLoading: isPostsLoading } = useQuery<NewsPost[]>({
-    queryKey: ["posts"],
-    queryFn: listNewsPosts,
-    staleTime: 60_000,
-  });
-
-  const orgPosts = (posts ?? []).filter((p) => p.type === "MINUTE" || p.type === "ANNOUNCEMENT");
-  const orgPostsThisMonth = orgPosts.filter((p) => isThisMonth(p.publishedAt)).length;
-
-  const stats: StatItem[] = [
-    { icon: iconEl(ICONS.application), value: summary?.pendingApplications ?? 0, label: "Pending Apps", tone: "warn", hint: "Awaiting review" },
-    { icon: iconEl(ICONS.members), value: summary?.activeMembers ?? 0, label: "Active Members", tone: "primary" },
-    { icon: iconEl(ICONS.edit), value: orgPostsThisMonth, label: "Minutes & Announcements", tone: "neutral", hint: "This month" },
-  ];
-
-  const actions: ActionItem[] = [
-    { icon: iconEl(ICONS.application), title: "Review Applications", sub: `${summary?.pendingApplications ?? 0} pending`, link: "/admin/work" },
-    { icon: iconEl(ICONS.document), title: "Meeting Minutes", sub: "Draft & publish", link: "/admin/work" },
-    { icon: iconEl(ICONS.megaphone), title: "Post Announcement", sub: "Notify members", link: "/admin/work" },
-    { icon: iconEl(ICONS.scan), title: "Scan Console", sub: "Verify attendance", link: "/admin/scan" },
-  ];
-
-  const activity: ActivityItem[] = orgPosts.slice(0, 3).map((p) => ({
-    icon: iconEl(p.type === "MINUTE" ? ICONS.document : ICONS.megaphone),
-    text: p.type === "MINUTE" ? <>Published meeting minutes: <b>{p.body.slice(0, 60)}</b></> : <>Posted announcement: <b>{p.body.slice(0, 60)}</b></>,
-    time: timeAgo(p.publishedAt),
-  }));
+function SecretaryHome() {
+  // Counts come from the member lists (the Secretary's own scope) — the finance summary is
+  // Treasurer / Auditor / Super Admin only and the server refuses it to the Secretary.
+  const { data: pendingList, isLoading: pLoadingMembers } = useQuery<MemberProfile[]>({ queryKey: ['members', 'pending'], queryFn: () => listMembers({ status: 'pending' }), staleTime: 30_000 });
+  const { data: activeList, isLoading: aLoadingMembers } = useQuery<MemberProfile[]>({ queryKey: ['members', 'active'], queryFn: () => listMembers({ status: 'active' }), staleTime: 30_000 });
+  const { data: posts, isLoading: pLoading } = useQuery<NewsPost[]>({ queryKey: ['posts'], queryFn: listNewsPosts, staleTime: 60_000 });
+  const orgPosts = (posts ?? []).filter((p) => p.type === 'MINUTE' || p.type === 'ANNOUNCEMENT');
+  const pending = pendingList?.length ?? 0;
+  const sLoading = pLoadingMembers || aLoadingMembers;
 
   return (
-    <DashboardShell
-      title="Secretary"
-      scope="Scope: Members · Minutes · Announcements · Scan"
-      stats={stats}
-      statsLoading={isSummaryLoading || isPostsLoading}
-      actions={actions}
-      activity={activity}
-      activityLoading={isPostsLoading}
+    <OfficerHome
+      scope={['Members', 'Minutes', 'Announcements', 'Scan']}
+      lead="You keep the membership record: applications, the roster, minutes and announcements."
+      stats={[
+        { icon: I.people, label: 'Pending', value: pending, tone: pending ? 'warn' : 'neutral', hint: 'Applications' },
+        { icon: I.check, label: 'Active', value: activeList?.length ?? 0, tone: 'primary', hint: 'Members' },
+        { icon: I.pen, label: 'This month', value: orgPosts.filter((p) => isThisMonth(p.publishedAt)).length, tone: 'neutral', hint: 'Minutes & notices' },
+      ]}
+      statsLoading={sLoading || pLoading}
+      actions={[
+        { icon: I.people, title: 'Review applications', sub: `${pending} pending`, to: '/admin/work?tab=pending' },
+        { icon: I.doc, title: 'Meeting minutes', sub: 'Publish minutes', to: '/admin/work?tab=minutes' },
+        { icon: I.megaphone, title: 'Announcement', sub: 'Notify members', to: '/admin/work?tab=announcements' },
+        { icon: I.scan, title: 'Scan console', sub: 'Check members in', to: '/admin/scan' },
+      ]}
+      activity={orgPosts.slice(0, 4).map((p) => ({
+        icon: p.type === 'MINUTE' ? I.doc : I.megaphone,
+        text: <>{p.type === 'MINUTE' ? 'Minutes published: ' : 'Announcement: '}<b className="font-semibold">{p.body.slice(0, 70)}</b></>,
+        time: timeAgo(p.publishedAt),
+      }))}
+      activityLoading={pLoading}
     />
   );
 }
 
 // ---------------------------------------------------------------------------
-// Treasurer — Scope: Dues · Expenses · Financial Reports · Scan
+// Treasurer — Dues · Expenses · Financial Reports · Scan
 // ---------------------------------------------------------------------------
-function TreasurerDashboard() {
-  const { data: summary, isLoading: isSummaryLoading } = useQuery<FinanceSummary>({
-    queryKey: ["finance", "summary"],
-    queryFn: getFinanceSummary,
-    staleTime: 60_000,
-  });
-  const { data: entries, isLoading: isEntriesLoading } = useQuery<FinanceEntry[]>({
-    queryKey: ["finance", "entries", "recent"],
-    queryFn: () => listFinanceEntries({ limit: 5 }),
-    staleTime: 60_000,
-  });
-
-  const stats: StatItem[] = [
-    { icon: iconEl(ICONS.peso), value: currency(summary?.fundsOnHand ?? 0), label: "Funds on Hand", tone: "primary" },
-    { icon: iconEl(ICONS.checkBadge), value: currency(summary?.totalDues ?? 0), label: "Dues Collected", tone: "primary" },
-    { icon: iconEl(ICONS.alert), value: currency(summary?.pendingDuesAmount ?? 0), label: "Pending Dues", tone: "warn", hint: "Follow up needed" },
-  ];
-
-  const actions: ActionItem[] = [
-    { icon: iconEl(ICONS.peso), title: "Record Payment", sub: "Log a dues payment", link: "/admin/work" },
-    { icon: iconEl(ICONS.document), title: "Financial Report", sub: "Semester statement", link: "/admin/work" },
-    { icon: iconEl(ICONS.chart), title: "Expense Log", sub: "Track spending", link: "/admin/work" },
-    { icon: iconEl(ICONS.scan), title: "Scan Console", sub: "Verify attendance", link: "/admin/scan" },
-  ];
-
-  const activity: ActivityItem[] = (entries ?? []).slice(0, 3).map((e) => ({
-    icon: iconEl(e.type === "DUES" ? ICONS.peso : ICONS.chart),
-    text: e.type === "DUES" ? <>Recorded dues payment: <b>{e.description}</b></> : <>Logged expense: <b>{e.description} — {currency(e.amount)}</b></>,
-    time: timeAgo(e.createdAt),
-  }));
+function TreasurerHome() {
+  const { data: summary, isLoading: sLoading } = useQuery<FinanceSummary>({ queryKey: ['finance', 'summary'], queryFn: getFinanceSummary, staleTime: 60_000 });
+  const { data: entries, isLoading: eLoading } = useQuery<FinanceEntry[]>({ queryKey: ['finance', 'entries', 'recent'], queryFn: () => listFinanceEntries({ limit: 5 }), staleTime: 60_000 });
 
   return (
-    <DashboardShell
-      title="Treasurer"
-      scope="Scope: Dues · Expenses · Financial Reports · Scan"
-      stats={stats}
-      statsLoading={isSummaryLoading}
-      actions={actions}
-      activity={activity}
-      activityLoading={isEntriesLoading}
+    <OfficerHome
+      scope={['Dues', 'Expenses', 'Financial reports', 'Scan']}
+      lead="You keep the books: every peso of dues in, every expense out."
+      stats={[
+        { icon: I.peso, label: 'On hand', value: currency(summary?.fundsOnHand ?? 0), tone: 'primary', hint: 'Funds' },
+        { icon: I.check, label: 'Collected', value: currency(summary?.totalDues ?? 0), tone: 'primary', hint: 'Dues' },
+        { icon: I.alert, label: 'Outstanding', value: currency(summary?.pendingDuesAmount ?? 0), tone: 'warn', hint: 'Dues to follow up' },
+      ]}
+      statsLoading={sLoading}
+      actions={[
+        { icon: I.peso, title: 'Record payment', sub: 'Log a dues payment', to: '/admin/work?focus=record-dues' },
+        { icon: I.chart, title: 'Log expense', sub: 'Track spending', to: '/admin/work?focus=record-expense' },
+        { icon: I.ledger, title: 'Ledger', sub: 'Recent entries', to: '/admin/work?focus=ledger' },
+        { icon: I.scan, title: 'Scan console', sub: 'Check members in', to: '/admin/scan' },
+      ]}
+      activity={(entries ?? []).slice(0, 4).map((e) => ({
+        icon: e.type === 'DUES' ? I.peso : I.chart,
+        text: e.type === 'DUES' ? <>Dues recorded: <b className="font-semibold">{e.description}</b></> : <>Expense: <b className="font-semibold">{e.description} · {currency(e.amount)}</b></>,
+        time: timeAgo(e.createdAt),
+      }))}
+      activityLoading={eLoading}
     />
   );
 }
 
 // ---------------------------------------------------------------------------
-// Auditor — Scope: Financial Review · Attendance Records (no scan access)
+// Auditor — Financial Review · Attendance Records (read-only; no scan, Article VI)
 // ---------------------------------------------------------------------------
-function AuditorDashboard() {
-  const { data: attendanceStats, isLoading: isAttendanceLoading } = useQuery<AttendanceStats>({
-    queryKey: ["attendance", "stats"],
-    queryFn: getAttendanceStats,
-    staleTime: 60_000,
-  });
-  const { data: entries, isLoading: isEntriesLoading } = useQuery<FinanceEntry[]>({
-    queryKey: ["finance", "entries", "audit"],
-    queryFn: () => listFinanceEntries({ limit: 20 }),
-    staleTime: 60_000,
-  });
-
-  const reviewCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const recentExpenses = (entries ?? []).filter((e) => e.type === "EXPENSE" && new Date(e.createdAt).getTime() > reviewCutoff);
-
-  const stats: StatItem[] = [
-    { icon: iconEl(ICONS.document), value: recentExpenses.length, label: "Reports to Audit", tone: "warn", hint: "Last 30 days" },
-    { icon: iconEl(ICONS.attendance), value: `${attendanceStats?.validRate ?? 0}%`, label: "Valid Scan Rate", tone: "primary" },
-    { icon: iconEl(ICONS.shield), value: 0, label: "Discrepancies", tone: "neutral", hint: "None flagged" },
-  ];
-
-  const actions: ActionItem[] = [
-    { icon: iconEl(ICONS.document), title: "Review Finance", sub: "Read-only ledger", link: "/admin/work" },
-    { icon: iconEl(ICONS.attendance), title: "Attendance", sub: "Cross-check logs", link: "/admin/work" },
-    { icon: iconEl(ICONS.checkBadge), title: "Submit Audit", sub: "This semester", link: "/admin/work" },
-  ];
-
-  const activity: ActivityItem[] = (entries ?? []).slice(0, 3).map((e) => ({
-    icon: iconEl(e.type === "DUES" ? ICONS.peso : ICONS.chart),
-    text: e.type === "DUES" ? <>Dues recorded by Treasurer: <b>{e.description}</b></> : <>Expense logged: <b>{e.description} — {currency(e.amount)}</b></>,
-    time: timeAgo(e.createdAt),
-  }));
+function AuditorHome() {
+  const { data: stats, isLoading: aLoading } = useQuery<AttendanceStats>({ queryKey: ['attendance', 'stats'], queryFn: getAttendanceStats, staleTime: 60_000 });
+  const { data: entries, isLoading: eLoading } = useQuery<FinanceEntry[]>({ queryKey: ['finance', 'entries', 'audit'], queryFn: () => listFinanceEntries({ limit: 20 }), staleTime: 60_000 });
+  const cutoff = Date.now() - 30 * 24 * 3600_000;
+  const recentExpenses = (entries ?? []).filter((e) => e.type === 'EXPENSE' && new Date(e.createdAt).getTime() > cutoff);
 
   return (
-    <DashboardShell
-      title="Auditor"
-      scope="Scope: Financial Review · Attendance Records"
-      stats={stats}
-      statsLoading={isAttendanceLoading || isEntriesLoading}
-      actions={actions}
-      activity={activity}
-      activityLoading={isEntriesLoading}
+    <OfficerHome
+      scope={['Financial review', 'Attendance records', 'Read-only']}
+      lead="You hold the record to account: finances and attendance, read-only, with no scanning or entries of your own."
+      stats={[
+        { icon: I.doc, label: 'To review', value: recentExpenses.length, tone: recentExpenses.length ? 'warn' : 'neutral', hint: 'Expenses, last 30 days' },
+        { icon: I.check, label: 'Valid scans', value: `${stats?.validRate ?? 0}%`, tone: 'primary', hint: 'Of all scans' },
+        { icon: I.ledger, label: 'Scans', value: stats?.totalScans ?? 0, tone: 'neutral', hint: 'On record' },
+      ]}
+      statsLoading={aLoading || eLoading}
+      actions={[
+        { icon: I.ledger, title: 'Finance ledger', sub: 'Read-only', to: '/admin/work?focus=audit-ledger' },
+        { icon: I.check, title: 'Attendance records', sub: 'Cross-check scans', to: '/admin/work?focus=audit-attendance' },
+      ]}
+      activity={(entries ?? []).slice(0, 4).map((e) => ({
+        icon: e.type === 'DUES' ? I.peso : I.chart,
+        text: e.type === 'DUES' ? <>Dues recorded by the Treasurer: <b className="font-semibold">{e.description}</b></> : <>Expense logged: <b className="font-semibold">{e.description} · {currency(e.amount)}</b></>,
+        time: timeAgo(e.createdAt),
+      }))}
+      activityLoading={eLoading}
     />
   );
 }
 
 // ---------------------------------------------------------------------------
-// Business Manager — Scope: Procurement · Supplier Coordination · Scan
+// Business Manager — Procurement · Supplier Coordination · Scan
 // ---------------------------------------------------------------------------
-function BusinessManagerDashboard() {
-  const { data: requests, isLoading } = useQuery<PurchaseRequest[]>({
-    queryKey: ["procurement", "requests"],
-    queryFn: listPurchaseRequests,
-    staleTime: 60_000,
-  });
-
+function BusinessManagerHome() {
+  const { data: requests, isLoading } = useQuery<PurchaseRequest[]>({ queryKey: ['procurement', 'requests'], queryFn: listPurchaseRequests, staleTime: 60_000 });
   const list = requests ?? [];
-  const activeOrders = list.filter((r) => r.status !== "REJECTED").length;
-  const pendingApproval = list.filter((r) => r.status === "PENDING").length;
-  const spendThisMonth = list.filter((r) => isThisMonth(r.createdAt)).reduce((sum, r) => sum + r.estimatedCost, 0);
-
-  const stats: StatItem[] = [
-    { icon: iconEl(ICONS.box), value: activeOrders, label: "Active Orders", tone: "primary" },
-    { icon: iconEl(ICONS.peso), value: currency(spendThisMonth), label: "This Month", tone: "neutral" },
-    { icon: iconEl(ICONS.clock), value: pendingApproval, label: "Pending Approval", tone: "warn", hint: "Awaiting Treasurer" },
-  ];
-
-  const actions: ActionItem[] = [
-    { icon: iconEl(ICONS.box), title: "New Purchase Request", sub: "Materials for events", link: "/admin/work" },
-    { icon: iconEl(ICONS.suppliers), title: "Supplier List", sub: "Manage vendors", link: "/admin/work" },
-    { icon: iconEl(ICONS.scan), title: "Scan Console", sub: "Verify attendance", link: "/admin/scan" },
-  ];
-
-  const STATUS_TEXT: Record<PurchaseRequest["status"], string> = {
-    PENDING: "Requested",
-    APPROVED: "Approved",
-    REJECTED: "Rejected",
-  };
-
-  const activity: ActivityItem[] = [...list]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3)
-    .map((r) => ({
-      icon: iconEl(ICONS.box),
-      text: <>{STATUS_TEXT[r.status]}: <b>{r.item}</b> — {currency(r.estimatedCost)}</>,
-      time: timeAgo(r.createdAt),
-    }));
+  const pending = list.filter((r) => r.status === 'PENDING').length;
+  const STATUS: Record<PurchaseRequest['status'], string> = { PENDING: 'Requested', APPROVED: 'Approved', REJECTED: 'Rejected' };
 
   return (
-    <DashboardShell
-      title="Business Manager"
-      scope="Scope: Procurement · Supplier Coordination · Scan"
-      stats={stats}
+    <OfficerHome
+      scope={['Procurement', 'Suppliers', 'Scan']}
+      lead="You source what events need: purchase requests and the supplier directory."
+      stats={[
+        { icon: I.box, label: 'Open', value: list.filter((r) => r.status !== 'REJECTED').length, tone: 'primary', hint: 'Requests' },
+        { icon: I.peso, label: 'This month', value: currency(list.filter((r) => isThisMonth(r.createdAt)).reduce((s, r) => s + r.estimatedCost, 0)), tone: 'neutral', hint: 'Requested' },
+        { icon: I.clock, label: 'Awaiting', value: pending, tone: pending ? 'warn' : 'neutral', hint: 'Approval' },
+      ]}
       statsLoading={isLoading}
-      actions={actions}
-      activity={activity}
+      actions={[
+        { icon: I.box, title: 'New request', sub: 'Materials for events', to: '/admin/work?focus=new-request' },
+        { icon: I.store, title: 'Suppliers', sub: 'Directory', to: '/admin/work?focus=suppliers' },
+        { icon: I.scan, title: 'Scan console', sub: 'Check members in', to: '/admin/scan' },
+      ]}
+      activity={[...list]
+        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+        .slice(0, 4)
+        .map((r) => ({ icon: I.box, text: <>{STATUS[r.status]}: <b className="font-semibold">{r.item}</b> · {currency(r.estimatedCost)}</>, time: timeAgo(r.createdAt) }))}
       activityLoading={isLoading}
     />
   );
 }
 
 // ---------------------------------------------------------------------------
-// PRO — Scope: News · Social Content · Scan (assigned events)
+// PRO — News · Social Content · Scan (assigned events)
 // ---------------------------------------------------------------------------
-function ProDashboard() {
-  const { data: posts, isLoading } = useQuery<NewsPost[]>({
-    queryKey: ["posts"],
-    queryFn: listNewsPosts,
-    staleTime: 60_000,
-  });
-
+function ProHome() {
+  const { data: posts, isLoading } = useQuery<NewsPost[]>({ queryKey: ['posts'], queryFn: listNewsPosts, staleTime: 60_000 });
   const list = posts ?? [];
-  const postsThisMonth = list.filter((p) => isThisMonth(p.publishedAt)).length;
-  const syncedPosts = list.filter((p) => p.source === "facebook");
-  const reachCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const reach30d = syncedPosts
-    .filter((p) => new Date(p.publishedAt).getTime() > reachCutoff)
-    .reduce((sum, p) => sum + (p.likeCount ?? 0) + (p.commentCount ?? 0), 0);
-
-  const stats: StatItem[] = [
-    { icon: iconEl(ICONS.edit), value: postsThisMonth, label: "Posts This Month", tone: "neutral" },
-    { icon: iconEl(ICONS.chart), value: reach30d >= 1000 ? `${(reach30d / 1000).toFixed(1)}K` : reach30d, label: "Reach (30d)", tone: "primary", hint: "Likes + comments" },
-    { icon: iconEl(ICONS.facebook), value: syncedPosts.length, label: "Synced Posts", tone: "primary" },
-  ];
-
-  const actions: ActionItem[] = [
-    { icon: iconEl(ICONS.facebook), title: "New Post", sub: "Write an update", link: "/admin/work" },
-    { icon: iconEl(ICONS.facebook), title: "Facebook Sync", sub: "Check latest posts", link: "/admin/work" },
-    { icon: iconEl(ICONS.scan), title: "Scan Console", sub: "Assigned events only", link: "/admin/scan" },
-  ];
-
-  const activity: ActivityItem[] = list.slice(0, 3).map((p) => ({
-    icon: iconEl(p.source === "facebook" ? ICONS.facebook : ICONS.edit),
-    text: p.source === "facebook" ? <>Synced from Facebook: <b>{p.body.slice(0, 60)}</b></> : <>Published manual post: <b>{p.body.slice(0, 60)}</b></>,
-    time: timeAgo(p.publishedAt),
-  }));
+  const synced = list.filter((p) => p.source === 'facebook');
+  const cutoff = Date.now() - 30 * 24 * 3600_000;
+  const reach = synced.filter((p) => new Date(p.publishedAt).getTime() > cutoff).reduce((s, p) => s + (p.likeCount ?? 0) + (p.commentCount ?? 0), 0);
 
   return (
-    <DashboardShell
-      title="Public Relations Officer"
-      scope="Scope: News · Social Content · Scan"
-      stats={stats}
+    <OfficerHome
+      scope={['News', 'Facebook sync', 'Scan (assigned events)']}
+      lead="You tell USWAG's story: news posts and the Facebook Page sync."
+      stats={[
+        { icon: I.pen, label: 'This month', value: list.filter((p) => isThisMonth(p.publishedAt)).length, tone: 'neutral', hint: 'Posts' },
+        { icon: I.chart, label: 'Reach', value: reach >= 1000 ? `${(reach / 1000).toFixed(1)}K` : reach, tone: 'primary', hint: 'Likes + comments, 30 days' },
+        { icon: I.sync, label: 'Synced', value: synced.length, tone: 'primary', hint: 'From Facebook' },
+      ]}
       statsLoading={isLoading}
-      actions={actions}
-      activity={activity}
+      actions={[
+        { icon: I.pen, title: 'New post', sub: 'Write an update', to: '/admin/work?focus=new-post' },
+        { icon: I.sync, title: 'Facebook sync', sub: 'Check the Page', to: '/admin/work?focus=fb-sync' },
+        { icon: I.scan, title: 'Scan console', sub: 'Assigned events', to: '/admin/scan' },
+      ]}
+      activity={list.slice(0, 4).map((p) => ({
+        icon: p.source === 'facebook' ? I.sync : I.pen,
+        text: <>{p.source === 'facebook' ? 'Synced from Facebook: ' : 'Posted: '}<b className="font-semibold">{p.body.slice(0, 70)}</b></>,
+        time: timeAgo(p.publishedAt),
+      }))}
       activityLoading={isLoading}
     />
   );
 }
 
 // ---------------------------------------------------------------------------
-// Entry point — dispatch by officer position
-// Vice President is Super-Admin-equivalent (see utils/roles.ts) and never
-// reaches this component — AdminHomePage.tsx routes them straight to
-// SuperAdminDashboardPage instead, since they're expected to continue every
-// admin/officer operation during the President's absence, not just get a
-// narrower "backup" view.
+// Entry point — by position. The VP is Super-Admin-equivalent and never lands here
+// (AdminHomePage routes them to SuperAdminDashboardPage).
 // ---------------------------------------------------------------------------
 export default function AdminDashboardPage() {
   const { user } = useAuth();
-
-  if (!user || !user.officerPosition) return null;
-
+  if (!user?.officerPosition) return null;
   switch (user.officerPosition) {
-    case "secretary":
-      return <SecretaryDashboard />;
-    case "treasurer":
-      return <TreasurerDashboard />;
-    case "auditor":
-      return <AuditorDashboard />;
-    case "business_manager":
-      return <BusinessManagerDashboard />;
-    case "pro":
-      return <ProDashboard />;
+    case 'secretary':
+      return <SecretaryHome />;
+    case 'treasurer':
+      return <TreasurerHome />;
+    case 'auditor':
+      return <AuditorHome />;
+    case 'business_manager':
+      return <BusinessManagerHome />;
+    case 'pro':
+      return <ProHome />;
     default:
       return (
-        <div className="min-h-screen bg-mist px-5 pt-6 pb-24">
-          <h1 className="text-2xl font-heading font-bold text-forest">Admin Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-2">Welcome back, {user.name}. Your role does not have a dashboard view yet.</p>
+        <div className="mp-page">
+          <PageHeader eyebrow="Officer console" title={`Welcome, ${user.name}.`} lead="Your position doesn't have a dashboard view yet." />
         </div>
       );
   }

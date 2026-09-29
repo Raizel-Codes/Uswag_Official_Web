@@ -63,60 +63,55 @@ export default function ApplicationReviewAids({ member }: { member: MemberProfil
     }
   }
 
-  const chip = "inline-flex items-center rounded-md px-2 py-0.5 text-[10.5px] font-bold";
-  const action =
-    "rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[10.5px] font-bold text-forest hover:bg-mist transition-colors disabled:opacity-50";
-
+  // Rendered inside the admin console (portal styles: .mp-standing chips, .mp-btn, .ap-input).
   return (
-    <div className="mt-1.5 space-y-1.5">
+    <div className="mt-2 space-y-2">
       {hasTags && (
         <div className="flex flex-wrap gap-1.5">
           {member.submittedByProxy && (
-            <span className={`${chip} bg-mist text-primary`}>
+            <span className="mp-standing mp-standing--info !tracking-[0.06em]">
               Via a friend{member.proxyName ? `: ${member.proxyName}` : ""}
             </span>
           )}
           {isPending && member.nameMatches > 0 && (
-            <span className={`${chip} bg-amber-50 text-amber-700`} title="Another member account has the same name. Check the student ID before approving.">
+            <span className="mp-standing mp-standing--pending !tracking-[0.06em]" title="Another member account has the same name. Check the student ID before approving.">
               Same name as {member.nameMatches} other{member.nameMatches > 1 ? "s" : ""}. Check ID
             </span>
           )}
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
         {showIdButton &&
           (studentId ? (
-            <span className="rounded-lg bg-mist px-2.5 py-1 font-mono text-[11.5px] font-semibold text-forest">
-              <span className="sr-only">Student ID: </span>
+            <span className="inline-flex items-center min-h-[40px] rounded-[3px] bg-[rgb(152_203_176/0.22)] px-3 font-mono text-[0.875rem] font-semibold">
+              <span className="mp-sr-only">Student ID: </span>
               {studentId}
             </span>
           ) : (
-            <button type="button" onClick={onRevealId} disabled={busy === "id"} className={action}>
+            <button type="button" onClick={onRevealId} disabled={busy === "id"} className="mp-btn mp-btn--ghost mp-btn--sm">
               {busy === "id" ? "Loading…" : "Show student ID"}
             </button>
           ))}
         {member.awaitingPasswordSetup && !link && (
-          <button type="button" onClick={onCreateLink} disabled={busy === "link"} className={action}>
+          <button type="button" onClick={onCreateLink} disabled={busy === "link"} className="mp-btn mp-btn--ghost mp-btn--sm">
             {busy === "link" ? "Creating…" : "Password setup link"}
           </button>
         )}
       </div>
 
       {link && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5">
-          <p className="text-[11px] font-semibold text-amber-800">
-            Give this only to {member.name}, in person. It works once and expires in 1 hour.
-          </p>
-          <div className="mt-1.5 flex items-center gap-1.5">
+        <div className="mp-note mp-note--warn !block text-[0.875rem]">
+          <p className="font-semibold">Give this only to {member.name}, in person. It works once and expires in 1 hour.</p>
+          <div className="mt-2 flex items-center gap-2">
             <input
               readOnly
               value={link}
               aria-label={`Password setup link for ${member.name}`}
               onFocus={(e) => e.currentTarget.select()}
-              className="min-w-0 flex-1 rounded-lg border border-amber-200 bg-white px-2 py-1 font-mono text-[10.5px] text-forest"
+              className="ap-input !min-h-[40px] font-mono !text-[0.8125rem] min-w-0 flex-1"
             />
-            <button type="button" onClick={onCopy} className={action}>
+            <button type="button" onClick={onCopy} className="mp-btn mp-btn--primary mp-btn--sm">
               {copied ? "Copied ✓" : "Copy"}
             </button>
           </div>
@@ -124,7 +119,7 @@ export default function ApplicationReviewAids({ member }: { member: MemberProfil
       )}
 
       {error && (
-        <p role="alert" className="text-[11px] font-semibold text-red-600">
+        <p role="alert" className="mp-alert !py-2 !text-[0.875rem]">
           {error}
         </p>
       )}

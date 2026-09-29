@@ -1,152 +1,147 @@
-import { useState } from 'react';
+// Procurement — the Business Manager's Work module (Article VI §2): purchase requests for
+// event materials and the supplier directory. Server-scoped via canManageProcurement in
+// procurement.routes.ts. `?focus=new-request | suppliers` jumps to a section.
+
+import { useState, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  listPurchaseRequests,
-  listSuppliers,
-  submitPurchaseRequest,
-} from '@/services/procurementService';
+import { usePortalToast } from '@/hooks/usePortalToast';
+import { useFocusParam } from '@/hooks/useFocusParam';
+import { listPurchaseRequests, listSuppliers, submitPurchaseRequest } from '@/services/procurementService';
 import type { PurchaseRequest, Supplier } from '@/types/procurement.types';
+import PageHeader from '@/components/portal/PageHeader';
+import Panel from '@/components/portal/Panel';
+import StatPlate from '@/components/portal/StatPlate';
+import PortalToast from '@/components/portal/PortalToast';
+import { apiError, currency, formatDate, initials, isThisMonth } from '@/components/admin/format';
+
+const STATUS: Record<PurchaseRequest['status'], { cls: string; label: string }> = {
+  PENDING: { cls: 'mp-standing--pending', label: 'Awaiting approval' },
+  APPROVED: { cls: 'mp-standing--active', label: 'Approved' },
+  REJECTED: { cls: 'mp-standing--rejected', label: 'Rejected' },
+};
 
 export default function ProcurementPage() {
   const queryClient = useQueryClient();
+  const { toast, show } = usePortalToast();
   const [item, setItem] = useState('');
-  const [estimatedCost, setEstimatedCost] = useState('');
+  const [cost, setCost] = useState('');
   const [event, setEvent] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const { data: requests, isLoading } = useQuery<PurchaseRequest[]>({
-    queryKey: ['procurement', 'requests'],
-    queryFn: listPurchaseRequests,
-  });
+  const requestsQ = useQuery<PurchaseRequest[]>({ queryKey: ['procurement', 'requests'], queryFn: listPurchaseRequests });
+  const suppliersQ = useQuery<Supplier[]>({ queryKey: ['procurement', 'suppliers'], queryFn: listSuppliers });
+  useFocusParam(!requestsQ.isLoading && !suppliersQ.isLoading);
 
-  const { data: suppliers } = useQuery<Supplier[]>({
-    queryKey: ['procurement', 'suppliers'],
-    queryFn: listSuppliers,
-  });
-
-  const createRequestMutation = useMutation({
+  const submit = useMutation({
     mutationFn: submitPurchaseRequest,
     onSuccess: () => {
       setItem('');
-      setEstimatedCost('');
+      setCost('');
       setEvent('');
       queryClient.invalidateQueries({ queryKey: ['procurement', 'requests'] });
-      alert('Purchase request submitted');
+      show('Purchase request submitted');
     },
+    onError: (err) => setFormError(apiError(err, 'Could not submit the request. Please try again.')),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!item || !estimatedCost) return;
-    createRequestMutation.mutate({ item, estimatedCost: Number(estimatedCost), event });
-  };
+    setFormError(null);
+    if (!item.trim()) return setFormError('Describe what you need.');
+    const amount = Number(cost);
+    if (!cost || isNaN(amount) || amount <= 0) return setFormError('Enter an estimated cost greater than zero.');
+    submit.mutate({ item: item.trim(), estimatedCost: amount, event: event.trim() });
+  }
+
+  const requests = [...(requestsQ.data ?? [])].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  const pending = requests.filter((r) => r.status === 'PENDING').length;
 
   return (
-    <div className="min-h-screen bg-mist px-5 pt-6 pb-24">
-      {/* App Bar */}
-      <div className="mb-6">
-        <h1 className="font-heading text-[19px] font-bold text-forest leading-tight mb-0.5">Procurement</h1>
-        <div className="text-[12px] text-gray-500">Manage purchase requests and suppliers</div>
-      </div>
+    <div className="mp-page space-y-8">
+      <PageHeader eyebrow="Work · Business Manager" title="Procurement" lead="Request materials for events and keep the supplier directory." />
 
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-heading text-[14.5px] font-bold text-forest">New Purchase Request</h3>
-      </div>
-      <form onSubmit={handleSubmit} className="bg-white rounded-[20px] p-4 shadow-sm mb-6">
-        <div className="space-y-3">
-          <div>
-            <label className="block text-[11.5px] font-bold mb-1.5 text-forest">Item / Description</label>
-            <input 
-              type="text" 
-              value={item}
-              onChange={(e) => setItem(e.target.value)}
-              className="w-full p-3 rounded-xl border border-gray-100 text-[13px] bg-gray-50 outline-none focus:border-primary/50 focus:bg-white transition-colors"
-              placeholder="e.g. 50x Reusable Water Bottles"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+      <dl className="ap-stats-row">
+        <StatPlate label="Open" value={requestsQ.data ? requests.filter((r) => r.status !== 'REJECTED').length : '…'} tone="primary" hint="Requests" />
+        <StatPlate label="Awaiting" value={requestsQ.data ? pending : '…'} tone={pending ? 'warn' : 'neutral'} hint="Approval" />
+        <StatPlate label="This month" value={requestsQ.data ? currency(requests.filter((r) => isThisMonth(r.createdAt)).reduce((s, r) => s + r.estimatedCost, 0)) : '…'} tone="neutral" hint="Requested" />
+      </dl>
+
+      <div className="grid lg:grid-cols-[minmax(0,420px)_1fr] gap-6 items-start">
+        <Panel title="New purchase request" id="new-request" className="scroll-mt-6">
+          <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <div>
-              <label className="block text-[11.5px] font-bold mb-1.5 text-forest">Est. Cost (₱)</label>
-              <input 
-                type="number" 
-                value={estimatedCost}
-                onChange={(e) => setEstimatedCost(e.target.value)}
-                className="w-full p-3 rounded-xl border border-gray-100 text-[13px] bg-gray-50 outline-none focus:border-primary/50 focus:bg-white transition-colors"
-                placeholder="0.00"
-                required
-              />
+              <label htmlFor="pr-item" className="ap-label">Item / description</label>
+              <input id="pr-item" value={item} onChange={(e) => setItem(e.target.value)} placeholder="e.g. 50 reusable water bottles" className="ap-input" />
             </div>
-            <div>
-              <label className="block text-[11.5px] font-bold mb-1.5 text-forest">Event (Optional)</label>
-              <input 
-                type="text" 
-                value={event}
-                onChange={(e) => setEvent(e.target.value)}
-                className="w-full p-3 rounded-xl border border-gray-100 text-[13px] bg-gray-50 outline-none focus:border-primary/50 focus:bg-white transition-colors"
-                placeholder="e.g. Welcome Assembly"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="pr-cost" className="ap-label">Est. cost (₱)</label>
+                <input id="pr-cost" type="number" inputMode="decimal" min="1" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" className="ap-input" />
+              </div>
+              <div>
+                <label htmlFor="pr-event" className="ap-label">
+                  Event <span className="normal-case tracking-normal font-medium mp-muted">(optional)</span>
+                </label>
+                <input id="pr-event" value={event} onChange={(e) => setEvent(e.target.value)} placeholder="e.g. Welcome Assembly" className="ap-input" />
+              </div>
             </div>
-          </div>
-          <button 
-            type="submit"
-            disabled={createRequestMutation.isPending}
-            className="w-full mt-2 bg-primary text-white font-bold text-[13px] py-3.5 rounded-xl shadow-sm hover:bg-primary-light transition-colors"
-          >
-            {createRequestMutation.isPending ? 'Submitting...' : 'Submit Request'}
-          </button>
-        </div>
-      </form>
+            {formError && <p role="alert" className="mp-alert">{formError}</p>}
+            <button type="submit" disabled={submit.isPending} className="mp-btn mp-btn--primary w-full sm:w-auto">
+              {submit.isPending ? 'Submitting…' : 'Submit request'}
+            </button>
+          </form>
+        </Panel>
 
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-heading text-[14.5px] font-bold text-forest">Recent Requests</h3>
-      </div>
-      <div className="flex flex-col gap-2.5 mb-6">
-        {isLoading ? (
-          <div className="text-[12.5px] text-gray-500 bg-white p-4 rounded-2xl shadow-sm text-center">Loading...</div>
-        ) : requests?.length === 0 ? (
-          <div className="text-[12.5px] text-gray-500 bg-white p-4 rounded-2xl shadow-sm text-center">No requests found.</div>
-        ) : (
-          requests?.map((req: any) => (
-            <div key={req.id} className="flex gap-3 bg-white rounded-2xl p-3 shadow-sm items-center">
-              <div className="w-[38px] h-[38px] rounded-xl bg-mist flex items-center justify-center shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px] stroke-primary"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-heading text-[13px] font-bold text-forest truncate">{req.item}</h4>
-                <div className="text-[11px] text-gray-500 mt-0.5">₱{req.estimatedCost} {req.event ? `· ${req.event}` : ''}</div>
-              </div>
-              <span className={`text-[10px] font-bold px-[9px] py-1 rounded-full whitespace-nowrap ${
-                req.status === 'APPROVED' ? 'bg-successBg text-success' : 
-                req.status === 'REJECTED' ? 'bg-red-50 text-red-600' : 
-                'bg-amber-50 text-amber-600'
-              }`}>
-                {req.status}
-              </span>
-            </div>
-          ))
-        )}
+        <Panel title="Requests" aside={requestsQ.data && <span className="mp-muted">{requests.length}</span>} flush>
+          {requestsQ.isLoading ? (
+            <div className="p-5 space-y-3" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-12" />)}</div>
+          ) : requestsQ.isError ? (
+            <p role="alert" className="m-5 mp-alert">{apiError(requestsQ.error, 'We couldn’t load requests.')}</p>
+          ) : requests.length === 0 ? (
+            <p className="p-8 mp-muted text-center">No requests yet.</p>
+          ) : (
+            <ul className="ap-list">
+              {requests.map((r) => (
+                <li key={r.id} className="ap-row items-start">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">{r.item}</p>
+                    <p className="mp-muted text-[0.8125rem]">
+                      <span className="mp-num">{currency(r.estimatedCost)}</span>
+                      {r.event ? ` · ${r.event}` : ''} · {formatDate(r.createdAt)}
+                    </p>
+                  </div>
+                  <span className={`mp-standing ${STATUS[r.status].cls} shrink-0`}>{STATUS[r.status].label}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
       </div>
 
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-heading text-[14.5px] font-bold text-forest">Supplier Directory</h3>
-      </div>
-      <div className="flex flex-col gap-2.5">
-        {suppliers?.length === 0 ? (
-          <div className="text-[12.5px] text-gray-500 bg-white p-4 rounded-2xl shadow-sm text-center">No suppliers in directory.</div>
+      <Panel title="Supplier directory" id="suppliers" className="scroll-mt-6" flush>
+        {suppliersQ.isLoading ? (
+          <div className="p-5 space-y-3" aria-busy="true">{[0, 1].map((i) => <div key={i} className="mp-skeleton h-12" />)}</div>
+        ) : !suppliersQ.data?.length ? (
+          <p className="p-8 mp-muted text-center">No suppliers in the directory yet.</p>
         ) : (
-          suppliers?.map((supplier: any) => (
-            <div key={supplier.id} className="flex gap-3 bg-white rounded-2xl p-3 shadow-sm items-center">
-              <div className="w-[38px] h-[38px] rounded-xl bg-mist flex items-center justify-center shrink-0">
-                <span className="text-[13px] font-bold text-primary">{supplier.name.charAt(0)}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-heading text-[13px] font-bold text-forest truncate">{supplier.name}</h4>
-                <div className="text-[11px] text-gray-500 mt-0.5">{supplier.category || 'General'}</div>
-              </div>
-            </div>
-          ))
+          <ul className="ap-list sm:grid sm:grid-cols-2 sm:[&>li+li]:border-t-0 sm:[&>li]:border-b sm:[&>li]:border-[rgb(20_39_24/0.1)]">
+            {suppliersQ.data.map((s) => (
+              <li key={s.id} className="ap-row">
+                <span className="ap-avatar" aria-hidden="true">{initials(s.name)}</span>
+                <div className="min-w-0">
+                  <p className="font-semibold truncate">{s.name}</p>
+                  <p className="mp-muted text-[0.8125rem] truncate">
+                    {s.category || 'General'}
+                    {s.contactInfo ? ` · ${s.contactInfo}` : ''}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+      </Panel>
+
+      <PortalToast toast={toast} />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { getMyDigitalCard } from '@/services/qrService';
 import { useMyProfile } from '@/hooks/useMyProfile';
-import PageHeader from '@/components/member/PageHeader';
+import PageHeader from '@/components/portal/PageHeader';
 import MembershipCard from '@/components/member/MembershipCard';
 import StandingNote from '@/components/member/StandingNote';
 import { isActive, errorMessage } from '@/components/member/standing';

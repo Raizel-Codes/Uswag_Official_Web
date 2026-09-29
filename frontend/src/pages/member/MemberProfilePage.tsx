@@ -6,7 +6,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { logout, updateNavPreference } from '@/services/authService';
-import PageHeader from '@/components/member/PageHeader';
+import PageHeader from '@/components/portal/PageHeader';
 import StandingNote from '@/components/member/StandingNote';
 import { STANDING_LABEL } from '@/components/member/standing';
 

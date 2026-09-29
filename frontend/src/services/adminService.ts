@@ -31,6 +31,32 @@ export async function assignOfficer(payload: {
   return data.data;
 }
 
+// An active member who may be put in office. Officers are never created from scratch: the
+// server only accepts members who have already applied, paid and been approved (Article III).
+export interface OfficerNominee {
+  id: string;
+  name: string;
+  email: string;
+  collegeOrDept: string;
+  yearLevel: string | null;
+  officerPosition: string | null;
+}
+
+export async function listOfficerNominees(): Promise<OfficerNominee[]> {
+  const { data } = await api.get<{ success: boolean; data: OfficerNominee[] }>('/officers/nominees');
+  return data.data;
+}
+
+export interface InstallTermResult {
+  installed: { userId: string; name: string; officerPosition: string }[];
+  steppedDown: { userId: string; name: string; previous: string | null }[];
+}
+
+export async function installOfficerTerm(assignments: { userId: string; officerPosition: string }[]): Promise<InstallTermResult> {
+  const { data } = await api.post<{ success: boolean; data: InstallTermResult }>('/officers/term', { assignments });
+  return data.data;
+}
+
 // ---------------------------------------------------------------------------
 // Bylaws — SUPER ADMIN ONLY (GET is public but we consume it here too)
 // Backend: bylaws.routes.ts

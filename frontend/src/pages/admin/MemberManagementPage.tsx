@@ -1,470 +1,279 @@
-// Member Management
-// Approve applications, issue/revoke QR. Primary owner: Secretary.
-// Any non-Secretary hitting this page sees LockedState — the server also
-// enforces this via requireOfficerPosition('SECRETARY') in member.routes.ts.
+// Member Management — the Secretary's Work module (Article VI §2(c)): applications, the
+// roster, meeting minutes and announcements. Any non-Secretary hitting this page sees
+// LockedState; the server also enforces it (requireOfficerPosition('SECRETARY') in
+// member.routes.ts, PRO/SECRETARY in post.routes.ts). `?tab=` opens a tab directly.
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import {
-  listMembers,
-  approveApplication,
-  rejectApplication,
-} from "@/services/memberService";
-import { ForbiddenError } from "@/services/api";
-import LockedState from "@/components/common/LockedState";
-import ApplicationReviewAids from "@/components/common/ApplicationReviewAids";
-import type { MemberProfile } from "@/types/member.types";
-import { createManualPost } from "@/services/postService";
-import { isSuperAdminEquivalent } from "@/utils/roles";
+import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { usePortalToast } from '@/hooks/usePortalToast';
+import { useApplicationDecision } from '@/hooks/useApplicationDecision';
+import { listMembers, approveApplication, rejectApplication } from '@/services/memberService';
+import { listNewsPosts, createManualPost } from '@/services/postService';
+import { ForbiddenError } from '@/services/api';
+import type { MemberProfile } from '@/types/member.types';
+import { MEMBER_STANDING } from '@/components/admin/positions';
+import type { NewsPost } from '@/types/post.types';
+import { isSuperAdminEquivalent } from '@/utils/roles';
+import LockedState from '@/components/common/LockedState';
+import ApplicationReviewAids from '@/components/common/ApplicationReviewAids';
+import PageHeader from '@/components/portal/PageHeader';
+import Panel from '@/components/portal/Panel';
+import StatPlate from '@/components/portal/StatPlate';
+import PortalToast from '@/components/portal/PortalToast';
+import { apiError, initials, timeAgo, formatDate } from '@/components/admin/format';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-const STATUS_BADGE: Record<string, string> = {
-  ACTIVE: "bg-successBg text-success",
-  PENDING: "bg-amber-50 text-amber-600",
-  EXPIRED: "bg-gray-100 text-gray-500",
-  REJECTED: "bg-red-50 text-red-500",
-};
+type Tab = 'pending' | 'active' | 'all' | 'minutes' | 'announcements';
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'pending', label: 'Applications' },
+  { key: 'active', label: 'Active' },
+  { key: 'all', label: 'All members' },
+  { key: 'minutes', label: 'Minutes' },
+  { key: 'announcements', label: 'Announcements' },
+];
 
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+export default function MemberManagementPage() {
+  const { user } = useAuth();
+  // Instant optimistic lock; the real boundary is the server (see header).
+  const canManage = isSuperAdminEquivalent(user) || user?.officerPosition === 'secretary';
+  if (!canManage) {
+    return (
+      <div className="mp-page space-y-8">
+        <PageHeader eyebrow="Members" title="Member management" />
+        <LockedState
+          title="Member management is the Secretary's"
+          description="Only the Secretary (and the Super Admin) approve applications and keep the member roster, per Article VI §2(c) of the USWAG Constitution."
+          redirectLabel="Contact the Secretary for membership matters"
+        />
+      </div>
+    );
+  }
+  return <MemberManagementContent />;
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 // ---------------------------------------------------------------------------
-// Member row
+// One member / application row
 // ---------------------------------------------------------------------------
 function MemberRow({
   member,
   onApprove,
   onReject,
-  isPending,
+  busy,
 }: {
   member: MemberProfile;
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
-  isPending?: boolean;
+  busy?: boolean;
 }) {
   const [confirmReject, setConfirmReject] = useState(false);
+  const pending = member.status === 'pending';
 
   return (
-    <div className="mb-2.5 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-mist font-heading text-[12px] font-bold text-primary">
-        {initials(member.name)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-[12.5px] font-bold text-forest truncate">{member.name}</div>
-        <div className="text-[10.5px] text-gray-500 mt-0.5 truncate">
-          {member.collegeOrDept} · {member.serialNumber || "No serial yet"}
-        </div>
-        {isPending && (
-          <div className="text-[10px] text-gray-400 mt-0.5">
-            Applied {formatDate(member.joinedAt)}
-          </div>
-        )}
+    // On a phone the decision buttons drop to their own full-width row under the details (thumb
+    // targets, and the details get the whole line); side by side from sm up.
+    <li className="ap-row items-start flex-wrap sm:flex-nowrap">
+      <span className="ap-avatar" aria-hidden="true">{initials(member.name)}</span>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold truncate">{member.name}</p>
+        <p className="mp-muted text-[0.875rem] sm:truncate">
+          {member.collegeOrDept}
+          {member.yearLevel ? ` · ${member.yearLevel}` : ''}
+          {pending ? ` · applied ${timeAgo(member.joinedAt)}` : member.serialNumber ? ` · ${member.serialNumber}` : ''}
+        </p>
         <ApplicationReviewAids member={member} />
       </div>
 
-      {/* Action buttons for pending; badge for active */}
-      {isPending && onApprove && onReject ? (
-        confirmReject ? (
-          <div className="flex gap-1.5 shrink-0">
-            <button
-              id={`btn-confirm-reject-${member.id}`}
-              onClick={() => onReject(member.id)}
-              className="rounded-xl bg-red-50 px-2.5 py-1.5 text-[10px] font-bold text-red-500 hover:bg-red-100 transition-colors"
-            >
-              Confirm
-            </button>
-            <button
-              onClick={() => setConfirmReject(false)}
-              className="rounded-xl bg-gray-100 px-2.5 py-1.5 text-[10px] font-bold text-gray-500 hover:bg-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <div className="flex gap-1.5 shrink-0">
-            <button
-              id={`btn-approve-${member.id}`}
-              onClick={() => onApprove(member.id)}
-              className="rounded-xl bg-successBg px-2.5 py-1.5 text-[10px] font-bold text-success hover:bg-green-100 transition-colors"
-            >
-              Approve
-            </button>
-            <button
-              id={`btn-reject-${member.id}`}
-              onClick={() => setConfirmReject(true)}
-              className="rounded-xl bg-red-50 px-2.5 py-1.5 text-[10px] font-bold text-red-400 hover:bg-red-100 transition-colors"
-            >
-              Reject
-            </button>
-          </div>
-        )
+      {pending && onApprove && onReject ? (
+        <div className="flex gap-2 w-full pl-[3.375rem] sm:w-auto sm:pl-0 shrink-0 [&>*]:flex-1 sm:[&>*]:flex-none">
+          {confirmReject ? (
+            <>
+              <button type="button" disabled={busy} onClick={() => onReject(member.id)} className="mp-btn mp-btn--danger mp-btn--sm">
+                Confirm reject<span className="mp-sr-only"> {member.name}</span>
+              </button>
+              <button type="button" onClick={() => setConfirmReject(false)} className="mp-btn mp-btn--ghost mp-btn--sm">
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" disabled={busy} onClick={() => onApprove(member.id)} className="mp-btn mp-btn--primary mp-btn--sm">
+                Approve<span className="mp-sr-only"> {member.name}</span>
+              </button>
+              <button type="button" disabled={busy} onClick={() => setConfirmReject(true)} className="mp-btn mp-btn--ghost mp-btn--sm">
+                Reject<span className="mp-sr-only"> {member.name}</span>
+              </button>
+            </>
+          )}
+        </div>
       ) : (
-        <span
-          className={
-            "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold " +
-            (STATUS_BADGE[member.status.toUpperCase()] ?? "bg-gray-100 text-gray-500")
-          }
-        >
-          {member.status.charAt(0) + member.status.slice(1).toLowerCase()}
-        </span>
+        <span className={`mp-standing mp-standing--${member.status} shrink-0`}>{MEMBER_STANDING[member.status]}</span>
       )}
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Minutes / announcements: composer + what's already been published
+// ---------------------------------------------------------------------------
+function Composer({ type, onPublished }: { type: 'MINUTE' | 'ANNOUNCEMENT'; onPublished: (msg: string, ok?: boolean) => void }) {
+  const [body, setBody] = useState('');
+  const queryClient = useQueryClient();
+  const { data: posts, isLoading } = useQuery<NewsPost[]>({ queryKey: ['posts'], queryFn: listNewsPosts, staleTime: 60_000 });
+  const mutation = useMutation({
+    mutationFn: () => createManualPost(body.trim(), undefined, type),
+    onSuccess: () => {
+      setBody('');
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      onPublished(type === 'MINUTE' ? 'Minutes published' : 'Announcement posted');
+    },
+    onError: (err) => onPublished(apiError(err, 'Could not publish. Please try again.'), false),
+  });
+  const label = type === 'MINUTE' ? 'Meeting minutes' : 'Announcement';
+  const published = (posts ?? []).filter((p) => p.type === type);
+
+  return (
+    <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6 items-start">
+      <Panel title={type === 'MINUTE' ? 'Publish minutes' : 'Post an announcement'} id={`compose-${type}`}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (body.trim()) mutation.mutate();
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label htmlFor={`compose-${type}-body`} className="ap-label">{label}</label>
+            <textarea
+              id={`compose-${type}-body`}
+              rows={type === 'MINUTE' ? 10 : 5}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder={type === 'MINUTE' ? 'Paste or write the meeting minutes…' : 'Write an update for members…'}
+              className="ap-input"
+            />
+            <p className="ap-hint">Visible to members and on the public News page.</p>
+          </div>
+          <button type="submit" disabled={mutation.isPending || !body.trim()} className="mp-btn mp-btn--primary">
+            {mutation.isPending ? 'Publishing…' : type === 'MINUTE' ? 'Publish minutes' : 'Post announcement'}
+          </button>
+        </form>
+      </Panel>
+
+      <Panel title={type === 'MINUTE' ? 'Published minutes' : 'Recent announcements'} aside={<span className="mp-muted">{published.length}</span>} flush>
+        {isLoading ? (
+          <div className="p-5 space-y-3" aria-busy="true">{[0, 1].map((i) => <div key={i} className="mp-skeleton h-12" />)}</div>
+        ) : published.length === 0 ? (
+          <p className="p-6 mp-muted text-center">Nothing published yet.</p>
+        ) : (
+          <ul className="ap-list">
+            {published.slice(0, 8).map((p) => (
+              <li key={p.id} className="ap-row">
+                <div className="min-w-0">
+                  <p className="text-[0.9375rem] line-clamp-2">{p.body}</p>
+                  <p className="mp-muted text-[0.8125rem] mt-0.5">{formatDate(p.publishedAt)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Toast notification
+// Page
 // ---------------------------------------------------------------------------
-function useToast() {
-  const [toast, setToast] = useState<string | null>(null);
-  function show(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  }
-  return { toast, show };
-}
-
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
-export default function MemberManagementPage() {
-  const { user } = useAuth();
-
-  // ---- Secretary guard — only Secretary (or Super Admin/VP) may manage members ----
-  // This check gives an instant optimistic lock before the network call.
-  // The real enforcement is requireOfficerPosition('SECRETARY') in
-  // member.routes.ts, which the VP passes automatically as Super-Admin-
-  // equivalent (see role.middleware.ts / utils/roles.ts). In practice the VP
-  // is routed to SuperAdminMembersPage instead (AdminMembersHomePage.tsx);
-  // this stays here as the defensive fallback for a direct hit on this page.
-  const canManage =
-    isSuperAdminEquivalent(user) || user?.officerPosition === "secretary";
-
-  if (!canManage) {
-    return (
-      <div className="min-h-screen bg-mist px-5 py-6 pb-24">
-        <h1 className="font-heading text-[19px] font-bold text-forest mb-1">Members</h1>
-        <p className="text-[12px] text-gray-500 mb-4">Approve applications & maintain the roster</p>
-        <LockedState
-          title="Member Management is Outside Your Scope"
-          description="Only the Secretary (and Super Admin) may approve applications and maintain member records, per Article VI §2(c) of the USWAG Constitution."
-          redirectLabel="Contact the Secretary to manage membership"
-        />
-      </div>
-    );
-  }
-
-  return <MemberManagementContent />;
-}
-
-// Separate component so hooks are never called for locked-out roles
 function MemberManagementContent() {
-  const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"pending" | "active" | "all" | "minutes" | "announcements">("pending");
-  const [postBody, setPostBody] = useState("");
-  const { toast, show: showToast } = useToast();
-  const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const tab = (TABS.some((t) => t.key === params.get('tab')) ? params.get('tab') : 'pending') as Tab;
+  const [search, setSearch] = useState('');
+  const { toast, show } = usePortalToast();
 
-  // Pending applications
-  const {
-    data: pending,
-    isLoading: isPendingLoading,
-    error: pendingError,
-  } = useQuery<MemberProfile[]>({
-    queryKey: ["members", "pending"],
-    queryFn: () => listMembers({ status: "pending" }),
-    staleTime: 30_000,
-  });
+  const pendingQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'pending'], queryFn: () => listMembers({ status: 'pending' }), staleTime: 30_000 });
+  const activeQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'active'], queryFn: () => listMembers({ status: 'active' }), staleTime: 30_000 });
+  const allQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'all'], queryFn: () => listMembers(), staleTime: 30_000, enabled: tab === 'all' });
 
-  // Active/all members
-  const {
-    data: active,
-    isLoading: isActiveLoading,
-    error: activeError,
-  } = useQuery<MemberProfile[]>({
-    queryKey: ["members", "active", search],
-    queryFn: () => listMembers({ status: activeTab === "all" ? undefined : "active", search }),
-    staleTime: 30_000,
-    enabled: activeTab !== "pending",
-  });
+  const approve = useApplicationDecision(approveApplication, 'Application approved', show);
+  const reject = useApplicationDecision((id) => rejectApplication(id), 'Application rejected', show);
 
-  const approveMutation = useMutation({
-    mutationFn: (memberId: string) => approveApplication(memberId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["members"] });
-      showToast("Application approved ✓");
-    },
-    onError: (err: unknown) => {
-      if (err instanceof ForbiddenError) {
-        showToast("Permission denied — Secretary access only");
-      } else {
-        showToast("Failed to approve application");
-      }
-    },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: (memberId: string) => rejectApplication(memberId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["members"] });
-      showToast("Application rejected");
-    },
-    onError: (err: unknown) => {
-      if (err instanceof ForbiddenError) {
-        showToast("Permission denied — Secretary access only");
-      } else {
-        showToast("Failed to reject application");
-      }
-    },
-  });
-
-  const postMutation = useMutation({
-    mutationFn: ({ body, type }: { body: string, type: 'MINUTE' | 'ANNOUNCEMENT' }) => createManualPost(body, undefined, type),
-    onSuccess: () => {
-      setPostBody("");
-      showToast("Post published successfully");
-    },
-    onError: () => {
-      showToast("Failed to publish post");
-    }
-  });
-
-  const handlePublishPost = () => {
-    if (!postBody.trim()) return;
-    const type = activeTab === "minutes" ? "MINUTE" : "ANNOUNCEMENT";
-    postMutation.mutate({ body: postBody, type });
-  };
-
-  // Show LockedState if the backend returned 403 (shouldn't normally happen if
-  // the optimistic role check above fired, but guards against edge cases)
-  const isForbidden =
-    pendingError instanceof ForbiddenError || activeError instanceof ForbiddenError;
-
-  if (isForbidden) {
+  if (pendingQ.error instanceof ForbiddenError || activeQ.error instanceof ForbiddenError) {
     return (
-      <div className="min-h-screen bg-mist px-5 py-6 pb-24">
-        <h1 className="font-heading text-[19px] font-bold text-forest mb-1">Members</h1>
+      <div className="mp-page space-y-8">
+        <PageHeader eyebrow="Members" title="Member management" />
         <LockedState
-          title="Access Denied by Server"
-          description="The server confirmed that member management is outside your officer role's scope. This page is restricted to the Secretary and Super Admin."
-          redirectLabel="Article VI §2(c) — Secretary's scope"
+          title="The server refused access"
+          description="The server confirmed that member management is outside your role's scope. It's restricted to the Secretary and the Super Admin (Article VI §2(c))."
         />
       </div>
     );
   }
 
-  const pendingList = pending ?? [];
-  const displayList = activeTab === "pending" ? [] : active ?? [];
+  const list = tab === 'pending' ? pendingQ.data : tab === 'active' ? activeQ.data : allQ.data;
+  const loading = tab === 'pending' ? pendingQ.isLoading : tab === 'active' ? activeQ.isLoading : allQ.isLoading;
+  const q = search.trim().toLowerCase();
+  const shown = (list ?? []).filter((m) => !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q) || m.serialNumber?.toLowerCase().includes(q));
+  const busy = approve.isPending || reject.isPending;
 
   return (
-    <div className="min-h-screen bg-mist pb-24">
-      {/* Header */}
-      <div className="px-5 pt-6 pb-2">
-        <h1 className="font-heading text-[19px] font-bold text-forest">Members</h1>
-        <p className="text-[12px] text-gray-500 mt-0.5">Approve applications & maintain the roster</p>
-      </div>
+    <div className="mp-page space-y-8">
+      <PageHeader eyebrow="Work · Secretary" title="Members" lead="Review applications, keep the roster, and publish minutes and announcements." />
 
-      <div className="px-5">
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-2.5 mb-4">
-          <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-            <div className="font-heading text-[18px] font-extrabold text-amber-500">
-              {pendingList.length}
-            </div>
-            <div className="text-[10px] text-gray-500 font-semibold mt-0.5">Pending</div>
-          </div>
-          <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-            <div className="font-heading text-[18px] font-extrabold text-primary">
-              {isActiveLoading ? "—" : (active?.length ?? 0)}
-            </div>
-            <div className="text-[10px] text-gray-500 font-semibold mt-0.5">Active</div>
-          </div>
-          <div className="bg-white rounded-2xl p-3 text-center shadow-sm">
-            <div className="font-heading text-[18px] font-extrabold text-forest">
-              {approveMutation.isPending || rejectMutation.isPending ? "…" : "✓"}
-            </div>
-            <div className="text-[10px] text-gray-500 font-semibold mt-0.5">Actions</div>
-          </div>
-        </div>
+      <dl className="grid grid-cols-2 gap-3 max-w-md">
+        <StatPlate label="Pending" value={pendingQ.data?.length ?? '…'} tone={pendingQ.data?.length ? 'warn' : 'neutral'} hint="Applications" />
+        <StatPlate label="Active" value={activeQ.data?.length ?? '…'} tone="primary" hint="Members" />
+      </dl>
 
-        {/* Tab switcher */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {(["pending", "active", "all", "minutes", "announcements"] as const).map((tab) => (
-            <button
-              key={tab}
-              id={`tab-members-${tab}`}
-              onClick={() => setActiveTab(tab)}
-              className={
-                "flex-1 min-w-[30%] rounded-xl py-2 text-[11px] font-bold transition-colors " +
-                (activeTab === tab
-                  ? "bg-primary text-white"
-                  : "bg-white text-gray-500 hover:bg-gray-50 shadow-sm")
-              }
-            >
-              {tab === "pending"
-                ? `Pending${pendingList.length > 0 ? ` (${pendingList.length})` : ""}`
-                : tab === "active"
-                ? "Active"
-                : tab === "all" ? "All"
-                : tab === "minutes" ? "Minutes" : "Announcements"}
-            </button>
-          ))}
-        </div>
-
-        {/* Search (only for Active/All tabs) */}
-        {activeTab !== "pending" && (
-          <div className="flex items-center gap-2 bg-white rounded-xl px-3.5 py-2.5 mb-4 shadow-sm">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4 stroke-gray-400 shrink-0"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              id="input-member-search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search members..."
-              className="flex-1 bg-transparent text-[13px] text-forest outline-none placeholder:text-gray-400"
-            />
-          </div>
-        )}
-
-        {/* Pending tab content */}
-        {activeTab === "pending" && (
-          <>
-            <div className="flex items-center justify-between mb-2.5">
-              <h3 className="font-heading text-[14px] font-bold text-forest">Pending Applications</h3>
-              {pendingList.length > 0 && (
-                <span className="text-[11px] font-semibold text-amber-500">
-                  {pendingList.length} awaiting review
-                </span>
-              )}
-            </div>
-
-            {isPendingLoading ? (
-              <div className="space-y-2.5">
-                {[1, 2, 3].map((n) => (
-                  <div key={n} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />
-                ))}
-              </div>
-            ) : pendingList.length === 0 ? (
-              <div className="rounded-2xl bg-white p-6 text-center shadow-sm border border-gray-100">
-                <p className="text-[12.5px] font-medium text-gray-500">No pending applications.</p>
-                <p className="mt-0.5 text-[11px] text-gray-400">
-                  All caught up! New applications will appear here.
-                </p>
-              </div>
-            ) : (
-              pendingList.map((m) => (
-                <MemberRow
-                  key={m.id}
-                  member={m}
-                  isPending
-                  onApprove={(id) => approveMutation.mutate(id)}
-                  onReject={(id) => rejectMutation.mutate(id)}
-                />
-              ))
-            )}
-          </>
-        )}
-
-        {/* Active / All tab content */}
-        {activeTab !== "pending" && (
-          <>
-            <div className="flex items-center justify-between mb-2.5">
-              <h3 className="font-heading text-[14px] font-bold text-forest">
-                {activeTab === "active" ? "Active Members" : "All Members"}
-              </h3>
-              {!isActiveLoading && (
-                <span className="text-[11px] font-semibold text-primary">
-                  {displayList.length} shown
-                </span>
-              )}
-            </div>
-
-            {isActiveLoading ? (
-              <div className="space-y-2.5">
-                {[1, 2, 3, 4].map((n) => (
-                  <div key={n} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />
-                ))}
-              </div>
-            ) : displayList.length === 0 ? (
-              <div className="rounded-2xl bg-white p-6 text-center shadow-sm border border-gray-100">
-                <p className="text-[12.5px] font-medium text-gray-500">
-                  {search ? "No members match your search." : "No members found."}
-                </p>
-              </div>
-            ) : (
-              displayList.map((m) => <MemberRow key={m.id} member={m} />)
-            )}
-          </>
-        )}
-
-        {/* Minutes / Announcements Composer */}
-        {(activeTab === "minutes" || activeTab === "announcements") && (
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2.5">
-              <h3 className="font-heading text-[14px] font-bold text-forest">
-                {activeTab === "minutes" ? "Publish Meeting Minutes" : "Post Announcement"}
-              </h3>
-            </div>
-            <textarea 
-              placeholder={activeTab === "minutes" ? "Paste meeting minutes here..." : "Write an update for members..."}
-              value={postBody}
-              onChange={(e) => setPostBody(e.target.value)}
-              className="w-full p-3 rounded-xl border border-gray-100 text-[13px] bg-white shadow-sm outline-none text-forest min-h-[120px] resize-y mb-3 focus:border-primary/50 transition-colors"
-            />
-            <button 
-              onClick={handlePublishPost}
-              disabled={postMutation.isPending || !postBody.trim()}
-              className="w-full p-3.5 rounded-xl bg-primary text-white font-bold text-[13px] hover:bg-primary-light transition-colors disabled:opacity-50"
-            >
-              {postMutation.isPending ? 'Publishing...' : 'Publish'}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-24 left-4 right-4 z-50 flex items-center gap-2.5 rounded-2xl bg-forest px-4 py-3 text-[12px] font-semibold text-white shadow-lg animate-fade-in">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4 stroke-[#7ee6a8] shrink-0"
+      <div role="group" aria-label="Show" className="flex gap-2 overflow-x-auto uw-scroll-hidden -mx-1 px-1 pb-1">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            aria-pressed={tab === t.key}
+            className="mp-chip"
+            onClick={() => setParams(t.key === 'pending' ? {} : { tab: t.key }, { replace: true })}
           >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          {toast}
-        </div>
+            {t.label}
+            {t.key === 'pending' && pendingQ.data?.length ? ` · ${pendingQ.data.length}` : ''}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'minutes' || tab === 'announcements' ? (
+        <Composer type={tab === 'minutes' ? 'MINUTE' : 'ANNOUNCEMENT'} onPublished={(m, ok = true) => show(m, ok ? 'ok' : 'error')} />
+      ) : (
+        <Panel
+          title={tab === 'pending' ? 'Applications awaiting review' : tab === 'active' ? 'Active members' : 'All members'}
+          aside={!loading && <span className="mp-muted">{shown.length} shown</span>}
+          flush
+        >
+          {tab !== 'pending' && (
+            <div className="p-4 sm:px-6 border-b border-[rgb(20_39_24/0.1)]">
+              <label htmlFor="member-search" className="mp-sr-only">Search members</label>
+              <div className="ap-search max-w-sm">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                <input id="member-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, email or serial" className="ap-input" />
+              </div>
+            </div>
+          )}
+          {loading ? (
+            <div className="p-5 space-y-3" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-14" />)}</div>
+          ) : shown.length === 0 ? (
+            <p className="p-8 mp-muted text-center">
+              {tab === 'pending' ? 'No applications waiting. New ones appear here as soon as they’re submitted.' : q ? 'No members match your search.' : 'No members here yet.'}
+            </p>
+          ) : (
+            <ul className="ap-list">
+              {shown.map((m) => (
+                <MemberRow key={m.id} member={m} busy={busy} onApprove={(id) => approve.mutate(id)} onReject={(id) => reject.mutate(id)} />
+              ))}
+            </ul>
+          )}
+        </Panel>
       )}
+
+      <PortalToast toast={toast} />
     </div>
   );
 }

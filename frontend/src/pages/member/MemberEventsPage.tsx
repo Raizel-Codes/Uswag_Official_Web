@@ -8,7 +8,7 @@ import { useEvents } from '@/hooks/useEvents';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { useMyRsvps } from '@/hooks/useMyRsvps';
 import type { UswagEvent } from '@/types/event.types';
-import PageHeader from '@/components/member/PageHeader';
+import PageHeader from '@/components/portal/PageHeader';
 import StandingNote from '@/components/member/StandingNote';
 import EventRow from '@/components/member/EventRow';
 import { isActive, errorMessage } from '@/components/member/standing';
@@ -114,7 +114,7 @@ export default function MemberEventsPage() {
 
       {profile && !active && <StandingNote profile={profile} what="Signing up is for active members" />}
 
-      <div role="group" aria-label="Show" className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+      <div role="group" aria-label="Show" className="flex gap-2 overflow-x-auto uw-scroll-hidden -mx-1 px-1 pb-1">
         {FILTERS.filter((f) => f.key !== 'mine' || active).map((f) => (
           <button key={f.key} type="button" className="mp-chip" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>
             {f.label}

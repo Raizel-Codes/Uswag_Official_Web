@@ -1,398 +1,165 @@
-// Bylaws & Amendments
-// SUPER ADMIN ONLY — publish constitution updates, log amendments per Article IX.
-// ACCESS: RoleRoute allow={['super_admin']} in AppRoutes.tsx redirects non-super-admin
-//         to "/" before this component is ever mounted.
-//         requireRole('SUPER_ADMIN') in bylaws.routes.ts is the actual server boundary.
+// Constitution & By-Laws — SUPER ADMIN ONLY: log proposed amendments and record the outcome of
+// the vote (Article IX). Guarded by RoleRoute allow={['super_admin']} and, on the server,
+// requireRole('SUPER_ADMIN') in bylaws.routes.ts. Approved amendments appear on the public
+// /bylaws page's amendments log.
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  listAmendments,
-  proposeAmendment,
-  resolveAmendment,
-  type AmendmentLog,
-} from "@/services/adminService";
+import { useState, type FormEvent } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { usePortalToast } from '@/hooks/usePortalToast';
+import { listAmendments, proposeAmendment, resolveAmendment, type AmendmentLog } from '@/services/adminService';
+import PageHeader from '@/components/portal/PageHeader';
+import Panel from '@/components/portal/Panel';
+import PortalToast from '@/components/portal/PortalToast';
+import { apiError, formatDate } from '@/components/admin/format';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-const STATUS_CONFIG: Record<
-  AmendmentLog["status"],
-  { label: string; cls: string; dot: string }
-> = {
-  proposed: {
-    label: "Awaiting vote",
-    cls: "bg-amber-50 text-amber-600",
-    dot: "bg-amber-400",
-  },
-  approved: {
-    label: "Approved",
-    cls: "bg-successBg text-success",
-    dot: "bg-success",
-  },
-  rejected: { label: "Rejected", cls: "bg-red-50 text-red-500", dot: "bg-red-400" },
+const STATUS: Record<AmendmentLog['status'], { cls: string; label: string }> = {
+  proposed: { cls: 'mp-standing--pending', label: 'Awaiting vote' },
+  approved: { cls: 'mp-standing--active', label: 'Approved' },
+  rejected: { cls: 'mp-standing--rejected', label: 'Rejected' },
 };
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function useToast() {
-  const [msg, setMsg] = useState<string | null>(null);
-  function show(m: string) {
-    setMsg(m);
-    setTimeout(() => setMsg(null), 3000);
-  }
-  return { msg, show };
-}
-
-// ---------------------------------------------------------------------------
-// Amendment row — matches prototype "Amendment Log" activity-item style
-// ---------------------------------------------------------------------------
-function AmendmentRow({
-  amendment,
-  onResolve,
-  isResolving,
-}: {
-  amendment: AmendmentLog;
-  onResolve: (id: string, status: "approved" | "rejected") => void;
-  isResolving: boolean;
-}) {
-  const cfg = STATUS_CONFIG[amendment.status];
-
-  return (
-    <div className="flex items-start gap-3 px-5 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
-      {/* Icon */}
-      <div className="mt-0.5 w-8 h-8 rounded-lg bg-mist flex items-center justify-center shrink-0">
-        {amendment.status === "approved" ? (
-          <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 stroke-primary">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        ) : amendment.status === "rejected" ? (
-          <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 stroke-red-400">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 stroke-primary">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-          </svg>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <span className="font-bold text-[13px] text-forest">{amendment.articleRef}</span>
-            <span className="mx-1.5 text-gray-400">—</span>
-            <span className="text-[12.5px] text-gray-600">{amendment.proposal}</span>
-          </div>
-          <span className={`shrink-0 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${cfg.cls}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-            {cfg.label}
-          </span>
-        </div>
-        <div className="mt-1 text-[11px] text-gray-400">
-          Proposed {formatDate(amendment.createdAt)}
-          {amendment.resolvedAt && ` · Resolved ${formatDate(amendment.resolvedAt)}`}
-        </div>
-
-        {/* Approve / Reject buttons for pending */}
-        {amendment.status === "proposed" && (
-          <div className="mt-2.5 flex gap-2">
-            <button
-              id={`btn-approve-amendment-${amendment.id}`}
-              disabled={isResolving}
-              onClick={() => onResolve(amendment.id, "approved")}
-              className="rounded-lg bg-successBg px-3 py-1.5 text-[10.5px] font-bold text-success hover:bg-green-100 disabled:opacity-50 transition-colors"
-            >
-              Approve
-            </button>
-            <button
-              id={`btn-reject-amendment-${amendment.id}`}
-              disabled={isResolving}
-              onClick={() => onResolve(amendment.id, "rejected")}
-              className="rounded-lg bg-red-50 px-3 py-1.5 text-[10.5px] font-bold text-red-400 hover:bg-red-100 disabled:opacity-50 transition-colors"
-            >
-              Reject
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Propose Amendment form
-// ---------------------------------------------------------------------------
-function ProposeForm({ onSuccess }: { onSuccess: () => void }) {
-  const [form, setForm] = useState({ articleRef: "", proposal: "" });
+function ProposeForm({ onDone }: { onDone: (msg: string) => void }) {
+  const [articleRef, setArticleRef] = useState('');
+  const [proposal, setProposal] = useState('');
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
-
   const mutation = useMutation({
-    mutationFn: () => proposeAmendment(form),
+    mutationFn: () => proposeAmendment({ articleRef: articleRef.trim(), proposal: proposal.trim() }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["amendments"] });
-      setForm({ articleRef: "", proposal: "" });
-      setError(null);
-      onSuccess();
+      queryClient.invalidateQueries({ queryKey: ['amendments'] });
+      setArticleRef('');
+      setProposal('');
+      onDone('Amendment logged · awaiting the vote');
     },
-    onError: (err: unknown) => {
-      setError(err instanceof Error ? err.message : "Failed to propose amendment");
-    },
+    onError: (err) => setError(apiError(err, 'Could not log the amendment. Please try again.')),
   });
 
-  function handleSubmit(e: React.FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!form.articleRef.trim()) return setError("Article reference is required.");
-    if (!form.proposal.trim()) return setError("Proposal text is required.");
+    if (!articleRef.trim()) return setError('Which article and section does it change?');
+    if (!proposal.trim()) return setError('Describe the proposed change.');
     mutation.mutate();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-      <h3 className="font-heading font-bold text-[14.5px] text-forest mb-4">Propose Amendment</h3>
-      <div className="mb-3">
-        <label className="block text-[11.5px] font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
-          Article Reference
-        </label>
-        <input
-          id="input-article-ref"
-          value={form.articleRef}
-          onChange={(e) => setForm((f) => ({ ...f, articleRef: e.target.value }))}
-          placeholder="e.g. Article VI, Sec. 1"
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-[13px] text-forest outline-none focus:ring-2 focus:ring-primary/25 transition"
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-[11.5px] font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
-          Proposal
-        </label>
-        <textarea
-          id="input-amendment-proposal"
-          value={form.proposal}
-          onChange={(e) => setForm((f) => ({ ...f, proposal: e.target.value }))}
-          rows={3}
-          placeholder="Describe the proposed change..."
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-[13px] text-forest outline-none focus:ring-2 focus:ring-primary/25 resize-none transition"
-        />
-      </div>
-      {error && <p className="mb-3 text-[11.5px] text-red-500 font-medium">{error}</p>}
-      <button
-        id="btn-propose-amendment"
-        type="submit"
-        disabled={mutation.isPending}
-        className="w-full rounded-xl bg-primary py-2.5 text-[13px] font-bold text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
-      >
-        {mutation.isPending ? "Submitting…" : "Propose Amendment"}
-      </button>
-      <p className="mt-2 text-[10.5px] text-gray-400 text-center">
-        Article IX — requires general assembly vote before approval
-      </p>
-    </form>
+    <Panel title="Log a proposed amendment" id="propose">
+      <form onSubmit={submit} className="space-y-4" noValidate>
+        <div>
+          <label htmlFor="am-ref" className="ap-label">Article reference</label>
+          <input id="am-ref" value={articleRef} onChange={(e) => setArticleRef(e.target.value)} placeholder="e.g. Article VI, Section 1" className="ap-input" />
+        </div>
+        <div>
+          <label htmlFor="am-text" className="ap-label">Proposed change</label>
+          <textarea id="am-text" rows={4} value={proposal} onChange={(e) => setProposal(e.target.value)} placeholder="What should the section say, and why?" className="ap-input" />
+        </div>
+        {error && <p role="alert" className="mp-alert">{error}</p>}
+        <button type="submit" disabled={mutation.isPending} className="mp-btn mp-btn--primary w-full sm:w-auto">
+          {mutation.isPending ? 'Saving…' : 'Log amendment'}
+        </button>
+        <p className="mp-muted text-[0.8125rem]">Article IX · an amendment takes effect only after it passes the vote the Constitution requires.</p>
+      </form>
+    </Panel>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
 export default function BylawsAmendmentsPage() {
-  // Non-super-admin users are NEVER rendered here — RoleRoute redirects to "/".
-  const { msg: toast, show: showToast } = useToast();
+  const { toast, show } = usePortalToast();
   const queryClient = useQueryClient();
-
-  const { data: amendments, isLoading, error } = useQuery<AmendmentLog[]>({
-    queryKey: ["amendments"],
-    queryFn: listAmendments,
-    staleTime: 60_000,
+  const { data, isLoading, error } = useQuery<AmendmentLog[]>({ queryKey: ['amendments'], queryFn: listAmendments, staleTime: 60_000 });
+  const resolve = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'approved' | 'rejected' }) => resolveAmendment(id, status),
+    onSuccess: (_d, v) => {
+      queryClient.invalidateQueries({ queryKey: ['amendments'] });
+      show(v.status === 'approved' ? 'Recorded as approved' : 'Recorded as rejected');
+    },
+    onError: (err) => show(apiError(err, 'Could not record the outcome.'), 'error'),
   });
 
-  const resolveMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: "approved" | "rejected" }) =>
-      resolveAmendment(id, status),
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["amendments"] });
-      showToast(
-        vars.status === "approved"
-          ? "Amendment approved ✓"
-          : "Amendment rejected",
-      );
-    },
-    onError: (err: unknown) => {
-      showToast(err instanceof Error ? err.message : "Failed to resolve amendment");
-    },
-  });
-
-  const pending = (amendments ?? []).filter((a) => a.status === "proposed");
-  const resolved = (amendments ?? []).filter((a) => a.status !== "proposed");
+  const amendments = data ?? [];
+  const pending = amendments.filter((a) => a.status === 'proposed');
+  const resolved = amendments.filter((a) => a.status !== 'proposed');
 
   return (
-    <div className="min-h-screen bg-mist pb-10">
-      {/* Header — matches prototype topbar */}
-      <div className="bg-white border-b border-gray-100 px-6 py-5 flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-[22px] font-bold text-forest">
-            Constitution & By-Laws
-          </h1>
-          <p className="text-[13px] text-gray-500 mt-0.5">
-            Publish updates and track amendments · Article IX
-          </p>
-        </div>
-        <span className="bg-amber-50 text-amber-600 text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
-          <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 stroke-amber-500">
-            <rect x="3" y="11" width="18" height="10" rx="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          Super Admin Only
-        </span>
+    <div className="mp-page space-y-8">
+      <PageHeader
+        eyebrow="Governance · Bylaws"
+        title="Constitution & By-Laws"
+        lead="Log proposed amendments and record the outcome of each vote (Article IX)."
+        actions={<span className="mp-standing mp-standing--neutral">Super Admin only</span>}
+      />
+
+      {error && <p role="alert" className="mp-alert">{apiError(error, 'We couldn’t load the amendments.')}</p>}
+
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
+        <Panel title="The Constitution">
+          <div className="flex items-center gap-4">
+            <span className="mp-seal w-12 h-12 shrink-0" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M9 13h6M9 17h6" />
+              </svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">USWAG Constitution &amp; By-Laws (PDF)</p>
+              <p className="mp-muted text-[0.875rem]">Public on the site’s Constitution page</p>
+            </div>
+            <a href="/constitution.pdf" download="USWAG-Constitution-and-By-Laws.pdf" className="mp-btn mp-btn--ghost mp-btn--sm shrink-0">
+              Download
+            </a>
+          </div>
+          <dl className="mt-5 pt-5 border-t border-[rgb(20_39_24/0.1)] grid grid-cols-2 gap-3">
+            <div>
+              <dt className="mp-eyebrow" style={{ fontSize: '0.6875rem' }}>Awaiting vote</dt>
+              <dd className="mp-stat mt-1" style={{ color: pending.length ? 'var(--mp-warn-ink)' : undefined }}>{isLoading ? '…' : pending.length}</dd>
+            </div>
+            <div>
+              <dt className="mp-eyebrow" style={{ fontSize: '0.6875rem' }}>Logged in total</dt>
+              <dd className="mp-stat mt-1">{isLoading ? '…' : amendments.length}</dd>
+            </div>
+          </dl>
+          <a href="/bylaws" className="mp-link inline-block mt-4 text-[0.875rem]">Open the public Constitution page</a>
+        </Panel>
+
+        <ProposeForm onDone={(m) => show(m)} />
       </div>
 
-      <div className="px-6 py-6">
-        {error && (
-          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] text-red-600">
-            Failed to load amendments: {error instanceof Error ? error.message : "Unknown error"}
-          </div>
+      <Panel title="Amendment log" aside={!isLoading && <span className="mp-muted">{pending.length} pending · {resolved.length} resolved</span>} flush>
+        {isLoading ? (
+          <div className="p-5 space-y-3" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-16" />)}</div>
+        ) : amendments.length === 0 ? (
+          <p className="p-10 mp-muted text-center">No amendments on record.</p>
+        ) : (
+          <ul className="ap-list">
+            {[...pending, ...resolved].map((a) => (
+              <li key={a.id} className="ap-row items-start flex-col sm:flex-row">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">{a.articleRef}</span>
+                    <span className={`mp-standing ${STATUS[a.status].cls}`}>{STATUS[a.status].label}</span>
+                  </div>
+                  <p className="text-[0.9375rem] mt-1.5">{a.proposal}</p>
+                  <p className="mp-muted text-[0.8125rem] mt-1">
+                    Logged {formatDate(a.createdAt)}
+                    {a.resolvedAt && ` · decided ${formatDate(a.resolvedAt)}`}
+                  </p>
+                </div>
+                {a.status === 'proposed' && (
+                  <div className="flex gap-2 shrink-0">
+                    <button type="button" disabled={resolve.isPending} onClick={() => resolve.mutate({ id: a.id, status: 'approved' })} className="mp-btn mp-btn--primary mp-btn--sm">
+                      Passed<span className="mp-sr-only">: {a.articleRef}</span>
+                    </button>
+                    <button type="button" disabled={resolve.isPending} onClick={() => resolve.mutate({ id: a.id, status: 'rejected' })} className="mp-btn mp-btn--ghost mp-btn--sm">
+                      Didn’t pass<span className="mp-sr-only">: {a.articleRef}</span>
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
+      </Panel>
 
-        {/* Two-column layout: current doc + amendment log (mirrors prototype grid-2) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-          {/* Current document panel */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h3 className="font-heading font-bold text-[14.5px] text-forest">
-                Current Document
-              </h3>
-              <span className="flex items-center gap-1.5 bg-successBg text-success text-[10.5px] font-bold px-2.5 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                Ratified
-              </span>
-            </div>
-            <div className="p-5">
-              {/* Constitution document card — matches prototype */}
-              <div className="flex items-center gap-3 p-3 bg-mist rounded-xl">
-                <div className="shrink-0">
-                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--tw-shadow-color, #2e5b41)" strokeWidth="1.8" className="stroke-primary">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="9" y1="13" x2="15" y2="13" />
-                    <line x1="9" y1="17" x2="15" y2="17" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-bold text-forest truncate">
-                    USWAG_Constitution_2026.pdf
-                  </div>
-                  <div className="text-[11px] text-gray-500 mt-0.5">
-                    Ratified June 2026 · Visible to all members
-                  </div>
-                </div>
-                <a
-                  id="btn-download-bylaws"
-                  href="/constitution.pdf"
-                  download="USWAG_Constitution_2026.pdf"
-                  className="w-8 h-8 rounded-lg border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50 transition-colors shrink-0"
-                  title="Download"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 stroke-forest">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                </a>
-              </div>
-
-              <div className="mt-4 space-y-2 text-[12px] text-gray-500">
-                <div className="flex items-center justify-between">
-                  <span>Active version</span>
-                  <span className="font-semibold text-forest">2026 Edition</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Pending amendments</span>
-                  <span className={`font-bold ${pending.length > 0 ? "text-amber-500" : "text-success"}`}>
-                    {isLoading ? "…" : pending.length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Total amendments logged</span>
-                  <span className="font-semibold text-forest">
-                    {isLoading ? "…" : (amendments?.length ?? 0)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Propose amendment form */}
-          <ProposeForm onSuccess={() => showToast("Amendment proposed — awaiting general assembly vote")} />
-        </div>
-
-        {/* Amendment log — pending first, then resolved */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h3 className="font-heading font-bold text-[14.5px] text-forest">Amendment Log</h3>
-            {!isLoading && (
-              <span className="text-[11px] font-semibold text-gray-400">
-                {pending.length} pending · {resolved.length} resolved
-              </span>
-            )}
-          </div>
-
-          {isLoading ? (
-            <div className="p-5 space-y-3">
-              {[1, 2, 3].map((n) => (
-                <div key={n} className="h-16 rounded-xl bg-gray-100 animate-pulse" />
-              ))}
-            </div>
-          ) : amendments?.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-[13px] text-gray-500">No amendments on record.</p>
-              <p className="text-[11px] text-gray-400 mt-1">
-                Use the form above to propose the first amendment.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Pending first */}
-              {pending.map((a) => (
-                <AmendmentRow
-                  key={a.id}
-                  amendment={a}
-                  onResolve={(id, status) => resolveMutation.mutate({ id, status })}
-                  isResolving={resolveMutation.isPending}
-                />
-              ))}
-              {/* Resolved below */}
-              {resolved.map((a) => (
-                <AmendmentRow
-                  key={a.id}
-                  amendment={a}
-                  onResolve={(id, status) => resolveMutation.mutate({ id, status })}
-                  isResolving={resolveMutation.isPending}
-                />
-              ))}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Toast */}
-      {toast && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2.5 rounded-xl bg-forest px-4 py-3 text-[12px] font-semibold text-white shadow-lg">
-          <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 stroke-[#7ee6a8] shrink-0">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          {toast}
-        </div>
-      )}
+      <PortalToast toast={toast} />
     </div>
   );
 }

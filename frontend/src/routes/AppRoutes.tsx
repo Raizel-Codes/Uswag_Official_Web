@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import PublicLayout from '@/components/layout/PublicLayout';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
 import PortalLayout, { PortalProfilePage } from './PortalLayout';
@@ -42,15 +41,15 @@ const AdminWorkPage = lazy(() => import('@/pages/admin/AdminWorkPage'));
 const AdminMembersHomePage = lazy(() => import('@/pages/admin/AdminMembersHomePage'));
 const EventManagementPage = lazy(() => import('@/pages/admin/EventManagementPage'));
 const ScanConsolePage = lazy(() => import('@/pages/admin/ScanConsolePage'));
+const OfficerQrPage = lazy(() => import('@/pages/admin/OfficerQrPage'));
 const ContentManagerPage = lazy(() => import('@/pages/admin/ContentManagerPage'));
 const OfficerRosterPage = lazy(() => import('@/pages/admin/OfficerRosterPage'));
 const BylawsAmendmentsPage = lazy(() => import('@/pages/admin/BylawsAmendmentsPage'));
 const FinanceOverviewPage = lazy(() => import('@/pages/admin/FinanceOverviewPage'));
 const AuditLogPage = lazy(() => import('@/pages/admin/AuditLogPage'));
 
-// Full-page fallback while a route chunk downloads. Layouts (PublicLayout,
-// DashboardLayout) stay mounted immediately — only the page content inside
-// them waits on this.
+// Full-page fallback while a route chunk downloads (a page, or a portal shell —
+// PortalLayout lazy-loads the member portal / admin console on first visit).
 function RouteFallback() {
   return (
     <div className="min-h-[50vh] flex items-center justify-center">
@@ -80,8 +79,8 @@ export default function AppRoutes() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
-        {/* Member portal — any authenticated user. Members get the member portal shell;
-            officers reaching /dashboard/profile keep DashboardLayout (PortalLayout.tsx). */}
+        {/* Member portal — any authenticated user. PortalLayout gives members the member
+            portal and officers (who reach /dashboard/profile) the admin console shell. */}
         <Route element={<ProtectedRoute />}>
           <Route element={<PortalLayout />}>
             <Route path="/dashboard" element={<MemberDashboardPage />} />
@@ -94,12 +93,13 @@ export default function AppRoutes() {
 
         {/* Admin — Super Admin + Officer Admin, scoped further inside each page */}
         <Route element={<RoleRoute allow={['super_admin', 'officer_admin']} />}>
-          <Route element={<DashboardLayout />}>
+          <Route element={<PortalLayout />}>
             <Route path="/admin" element={<AdminHomePage />} />
             <Route path="/admin/work" element={<AdminWorkPage />} />
             <Route path="/admin/members" element={<AdminMembersHomePage />} />
             <Route path="/admin/events" element={<EventManagementPage />} />
             <Route path="/admin/scan" element={<ScanConsolePage />} />
+            <Route path="/admin/qr" element={<OfficerQrPage />} />
             <Route path="/admin/content" element={<ContentManagerPage />} />
 
             {/* Super Admin only */}

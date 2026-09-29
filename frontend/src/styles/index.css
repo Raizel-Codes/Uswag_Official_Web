@@ -12,6 +12,35 @@ h1, h2, h3, h4, h5, h6 {
   @apply font-display;
 }
 
+/* ---------- Scrollbars ----------
+   Global (loaded on every page) so it's available to the public site and the portals alike.
+   The OS default scrollbar — chunky, grey, square-cornered — breaks the engraved-plate/vault
+   look wherever it shows up inside a rounded card, a dark rail, or a row of pill filters.
+   Two utilities:
+   - .uw-scroll: a thin, brand-tinted bar for areas where the scroll affordance is useful (a
+     long nav list, a wide table, a dropdown). Sage-tinted automatically inside a dark surface
+     (.mp-on-dark; the dark override lives in member.css, next to where that context is
+     defined) — nothing further to opt in on the light default below.
+   - .uw-scroll-hidden: the bar is removed but the area still scrolls — for swipeable rows
+     (filter chips, tab strips) where a persistent bar would read as a stray line under a row
+     of pills, not a real, ownable list.
+   Both only change how a *scrolling* element looks; neither one makes anything scroll. */
+.uw-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(46 91 65 / 0.4) transparent; /* thumb, track — Primary at low opacity */
+}
+.uw-scroll::-webkit-scrollbar { width: 7px; height: 7px; }
+.uw-scroll::-webkit-scrollbar-track { background: transparent; }
+.uw-scroll::-webkit-scrollbar-thumb { background: rgb(46 91 65 / 0.4); border-radius: 999px; }
+.uw-scroll::-webkit-scrollbar-thumb:hover { background: rgb(46 91 65 / 0.65); }
+.uw-scroll::-webkit-scrollbar-corner { background: transparent; }
+
+.uw-scroll-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.uw-scroll-hidden::-webkit-scrollbar { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

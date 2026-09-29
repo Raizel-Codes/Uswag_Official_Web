@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/context/AuthContext';
 import Logo from '@/components/common/Logo';
 
-// Public-site header (PublicLayout only — portals use DashboardLayout/Sidebar).
+// Public-site header (PublicLayout only — the portals use components/portal/PortalShell).
 // Styled to match the public "Record": small-caps nav with a drawn underline, an engraved
 // double rule when scrolled, and square, hairline-framed buttons instead of pills.
 const NAV_LINKS = [
@@ -124,7 +124,7 @@ export default function Header() {
           <div className="fixed inset-0 z-40 bg-forest/30 backdrop-blur-sm" onClick={() => setMenuOpen(false)} aria-hidden="true" />
           <div
             id="mobile-menu"
-            className="fixed top-0 right-0 bottom-0 z-50 w-[min(20rem,86vw)] bg-mist border-l border-forest/15 shadow-[inset_4px_0_0_-3px_rgba(152,203,176,0.9),-20px_0_40px_-20px_rgba(20,39,24,0.45)] flex flex-col pt-24 pb-8 px-6 overflow-y-auto"
+            className="fixed top-0 right-0 bottom-0 z-50 w-[min(20rem,86vw)] bg-mist border-l border-forest/15 shadow-[inset_4px_0_0_-3px_rgba(152,203,176,0.9),-20px_0_40px_-20px_rgba(20,39,24,0.45)] flex flex-col pt-24 pb-8 px-6 overflow-y-auto uw-scroll"
           >
             <p className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-forest/75 mb-3">The Record</p>
             <nav aria-label="Main" className="flex flex-col border-t border-forest/15">

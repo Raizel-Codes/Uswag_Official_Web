@@ -1,0 +1,704 @@
+/*
+  USWAG admin console (officers + Super Admin) — the same present-day portal as the member
+  side (member.css supplies the base: .mp shell, rail, tab bar, buttons, standing chips,
+  notes; premium.css the plate cards / vault / seals). This file adds what the console
+  needs on top: panels, KPI plates, tables, form fields, dialogs, toasts, the scanner.
+
+  Imported only by components/admin/AdminLayout.tsx (a lazy chunk), after member.css.
+  Every rule is scoped to an .ap-* class (or .mp-standing-- tone) — no global selectors.
+  Headings are Poppins (--font-heading), body Inter, per CLAUDE.md portal typography.
+*/
+
+/* ---------- Panel (titled plate card) ---------- */
+.ap-panel { padding: 0; overflow: hidden; }
+.ap-panel__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgb(20 39 24 / 0.1);
+}
+.ap-panel__body { padding: 1.25rem; }
+@media (min-width: 640px) {
+  .ap-panel__head { padding: 1.125rem 1.5rem; }
+  .ap-panel__body { padding: 1.5rem; }
+}
+
+/* ---------- KPI plate ---------- */
+.ap-stat { padding: 1rem 1.125rem 1.125rem; min-width: 0; }
+.ap-stat__icon {
+  display: grid;
+  place-items: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: var(--color-mist);
+  background: radial-gradient(circle at 35% 30%, rgb(61 116 85), var(--color-primary) 55%, var(--color-deep));
+  box-shadow: inset 0 0 0 1.5px var(--color-primary), inset 0 0 0 2.5px rgb(152 203 176 / 0.7);
+}
+.ap-stat__icon svg { width: 1rem; height: 1rem; }
+.ap-stat__value { word-break: break-word; }
+.ap-stat--primary .ap-stat__value { color: var(--color-primary); }
+.ap-stat--warn .ap-stat__value { color: var(--mp-warn-ink); }
+.ap-stat--danger .ap-stat__value { color: var(--mp-danger-ink); }
+.ap-stat--neutral .ap-stat__value { color: var(--color-deep); }
+@media (max-width: 479px) {
+  .ap-stat { padding: 0.875rem; }
+  .ap-stat .mp-stat { font-size: 1.5rem; }
+  .ap-stat__icon { display: none; } /* three across on a phone: numbers first */
+}
+
+/* ---------- Tables ---------- */
+/* Horizontal scroll on narrow screens; always the thin light bar — a table plate is always
+   on Mist/white, never the dark vault. */
+.ap-table-wrap {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(46 91 65 / 0.4) transparent;
+}
+.ap-table-wrap::-webkit-scrollbar { width: 7px; height: 7px; }
+.ap-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.ap-table-wrap::-webkit-scrollbar-thumb { background: rgb(46 91 65 / 0.4); border-radius: 999px; }
+.ap-table-wrap::-webkit-scrollbar-thumb:hover { background: rgb(46 91 65 / 0.65); }
+.ap-table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+.ap-table th {
+  text-align: left;
+  white-space: nowrap;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(20 39 24 / 0.75);
+  border-bottom: 1px solid rgb(20 39 24 / 0.14);
+  box-shadow: inset 0 -3px 0 -2px rgb(152 203 176 / 0.6);
+}
+.ap-table td { padding: 0.875rem 1.25rem; vertical-align: middle; border-top: 1px solid rgb(20 39 24 / 0.08); }
+.ap-table tbody tr:first-child td { border-top: 0; }
+.ap-table tbody tr { transition: background-color var(--lp-dur-ui) var(--lp-ease); }
+.ap-table tbody tr:hover { background: rgb(20 39 24 / 0.03); }
+.ap-table .ap-num { font-family: var(--font-heading); font-variant-numeric: tabular-nums; }
+
+/* List rows (the phone-first counterpart of a table) */
+.ap-list > li + li { border-top: 1px solid rgb(20 39 24 / 0.1); }
+.ap-row { display: flex; align-items: center; gap: 0.875rem; padding: 0.875rem 1.25rem; }
+/* This file loads after Tailwind, so .ap-row's align-items would silently beat a row's own
+   `items-start` utility (avatar sinking to the middle of a multi-line row) — honour it. */
+.ap-row.items-start { align-items: flex-start; }
+@media (min-width: 640px) { .ap-row { padding: 1rem 1.5rem; } }
+
+/* Initials medallion for people in lists */
+.ap-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--color-primary);
+  background: var(--color-mist);
+  box-shadow: 0 0 0 1px rgb(20 39 24 / 0.14), inset 0 0 0 3px var(--color-mist), inset 0 0 0 4px rgb(152 203 176 / 0.6);
+}
+
+/* ---------- Forms ---------- */
+.ap-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(20 39 24 / 0.82);
+}
+.ap-hint { margin-top: 0.375rem; font-size: 0.8125rem; color: rgb(20 39 24 / 0.75); }
+.ap-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.625rem 0.875rem;
+  border-radius: 3px;
+  border: 1px solid rgb(20 39 24 / 0.25);
+  background: rgb(255 255 255 / 0.65);
+  color: var(--color-deep);
+  font-size: 0.9375rem;
+  transition: border-color var(--lp-dur-ui) var(--lp-ease), box-shadow var(--lp-dur-ui) var(--lp-ease);
+}
+.ap-input::placeholder { color: rgb(20 39 24 / 0.6); }
+.ap-input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgb(46 91 65 / 0.18); }
+textarea.ap-input { resize: vertical; min-height: 6rem; line-height: 1.55; }
+.ap-search { position: relative; }
+.ap-search svg { position: absolute; left: 0.875rem; top: 50%; width: 1rem; height: 1rem; transform: translateY(-50%); color: rgb(20 39 24 / 0.6); pointer-events: none; }
+.ap-search .ap-input { padding-left: 2.5rem; }
+
+/* ---------- Icon buttons (approve / reject in dense rows) ---------- */
+.ap-iconbtn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 3px;
+  border: 1px solid rgb(20 39 24 / 0.2);
+  background: rgb(255 255 255 / 0.6);
+  color: var(--color-deep);
+  transition: background-color var(--lp-dur-ui) var(--lp-ease), border-color var(--lp-dur-ui) var(--lp-ease), color var(--lp-dur-ui) var(--lp-ease);
+}
+.ap-iconbtn svg { width: 1rem; height: 1rem; }
+.ap-iconbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ap-iconbtn--ok:hover:not(:disabled) { background: var(--color-success-bg); border-color: rgb(47 158 92 / 0.5); color: var(--mp-success-ink); }
+.ap-iconbtn--no:hover:not(:disabled) { background: var(--color-danger-bg); border-color: rgb(179 69 63 / 0.5); color: var(--mp-danger-ink); }
+
+/* Danger button (reject / stop scanning) */
+.mp-btn--danger { background: var(--mp-danger-ink); color: #fff; }
+.mp-btn--danger:hover:not(:disabled) { background: var(--color-deep); }
+
+/* ---------- Extra standing tones for console badges ---------- */
+.mp-standing--neutral { color: rgb(20 39 24 / 0.8); background: rgb(20 39 24 / 0.05); border-color: rgb(20 39 24 / 0.22); }
+.mp-standing--info { color: var(--color-primary); background: rgb(152 203 176 / 0.22); border-color: rgb(46 91 65 / 0.35); }
+
+/* ---------- Dialog ---------- */
+.ap-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(20 39 24 / 0.45);
+}
+@media (min-width: 640px) { .ap-dialog-backdrop { align-items: center; } }
+.ap-dialog {
+  width: 100%;
+  max-width: 30rem;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  padding: 1.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(46 91 65 / 0.4) transparent;
+}
+.ap-dialog::-webkit-scrollbar { width: 7px; }
+.ap-dialog::-webkit-scrollbar-track { background: transparent; }
+.ap-dialog::-webkit-scrollbar-thumb { background: rgb(46 91 65 / 0.4); border-radius: 999px; }
+.ap-dialog::-webkit-scrollbar-thumb:hover { background: rgb(46 91 65 / 0.65); }
+
+/* ---------- Toast ---------- */
+.ap-toast-region {
+  position: fixed;
+  z-index: 60;
+  left: 1rem;
+  right: 1rem;
+  bottom: calc(var(--mp-tabbar-h) + 1rem + env(safe-area-inset-bottom));
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+}
+@media (min-width: 768px) {
+  .ap-toast-region { left: auto; right: 1.5rem; top: 1.5rem; bottom: auto; }
+}
+.mp--sidebar .ap-toast-region { bottom: 1.5rem; }
+.ap-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 26rem;
+  padding: 0.875rem 1.125rem;
+  border-radius: 4px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  pointer-events: auto;
+  box-shadow: 0 18px 40px -16px rgb(20 39 24 / 0.6);
+  animation: ap-toast-in var(--lp-dur-ui) var(--lp-ease);
+}
+.ap-toast__mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 99px;
+  font-size: 0.8125rem;
+  color: var(--color-deep);
+  background: var(--color-sage);
+}
+.ap-toast--error .ap-toast__mark { background: var(--color-danger-bg); color: var(--mp-danger-ink); }
+@keyframes ap-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Scanner ---------- */
+.ap-scanner { padding: 1rem; border-radius: 6px; }
+.ap-scanner__view { position: relative; width: 100%; max-width: 320px; aspect-ratio: 1; margin-inline: auto; border-radius: 4px; overflow: hidden; }
+.ap-scanner__corner { position: absolute; width: 28px; height: 28px; border-color: var(--color-sage); pointer-events: none; }
+.ap-scanner__corner--tl { left: 12px; top: 12px; border-left: 3px solid; border-top: 3px solid; }
+.ap-scanner__corner--tr { right: 12px; top: 12px; border-right: 3px solid; border-top: 3px solid; }
+.ap-scanner__corner--bl { left: 12px; bottom: 12px; border-left: 3px solid; border-bottom: 3px solid; }
+.ap-scanner__corner--br { right: 12px; bottom: 12px; border-right: 3px solid; border-bottom: 3px solid; }
+.ap-scanner__line {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-sage), transparent);
+  animation: ap-scanline 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes ap-scanline { 0%, 100% { top: 12px; } 50% { top: calc(100% - 14px); } }
+.ap-scanner__idle { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(20 39 24 / 0.82); }
+
+/* Scan result plate: a coloured rule down the left for the outcome */
+.ap-result { box-shadow: inset 4px 0 0 var(--ap-result, var(--color-success)); }
+.ap-result--invalid { --ap-result: var(--color-danger); }
+.ap-result--expired { --ap-result: var(--color-warn); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-toast { animation: none; }
+  .ap-scanner__line { animation: none; top: 50%; }
+  .ap-table tbody tr { transition: none; }
+}
+
+/* ---------- Officer Home (phone-first) ---------- */
+/* A row that swipes sideways on a phone instead of wrapping (scope chips) */
+.ap-snap-row { overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin-inline: -0.25rem; padding-inline: 0.25rem; }
+.ap-snap-row::-webkit-scrollbar { display: none; }
+.ap-snap-row > * { scroll-snap-align: start; }
+@media (min-width: 640px) { .ap-snap-row { overflow: visible; } }
+
+/* Stat plates: a swipeable row of ~2.3 cards on a phone (the third peeks in, so it reads as
+   scrollable), three across from sm up. Bleeds to the page edge so cards aren't cut mid-gutter. */
+.ap-stats-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(9.5rem, 42%);
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  margin-inline: -1rem;
+  padding: 0.25rem 1rem 0.5rem;
+  scroll-padding-inline: 1rem;
+}
+.ap-stats-row::-webkit-scrollbar { display: none; }
+.ap-stats-row > * { scroll-snap-align: start; }
+@media (min-width: 640px) {
+  .ap-stats-row { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; margin-inline: 0; padding: 0; }
+}
+/* In the swipe row there's room for the icon again (the base hides it below 480px) */
+@media (max-width: 479px) { .ap-stats-row .ap-stat__icon { display: grid; width: 1.75rem; height: 1.75rem; } }
+
+/* Quick-action tiles: 2 x 2 thumb grid on a phone, a row of four on desktop */
+.ap-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+@media (min-width: 1024px) { .ap-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.ap-tiles > li { min-width: 0; }
+.ap-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.875rem;
+  height: 100%;
+  min-height: 7.5rem;
+  padding: 1rem;
+  border-radius: 3px;
+}
+@media (min-width: 640px) { .ap-tile { flex-direction: row; align-items: center; min-height: 0; padding: 1.25rem; gap: 1rem; } }
+.ap-tile__seal { width: 2.5rem; height: 2.5rem; }
+@media (min-width: 640px) { .ap-tile__seal { width: 2.75rem; height: 2.75rem; } }
+.ap-tile__title { display: block; font-family: var(--font-heading); font-weight: 600; font-size: 0.9375rem; line-height: 1.3; }
+.ap-tile__sub { display: block; margin-top: 0.125rem; font-size: 0.8125rem; line-height: 1.35; }
+@media (min-width: 640px) { .ap-tile__title { font-size: 1rem; } .ap-tile__sub { font-size: 0.875rem; } }
+/* The position's main task: the dark vault tile */
+.ap-tile--primary {
+  color: var(--color-mist);
+  background:
+    radial-gradient(90% 90% at 10% 0%, rgb(46 91 65 / 0.9), transparent 65%),
+    var(--color-deep);
+  box-shadow: inset 0 0 0 1px rgb(152 203 176 / 0.35), 0 10px 24px -14px rgb(20 39 24 / 0.7);
+}
+.ap-tile--primary .ap-tile__seal { box-shadow: inset 0 0 0 2px var(--color-primary), inset 0 0 0 3px rgb(152 203 176 / 0.9), 0 0 0 1px rgb(152 203 176 / 0.35); }
+
+/* ---------- Charts: stacked bars, bar lists, meters ----------
+   Hand-built (no chart library): every chart here is a horizontal bar, so flexbox with
+   flex-grow proportions draws them exactly and stays light on a phone. Segment colours are
+   the brand tokens and the semantic status colours only (StackedBar.tsx BarTone). */
+.ap-seg--success { background: var(--color-success); }
+.ap-seg--warn { background: var(--color-warn); }
+.ap-seg--grey { background: var(--color-grey); }
+.ap-seg--danger { background: var(--color-danger); }
+.ap-seg--primary { background: var(--color-primary); }
+.ap-seg--sage { background: var(--color-sage); }
+.ap-seg--deep { background: var(--color-deep); }
+
+.ap-bar {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(20 39 24 / 0.08);
+}
+.ap-bar--sm { height: 6px; }
+.ap-bar--lg { height: 16px; border-radius: 4px; }
+.ap-bar .ap-seg { flex-basis: 0; min-width: 4px; }
+.ap-bar__empty { flex: 1; }
+
+.ap-legend { display: flex; flex-wrap: wrap; gap: 0.375rem 1.125rem; margin-top: 0.75rem; font-size: 0.8125rem; color: rgb(20 39 24 / 0.8); }
+.ap-legend li { display: inline-flex; align-items: center; gap: 0.4375rem; }
+.ap-legend__dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+
+/* Bar list: label | track | value; the label goes above the track on a phone */
+.ap-barlist { display: flex; flex-direction: column; gap: 0.25rem; }
+.ap-barlist__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'label value' 'track track';
+  align-items: center;
+  gap: 0.375rem 0.875rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border-radius: 4px;
+  text-align: left;
+}
+@media (min-width: 768px) {
+  .ap-barlist__row { grid-template-columns: minmax(8rem, 15rem) minmax(0, 1fr) 3.5rem; grid-template-areas: 'label track value'; }
+}
+.ap-barlist__row--button { transition: background-color var(--lp-dur-ui) var(--lp-ease); }
+.ap-barlist__row--button:hover { background: rgb(20 39 24 / 0.04); }
+.ap-barlist__label { grid-area: label; font-size: 0.875rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-barlist__track { grid-area: track; display: block; height: 14px; border-radius: 4px; background: rgb(20 39 24 / 0.06); overflow: hidden; }
+.ap-barlist__fill { display: flex; gap: 2px; height: 100%; min-width: 6px; transition: width 600ms var(--lp-ease); }
+.ap-barlist__fill .ap-seg { flex-basis: 0; min-width: 3px; }
+.ap-barlist__fill .ap-seg:last-child { border-radius: 0 4px 4px 0; }
+.ap-barlist__value { grid-area: value; text-align: right; font-weight: 600; font-size: 0.9375rem; }
+
+/* Meter: a single value out of 100 (attendance rate, sign-ups vs slots) */
+.ap-meter { display: flex; align-items: center; gap: 0.625rem; min-width: 0; }
+.ap-meter__track { flex: 1; min-width: 3rem; max-width: 7rem; height: 6px; border-radius: 999px; background: rgb(20 39 24 / 0.08); overflow: hidden; }
+.ap-meter__fill { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); }
+.ap-meter__fill--warn { background: var(--color-warn); }
+.ap-meter__fill--danger { background: var(--color-danger); }
+.ap-meter__value { font-family: var(--font-heading); font-variant-numeric: tabular-nums; font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
+
+/* ---------- Board (monday.com-style grouped rows) ----------
+   A group = accent strip + title + count + summary bar; rows are a CSS grid whose columns
+   each page sets with --ap-cols. Below md the grid folds into a wrapped card: the first cell
+   takes the full width and the rest flow underneath, labelled from data-label — so no board
+   ever needs a horizontal scroll on a phone. */
+.ap-board { display: flex; flex-direction: column; gap: 1.25rem; }
+.ap-group { --ap-accent: var(--color-primary); }
+.ap-group--a0 { --ap-accent: var(--color-primary); }
+.ap-group--a1 { --ap-accent: color-mix(in srgb, var(--color-sage) 70%, var(--color-deep)); }
+.ap-group--a2 { --ap-accent: var(--color-deep); }
+.ap-group--a3 { --ap-accent: color-mix(in srgb, var(--color-primary) 50%, var(--color-sage)); }
+.ap-group--a4 { --ap-accent: color-mix(in srgb, var(--color-deep) 55%, var(--color-sage)); }
+.ap-group--a5 { --ap-accent: var(--color-grey); }
+
+.ap-group__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  padding: 0.25rem 0;
+}
+.ap-group__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 44px;
+  padding-right: 0.5rem;
+  border-radius: 4px;
+  text-align: left;
+}
+.ap-group__chevron { width: 1.125rem; height: 1.125rem; flex-shrink: 0; color: var(--ap-accent); transition: transform var(--lp-dur-ui) var(--lp-ease); }
+.ap-group__toggle[aria-expanded='true'] .ap-group__chevron { transform: rotate(90deg); }
+.ap-group__title { font-family: var(--font-heading); font-weight: 600; font-size: 1rem; line-height: 1.3; }
+.ap-group__title::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 0.625rem;
+  border-radius: 3px;
+  background: var(--ap-accent);
+  vertical-align: 0.05em;
+}
+.ap-group__count { font-size: 0.8125rem; color: rgb(20 39 24 / 0.72); white-space: nowrap; }
+.ap-group__summary { flex: 1 1 14rem; max-width: 26rem; margin-left: auto; }
+.ap-group__rows {
+  margin-top: 0.5rem;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.62);
+  border: 1px solid rgb(20 39 24 / 0.1);
+  box-shadow: 0 1px 2px rgb(20 39 24 / 0.05);
+}
+
+.ap-board-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--ap-cols, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8125rem 1.25rem 0.8125rem 1.5rem;
+  border-top: 1px solid rgb(20 39 24 / 0.08);
+  transition: background-color var(--lp-dur-ui) var(--lp-ease);
+}
+.ap-board-row::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--ap-accent); }
+.ap-board-row:first-child { border-top: 0; }
+.ap-board-row:not(.ap-board-row--head):hover { background: rgb(20 39 24 / 0.025); }
+.ap-board-row--head {
+  padding-block: 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(20 39 24 / 0.72);
+  background: rgb(20 39 24 / 0.025);
+}
+.ap-board-row > * { min-width: 0; }
+@media (max-width: 767px) {
+  .ap-board-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.625rem 1.25rem; padding: 0.875rem 1rem 0.875rem 1.25rem; }
+  .ap-board-row > :first-child { flex-basis: 100%; }
+  .ap-board-row > [data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.1875rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(20 39 24 / 0.7);
+  }
+  .ap-board-row--head { display: none; }
+  .ap-group__summary { flex-basis: 100%; max-width: none; margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-barlist__fill,
+  .ap-group__chevron { transition: none; }
+}
+
+/* ---------- Officer ID card (OfficerIdCard.tsx) ----------
+   The id_card_v2.html **officer** tier (symmetrical, engraved, exclusive) on its own .oc-*
+   classes, deliberately not layered on the member card's .mp-idcard, whose slant foil,
+   hatching and round medallion would otherwise bleed through. Measurements are the
+   prototype's 336 x 520 card in container units (1cqw = 3.36px there); its bespoke palette
+   maps onto the brand tokens: pine -> Deep, basil/forest -> Primary, pistachio -> Mist,
+   mint -> Sage. */
+.oc-stage {
+  container-type: inline-size;
+  width: 100%;
+  max-width: 340px;
+  margin-inline: auto;
+  perspective: 1100px;
+}
+.oc-card {
+  --rx: 0deg;
+  --ry: 0deg;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 336 / 520;
+  border-radius: 5.4cqw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-mist);
+  background:
+    radial-gradient(ellipse 140% 90% at 15% -10%, rgb(152 203 176 / 0.3), transparent 55%),
+    linear-gradient(165deg,
+      var(--color-primary) 0%,
+      color-mix(in srgb, var(--color-primary) 70%, var(--color-deep)) 30%,
+      var(--color-deep) 68%,
+      color-mix(in srgb, var(--color-deep) 72%, black) 100%);
+  box-shadow:
+    0 30px 70px -20px rgb(20 39 24 / 0.9),
+    0 2px 6px rgb(20 39 24 / 0.25),
+    inset 0 1px 0 rgb(231 239 228 / 0.12);
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 500ms var(--lp-ease);
+}
+/* Guilloché engine-turned texture: fine engraved arcs over a hairline cross-hatch, the mark
+   of a certificate print rather than a flat UI pattern */
+.oc-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    repeating-radial-gradient(circle at 50% 120%, transparent 0 7px, rgb(152 203 176 / 0.06) 7.5px, transparent 8px 15px),
+    repeating-linear-gradient(115deg, transparent 0 9px, rgb(152 203 176 / 0.04) 9.5px, transparent 10px);
+}
+/* Double engraved frame, inset from the edge */
+.oc-card::before {
+  content: '';
+  position: absolute;
+  inset: 3.6cqw;
+  z-index: 6;
+  pointer-events: none;
+  border-radius: 3cqw;
+  border: 1px solid rgb(152 203 176 / 0.42);
+  box-shadow: inset 0 0 0 1.2cqw var(--color-deep), inset 0 0 0 calc(1.2cqw + 1px) rgb(152 203 176 / 0.16);
+}
+.oc-card__glow {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  width: 74cqw;
+  height: 74cqw;
+  transform: translateX(-50%);
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(circle, rgb(152 203 176 / 0.32) 0%, transparent 70%);
+}
+/* Pointer-following foil sheen (the member card's registered --mp-sheen and sweep) */
+.oc-card__sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  background: linear-gradient(115deg, transparent calc(var(--mp-sheen) - 22%), rgb(231 239 228 / 0.5) var(--mp-sheen), transparent calc(var(--mp-sheen) + 22%));
+  animation: mp-foil-sweep 1.8s var(--lp-ease) 0.3s backwards;
+}
+
+.oc-card__top,
+.oc-card__zone,
+.oc-card__bottom { position: relative; z-index: 3; }
+
+.oc-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 7.4cqw 8.4cqw 0;
+}
+.oc-card__crest {
+  display: grid;
+  place-items: center;
+  width: 11.3cqw;
+  height: 11.3cqw;
+  border-radius: 99px;
+  border: 1px solid var(--color-mist);
+  background: linear-gradient(135deg, var(--color-deep), var(--color-primary));
+  box-shadow: 0 1.2cqw 3.6cqw rgb(20 39 24 / 0.6), inset 0 0 2.4cqw rgb(152 203 176 / 0.22);
+}
+.oc-card__crest img { width: 62%; height: auto; }
+.oc-card__org { font-family: var(--font-heading); font-weight: 600; font-size: 5.4cqw; line-height: 1.1; letter-spacing: 0.02em; }
+.oc-card__org-sub { font-size: max(10px, 2.6cqw); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(231 239 228 / 0.8); margin-top: 0.9cqw; }
+
+.oc-card__zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4.2cqw;
+  padding: 2cqw 0;
+}
+
+/* Struck rank seal: gradient core, arced rank, emblem and pips inside a medal-edge double ring */
+.oc-seal { position: relative; width: 27.4cqw; height: 27.4cqw; }
+.oc-seal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 99px;
+  border: 1px solid rgb(152 203 176 / 0.55);
+  box-shadow: inset 0 0 0 0.9cqw var(--color-deep), inset 0 0 0 calc(0.9cqw + 1px) rgb(152 203 176 / 0.28);
+}
+.oc-seal svg { position: relative; width: 100%; height: 100%; overflow: visible; }
+.oc-seal__stop-light { stop-color: var(--color-primary); }
+.oc-seal__stop-dark { stop-color: var(--color-deep); }
+.oc-seal__ring { fill: none; stroke: rgb(152 203 176 / 0.35); stroke-width: 0.75; }
+.oc-seal__label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  fill: var(--color-mist);
+}
+.oc-seal__label--long { font-size: 6.4px; letter-spacing: 0.12em; }
+.oc-seal__emblem { fill: none; stroke: var(--color-mist); stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
+.oc-seal__emblem--filled { fill: var(--color-mist); stroke: none; }
+.oc-seal__fill { fill: var(--color-mist); stroke: none; }
+.oc-seal__pip { fill: var(--color-sage); }
+
+/* Square QR plate inside an engraved outer outline */
+.oc-card__qr {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 41.7cqw;
+  aspect-ratio: 1;
+  border-radius: 2.4cqw;
+  background: var(--color-mist);
+  box-shadow:
+    0 0 0 1px var(--color-deep),
+    0 0 0 1.2cqw rgb(152 203 176 / 0.3),
+    0 4.5cqw 9cqw -3cqw rgb(20 39 24 / 0.8);
+}
+.oc-card__qr::before {
+  content: '';
+  position: absolute;
+  inset: -2.4cqw;
+  border-radius: 3.6cqw;
+  border: 1px solid rgb(152 203 176 / 0.55);
+}
+.oc-card__qr canvas { width: 86% !important; height: auto !important; aspect-ratio: 1; display: block; border-radius: 1.2cqw; }
+.oc-card__qr-wait { font-size: max(12px, 3.5cqw); font-weight: 600; color: var(--color-deep); }
+.oc-card__hint {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: max(10px, 2.6cqw);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-sage);
+}
+
+.oc-card__bottom { padding: 2.4cqw 8.4cqw 9cqw; text-align: center; }
+.oc-card__divider { height: 1px; margin-bottom: 4.8cqw; background: linear-gradient(90deg, transparent, rgb(152 203 176 / 0.45), transparent); }
+.oc-card__name { font-family: var(--font-heading); font-weight: 600; font-size: 7.1cqw; line-height: 1.15; }
+/* "Office of the ___" between rule marks */
+.oc-card__title {
+  position: relative;
+  display: inline-block;
+  margin-top: 1.2cqw;
+  font-size: max(12px, 3.9cqw);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--color-sage);
+}
+.oc-card__title::before,
+.oc-card__title::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 4.2cqw;
+  height: 1px;
+  background: rgb(152 203 176 / 0.55);
+}
+.oc-card__title::before { right: calc(100% + 3cqw); }
+.oc-card__title::after { left: calc(100% + 3cqw); }
+.oc-card__meta { display: flex; justify-content: space-between; align-items: flex-end; gap: 3cqw; margin-top: 5.4cqw; text-align: left; }
+.oc-card__meta-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: max(10px, 2.6cqw);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-sage);
+}
+.oc-card__meta-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: max(12px, 3.9cqw);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-top: 1.2cqw;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-card { transform: none !important; transition: none; }
+  .oc-card__sheen { animation: none; }
+}
+

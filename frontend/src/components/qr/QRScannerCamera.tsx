@@ -35,5 +35,5 @@ export default function QRScannerCamera({ onDecoded, active }: QRScannerCameraPr
     };
   }, [active, onDecoded]);
 
-  return <div id={containerId} className="w-full aspect-square rounded-2xl overflow-hidden bg-forest" />;
+  return <div id={containerId} className="w-full aspect-square overflow-hidden bg-forest" />;
 }

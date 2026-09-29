@@ -6,7 +6,8 @@ import type { ScanVerificationResponse } from "@/types/qr.types";
 // After a successful decode the hook debounces further decodes for 3 s so a
 // single physical QR code doesn't trigger multiple API calls.
 // Call reset() to clear the last result and allow the next scan immediately.
-export function useQRScanner(eventId: string) {
+// eventId is omitted when checking an officer's own ID (not tied to an event).
+export function useQRScanner(eventId?: string) {
   const [result, setResult] = useState<ScanVerificationResponse | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +25,9 @@ export function useQRScanner(eventId: string) {
         const res = await qrService.verifyScan(rawValue, eventId);
         setResult(res);
       } catch (err: unknown) {
-        const msg =
-          err instanceof Error ? err.message : "Network error — check your connection";
-        setError(msg);
+        // The server's reason when there is one (e.g. the Auditor's 403), else a network hint.
+        const e = err as { response?: { data?: { message?: string } }; message?: string };
+        setError(e?.response?.data?.message ?? e?.message ?? "Network error — check your connection");
       } finally {
         setIsVerifying(false);
         // Hold the cooldown for 3 s so the same QR code is not re-submitted

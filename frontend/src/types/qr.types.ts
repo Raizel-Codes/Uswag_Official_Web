@@ -19,6 +19,12 @@ export interface ScanVerificationResponse {
     serialNumber: string;
     collegeOrDept: string;
   };
+  // Present instead of `member` when the scanned card was an officer's own ID (meetings and
+  // forums an officer conducts — see qr.service.ts buildOfficerQrValue). Never both at once.
+  officer?: {
+    name: string;
+    officerPosition: string | null;
+  };
   reason?: string; // populated when status !== 'valid'
   scannedAt: string;
 }

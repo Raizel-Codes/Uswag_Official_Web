@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { getMyAttendance } from '@/services/attendanceService';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { PILLAR_LABELS, type AttendanceHistoryEntry, type MemberAttendanceHistory } from '@/types/event.types';
-import PageHeader from '@/components/member/PageHeader';
+import PageHeader from '@/components/portal/PageHeader';
 import { isActive } from '@/components/member/standing';
 
 const RESULT: Record<AttendanceHistoryEntry['result'], { cls: string; label: string }> = {

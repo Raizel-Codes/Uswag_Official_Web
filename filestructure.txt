@@ -70,10 +70,6 @@ USWAG-OFFICIAL_WEBSITE/
 │   │   │
 │   │   ├── components/                       # Modular UI Components
 │   │   │   ├── common/                       # Generic reusable UI primitives
-│   │   │   │   ├── Button.tsx                # Primary, Secondary, Outline buttons
-│   │   │   │   ├── Card.tsx                  # Mist Background container cards
-│   │   │   │   ├── Badge.tsx                 # Status & advocacy pillar badges
-│   │   │   │   ├── Modal.tsx                 # Accessible modal dialogs
 │   │   │   │   ├── Input.tsx                 # Form inputs & validation states
 │   │   │   │   ├── Dropdown.tsx              # Select & filter dropdown menus
 │   │   │   │   ├── SkeletonLoader.tsx        # Skeleton placeholders for feed/events
@@ -82,8 +78,6 @@ USWAG-OFFICIAL_WEBSITE/
 │   │   │   ├── layout/                       # Structural Layout Components
 │   │   │   │   ├── Header.tsx                # Translucent sticky nav bar with shrink
 │   │   │   │   ├── Footer.tsx                # Footer with links, contacts, social icons
-│   │   │   │   ├── Sidebar.tsx               # Admin & Member dashboard navigation drawer
-│   │   │   │   ├── DashboardLayout.tsx       # Auth-protected shell wrapper
 │   │   │   │   └── PublicLayout.tsx          # Public page wrapper
 │   │   │   │
 │   │   │   ├── pwa/                          # PWA-specific UI widgets
@@ -97,8 +91,7 @@ USWAG-OFFICIAL_WEBSITE/
 │   │   │   │   └── ScanResultCard.tsx        # Valid (Green) / Invalid / Expired alert card
 │   │   │   │
 │   │   │   └── feed/                         # Social & news components
-│   │   │       ├── FacebookPostCard.tsx      # Synced FB post card with link out
-│   │   │       └── EventCard.tsx             # Upcoming event card with RSVP action
+│   │   │       └── FacebookPostCard.tsx      # Synced FB post card with link out
 │   │   │
 │   │   ├── context/                          # Global React Contexts & Providers
 │   │   │   ├── AuthContext.tsx               # User authentication state & JWT session
@@ -109,7 +102,6 @@ USWAG-OFFICIAL_WEBSITE/
 │   │   │   ├── useAuth.ts                    # User login, logout, role checks
 │   │   │   ├── useEvents.ts                  # Event querying, filtering, RSVP
 │   │   │   ├── useQRScanner.ts               # Camera scanner lifecycle & verification
-│   │   │   ├── useNotifications.ts           # Push notifications & unread polling
 │   │   │   └── usePWAInstall.ts              # beforeinstallprompt handler hook
 │   │   │
 │   │   ├── pages/                            # Application View Pages
@@ -132,7 +124,7 @@ USWAG-OFFICIAL_WEBSITE/
 │   │   │   │   ├── MyAttendancePage.tsx      # Scanned activity history & attendance rate
 │   │   │   │   ├── MemberEventsPage.tsx      # RSVP to events & slot eligibility status
 │   │   │   │   ├── NotificationsPage.tsx     # Full notification center & push settings
-│   │   │   │   └── ProfilePage.tsx           # Profile info, department, credentials
+│   │   │   │   └── MemberProfilePage.tsx     # Profile info, department, credentials
 │   │   │   │
 │   │   │   └── admin/                        # Admin Portal (Auth: Super Admin / Officer Admin)
 │   │   │       ├── AdminDashboardPage.tsx    # Org-wide stats, attendance trends, metrics
@@ -167,10 +159,7 @@ USWAG-OFFICIAL_WEBSITE/
 │   │   │   └── post.types.ts                 # FacebookPost, Announcement, NewsItem
 │   │   │
 │   │   ├── utils/                            # Utility functions & helpers
-│   │   │   ├── formatters.ts                 # Date/Time, currency, name formatting
-│   │   │   ├── qrCrypto.ts                   # Client-side QR payload verification
-│   │   │   ├── storage.ts                    # LocalStorage / SessionStorage wrappers
-│   │   │   └── validators.ts                 # Form input validation schemas
+│   │   │   └── formatters.ts                 # Date/Time, currency, name formatting
 │   │   │
 │   │   ├── styles/                           # Global stylesheets & design system tokens
 │   │   │   ├── index.css                     # Tailwind base, components, utilities

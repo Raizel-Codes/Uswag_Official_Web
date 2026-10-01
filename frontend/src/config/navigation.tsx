@@ -1,7 +1,9 @@
+import type { SVGProps } from 'react';
+
 export interface NavItem {
   name: string;
   href: string;
-  icon: (props: any) => JSX.Element;
+  icon: (props: SVGProps<SVGSVGElement>) => JSX.Element;
   roles: string[];
   section?: string; // rail group heading (desktop)
   centre?: boolean; // tab bar: the raised centre tab
@@ -13,7 +15,7 @@ export interface NavItem {
   lock?: 'inactiveMember' | 'auditor';
 }
 
-const CardIcon = (props: any) => (
+const CardIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="3" y="3" width="7" height="7" rx="1" />
     <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -22,7 +24,7 @@ const CardIcon = (props: any) => (
   </svg>
 );
 
-const LedgerIcon = (props: any) => (
+const LedgerIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M9 11l2 2 4-4" />
     <rect x="4" y="3" width="16" height="18" rx="2" />
@@ -30,14 +32,14 @@ const LedgerIcon = (props: any) => (
   </svg>
 );
 
-const HomeIcon = (props: any) => (
+const HomeIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M3 12l9-9 9 9" />
     <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
   </svg>
 );
 
-const ScanIcon = (props: any) => (
+const ScanIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="3" y="3" width="7" height="7" />
     <rect x="14" y="3" width="7" height="7" />
@@ -45,7 +47,7 @@ const ScanIcon = (props: any) => (
   </svg>
 );
 
-const WorkIcon = (props: any) => (
+const WorkIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="3" y="3" width="7" height="9" rx="1" />
     <rect x="14" y="3" width="7" height="5" rx="1" />
@@ -54,14 +56,14 @@ const WorkIcon = (props: any) => (
   </svg>
 );
 
-const UserIcon = (props: any) => (
+const UserIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <circle cx="12" cy="8" r="4" />
     <path d="M4 21a8 8 0 0 1 16 0" />
   </svg>
 );
 
-const UsersIcon = (props: any) => (
+const UsersIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
     <circle cx="9" cy="7" r="4" />
@@ -70,13 +72,13 @@ const UsersIcon = (props: any) => (
   </svg>
 );
 
-const ShieldIcon = (props: any) => (
+const ShieldIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
   </svg>
 );
 
-const CalendarIcon = (props: any) => (
+const CalendarIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="3" y="4" width="18" height="18" rx="2" />
     <line x1="16" y1="2" x2="16" y2="6" />
@@ -85,13 +87,13 @@ const CalendarIcon = (props: any) => (
   </svg>
 );
 
-const NewsIcon = (props: any) => (
+const NewsIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M22 12a10 10 0 1 0-11.5 9.87v-6.98H7.9V12h2.6V9.8c0-2.56 1.52-3.98 3.86-3.98" />
   </svg>
 );
 
-const DocumentIcon = (props: any) => (
+const DocumentIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <polyline points="14 2 14 8 20 8" />
@@ -100,7 +102,7 @@ const DocumentIcon = (props: any) => (
   </svg>
 );
 
-const PesoIcon = (props: any) => (
+const PesoIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M7 21V4h6a4.5 4.5 0 0 1 0 9H7" />
     <path d="M4 8h14M4 11h14" />

@@ -7,6 +7,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import AuthShell from '@/components/landing/AuthShell';
 import DigitalCardFace from '@/components/landing/artifacts/DigitalCardFace';
+import { apiError } from '@/utils/apiError';
 
 const MEMBER_PERKS = [
   { title: 'Your digital membership card', desc: 'A signed QR card, ready to scan at the door.' },
@@ -43,9 +44,9 @@ export default function LoginPage() {
       } else {
         navigate('/dashboard', { replace: true });
       }
-    } catch (err: any) {
+    } catch (err) {
       // Axios wraps HTTP errors; pull the backend message when available
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Login failed. Please try again.';
+      const msg = apiError(err, 'Login failed. Please try again.');
       setError(msg);
     } finally {
       setIsSubmitting(false);

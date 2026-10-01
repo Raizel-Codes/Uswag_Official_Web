@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { MemberProfile } from "@/types/member.types";
 import { revealStudentId, createSetupLink } from "@/services/memberService";
+import { apiError } from "@/utils/apiError";
 
 // Review aids for a membership application, shown under the applicant's name in the
 // Secretary's (MemberManagementPage) and Super Admin's (SuperAdminMembersPage) lists:
@@ -11,10 +12,6 @@ import { revealStudentId, createSetupLink } from "@/services/memberService";
 // - Password setup link: one-time, 1-hour link for a friend-assisted applicant, to be
 //   handed over in person (there is no email delivery yet)
 // The server enforces every one of these (requireOfficerPosition('SECRETARY')).
-
-function apiMessage(err: unknown, fallback: string) {
-  return (err as any)?.response?.data?.message ?? fallback;
-}
 
 export default function ApplicationReviewAids({ member }: { member: MemberProfile }) {
   const isPending = member.status === "pending";
@@ -34,7 +31,7 @@ export default function ApplicationReviewAids({ member }: { member: MemberProfil
     try {
       setStudentId(await revealStudentId(member.id));
     } catch (err) {
-      setError(apiMessage(err, "Couldn’t load the student ID."));
+      setError(apiError(err, "Couldn’t load the student ID."));
     } finally {
       setBusy(null);
     }
@@ -47,7 +44,7 @@ export default function ApplicationReviewAids({ member }: { member: MemberProfil
     try {
       setLink((await createSetupLink(member.id)).url);
     } catch (err) {
-      setError(apiMessage(err, "Couldn’t create a setup link."));
+      setError(apiError(err, "Couldn’t create a setup link."));
     } finally {
       setBusy(null);
     }

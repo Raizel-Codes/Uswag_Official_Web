@@ -7,6 +7,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '@/services/authService';
 import AuthShell from '@/components/landing/AuthShell';
 import EngravedKey from '@/components/landing/artifacts/EngravedKey';
+import { apiError } from '@/utils/apiError';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -49,8 +50,8 @@ export default function ResetPasswordPage() {
     try {
       await resetPassword(token, newPassword);
       setDone(true);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to reset password. Please try again.';
+    } catch (err) {
+      const msg = apiError(err, 'Failed to reset password. Please try again.');
       setError(msg);
     } finally {
       setIsSubmitting(false);

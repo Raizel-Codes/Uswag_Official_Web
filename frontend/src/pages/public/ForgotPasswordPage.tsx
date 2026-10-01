@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { forgotPassword } from '@/services/authService';
 import AuthShell from '@/components/landing/AuthShell';
 import EngravedKey from '@/components/landing/artifacts/EngravedKey';
+import { apiError } from '@/utils/apiError';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -29,8 +30,8 @@ export default function ForgotPasswordPage() {
     try {
       const res = await forgotPassword(email.trim());
       setResult(res);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Something went wrong. Please try again.';
+    } catch (err) {
+      const msg = apiError(err, 'Something went wrong. Please try again.');
       setError(msg);
     } finally {
       setIsSubmitting(false);

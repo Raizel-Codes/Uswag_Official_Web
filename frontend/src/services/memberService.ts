@@ -35,12 +35,12 @@ export async function listMembers(params?: { status?: string; search?: string })
 }
 
 export async function approveApplication(memberId: string) {
-  const { data } = await api.post<{ success: boolean; data: any }>(`/members/${memberId}/approve`);
+  const { data } = await api.post<{ success: boolean; data: unknown }>(`/members/${memberId}/approve`);
   return data.data;
 }
 
 export async function rejectApplication(memberId: string, reason?: string) {
-  const { data } = await api.post<{ success: boolean; data: any }>(`/members/${memberId}/reject`, { reason });
+  const { data } = await api.post<{ success: boolean; data: unknown }>(`/members/${memberId}/reject`, { reason });
   return data.data;
 }
 

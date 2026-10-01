@@ -22,6 +22,7 @@ import PageMasthead from '@/components/landing/PageMasthead';
 import SectionHeading from '@/components/landing/SectionHeading';
 import MembershipEnvelope, { useFocusAfterOpen } from '@/components/landing/artifacts/MembershipEnvelope';
 import ApplicationDropbox, { type DropboxPhase } from '@/components/landing/artifacts/ApplicationDropbox';
+import { apiError } from '@/utils/apiError';
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year'];
 
@@ -250,8 +251,8 @@ export default function ApplicationPage() {
       setSent(record);
       setRestored(false);
       setPhase('posting');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to submit application. Please try again.';
+    } catch (err) {
+      const msg = apiError(err, 'Failed to submit application. Please try again.');
       setError(msg);
       setPhase('form');
     }

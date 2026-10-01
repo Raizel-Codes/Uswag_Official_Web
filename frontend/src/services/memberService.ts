@@ -39,6 +39,12 @@ export async function approveApplication(memberId: string) {
   return data.data;
 }
 
+/** Secretary / Super Admin: renew an expired membership for the current academic year (Article III §3). */
+export async function renewMember(memberId: string) {
+  const { data } = await api.post<{ success: boolean; data: unknown }>(`/members/${memberId}/renew`);
+  return data.data;
+}
+
 export async function rejectApplication(memberId: string, reason?: string) {
   const { data } = await api.post<{ success: boolean; data: unknown }>(`/members/${memberId}/reject`, { reason });
   return data.data;

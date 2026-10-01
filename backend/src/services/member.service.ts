@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { prisma } from '../config/db.js';
 import { buildQrValue } from './qr.service.js';
 import { hashStudentId, encryptStudentId } from '../utils/crypto.js';
+import { academicYearEnd, academicYearStart, currentAcademicYear } from '../utils/academicYear.js';
 
 // Serial number format: UW-<academicYearStart>-<zero-padded sequence>.
 // Never sequential in a way that's guessable per-member without a DB lookup —
@@ -11,16 +12,11 @@ export async function generateSerialNumber(academicYearStart: number): Promise<s
   return `UW-${academicYearStart}-${String(count + 1).padStart(6, '0')}`;
 }
 
-// NwSSU's academic year runs roughly June–March. Before June, "now" still
-// belongs to the year that started the previous June.
-// Used as the default when an approve action doesn't specify one (e.g. a
-// quick one-click approve from a dashboard list, vs. a form that lets an
-// officer pick a specific year for a late/backdated renewal).
+// The default when an approve action doesn't specify a year (e.g. a quick one-click approve from a
+// dashboard list, vs. a form that lets an officer pick a specific year). The year's boundaries —
+// and the assumption behind them — live in utils/academicYear.ts.
 export function getCurrentAcademicYear(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const startYear = now.getMonth() >= 5 ? year : year - 1; // getMonth() is 0-indexed; 5 = June
-  return `${startYear}-${startYear + 1}`;
+  return currentAcademicYear();
 }
 
 // Approve/reject are the moment the Secretary "handles" an application, so
@@ -36,8 +32,26 @@ export async function approveApplication(profileId: string, academicYear?: strin
 
   return prisma.memberProfile.update({
     where: { id: profileId },
-    data: { status: 'ACTIVE', serialNumber, academicYear: year, qrIssuedAt: new Date(), ...CLEAR_REVIEW_DATA },
+    data: { status: 'ACTIVE', serialNumber, academicYear: year, expiresAt: academicYearEnd(year), qrIssuedAt: new Date(), ...CLEAR_REVIEW_DATA },
   });
+}
+
+/**
+ * Renews a lapsed membership for `academicYear` (the current one unless the Secretary picks a later
+ * one): Article III §3, "renewable annually". The member keeps their serial number and the same card,
+ * which verifies again once they're ACTIVE. Collecting the fee stays a Treasurer entry (finance).
+ */
+export async function renewMembership(profileId: string, academicYear?: string) {
+  const year = academicYear || getCurrentAcademicYear();
+  return prisma.memberProfile.update({
+    where: { id: profileId },
+    data: { status: 'ACTIVE', academicYear: year, expiresAt: academicYearEnd(year), qrIssuedAt: new Date() },
+  });
+}
+
+/** A renewal can't be for a year that has already ended — it would lapse again straight away. */
+export function isPastAcademicYear(year: string): boolean {
+  return !(academicYearStart(year) >= academicYearStart(currentAcademicYear()));
 }
 
 export async function rejectApplication(profileId: string) {

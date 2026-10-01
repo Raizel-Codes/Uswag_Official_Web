@@ -51,8 +51,19 @@ export const submitApplicationSchema = z
 // pending-list) doesn't collect it, so the controller defaults to the
 // current academic year (member.service.ts getCurrentAcademicYear()) when
 // omitted. Still overridable by any caller that does supply one.
+// "2026-2027": two consecutive years. The expiry date is derived from it (utils/academicYear.ts).
+const academicYear = z
+  .string()
+  .regex(/^\d{4}-\d{4}$/, 'Use the form 2026-2027')
+  .refine((v) => Number(v.slice(5)) === Number(v.slice(0, 4)) + 1, 'The years must be consecutive, like 2026-2027');
+
 export const approveApplicationSchema = z.object({
-  academicYear: z.string().min(1).optional(),
+  academicYear: academicYear.optional(),
+});
+
+// Renew an expired membership; the year defaults to the current academic year.
+export const renewMemberSchema = z.object({
+  academicYear: academicYear.optional(),
 });
 
 // reason is optional for the same reason — most reject actions in the UI

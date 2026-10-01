@@ -4,7 +4,7 @@ import * as attendanceController from '../controllers/attendance.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { requireOfficerPosition, requireRole } from '../middlewares/role.middleware.js';
 import { validateBody } from '../middlewares/validation.middleware.js';
-import { approveApplicationSchema, rejectApplicationSchema, submitApplicationSchema } from './memberSchemas.js';
+import { approveApplicationSchema, rejectApplicationSchema, renewMemberSchema, submitApplicationSchema } from './memberSchemas.js';
 import { applyRateLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router = Router();
@@ -27,6 +27,9 @@ router.get('/me/attendance', attendanceController.getMyAttendance);
 router.get('/', requireOfficerPosition('SECRETARY'), memberController.listMembers);
 router.post('/:memberId/approve', requireOfficerPosition('SECRETARY'), validateBody(approveApplicationSchema), memberController.approveApplication);
 router.post('/:memberId/reject', requireOfficerPosition('SECRETARY'), validateBody(rejectApplicationSchema), memberController.rejectApplication);
+// Article III §3: membership lasts one academic year and is renewable. The renewal job expires
+// lapsed members; the Secretary renews them here.
+router.post('/:memberId/renew', requireOfficerPosition('SECRETARY'), validateBody(renewMemberSchema), memberController.renewMember);
 // Application review aids (Secretary): the temporary, encrypted student ID,
 // and the one-time password-setup link for friend-assisted applicants.
 router.get('/:memberId/student-id', requireOfficerPosition('SECRETARY'), memberController.revealStudentId);

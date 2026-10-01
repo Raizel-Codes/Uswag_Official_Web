@@ -1,5 +1,6 @@
 import { prisma } from '../config/db.js';
 import { signMemberId, verifySignature } from '../utils/crypto.js';
+import { effectiveStatus } from '../utils/academicYear.js';
 
 // Core QR issuance + verification logic. See claude.md "QR membership
 // system" — this is the security-relevant part of the whole platform.
@@ -38,11 +39,14 @@ export async function verifyQrValue(raw: string): Promise<VerifyOutcome> {
   const member = await prisma.memberProfile.findUnique({ where: { userId: parsed.memberId } });
   if (!member) return { status: 'invalid', reason: 'No matching member record' };
 
-  if (member.status === 'EXPIRED') {
+  // The effective status, not just the stored one: a membership that ran past its academic year is
+  // expired even if the daily renewal job hasn't flipped it yet.
+  const status = effectiveStatus(member);
+  if (status === 'EXPIRED') {
     return { status: 'expired', reason: 'Membership has expired — renewal required (Article III §3)', memberId: parsed.memberId };
   }
-  if (member.status !== 'ACTIVE') {
-    return { status: 'invalid', reason: `Membership status is ${member.status.toLowerCase()}` };
+  if (status !== 'ACTIVE') {
+    return { status: 'invalid', reason: `Membership status is ${status.toLowerCase()}` };
   }
 
   return { status: 'valid', memberId: parsed.memberId };

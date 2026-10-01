@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { prisma } from '../config/db.js';
 import * as eventService from '../services/event.service.js';
 import { standingBlock } from '../services/member.service.js';
+import { effectiveStatus } from '../utils/academicYear.js';
 import { logAction } from '../services/audit.service.js';
 import { ok, fail } from '../utils/response.js';
 
@@ -24,8 +25,9 @@ export async function rsvp(req: Request, res: Response) {
 
   const profile = await prisma.memberProfile.findUnique({ where: { userId: req.user!.id } });
   if (!profile) return fail(res, 'Only members can RSVP', 403);
-  const blocked = standingBlock(profile.status);
-  if (blocked) return fail(res, blocked, 403, { standing: profile.status.toLowerCase() });
+  const standing = effectiveStatus(profile);
+  const blocked = standingBlock(standing);
+  if (blocked) return fail(res, blocked, 403, { standing: standing.toLowerCase() });
 
   const event = await prisma.uswagEvent.findUnique({ where: { id: eventId } });
   if (!event) return fail(res, 'Event not found', 404);

@@ -229,10 +229,11 @@ USWAG-OFFICIAL_WEBSITE/
     │   │
     │   ├── jobs/                             # Background Cron Tasks (node-cron)
     │   │   ├── facebookSync.job.ts           # Periodic Facebook page post sync (every 30m)
-    │   │   └── memberRenewal.job.ts          # Annual membership status check & archiving
+    │   │   └── memberRenewal.job.ts          # Daily: marks members whose academic year ended as EXPIRED
     │   │
     │   ├── utils/                            # Shared Helper Utilities
     │   │   ├── crypto.ts                     # HMAC signature generation & verification
+    │   │   ├── academicYear.ts               # Academic-year boundaries (Art. III §3), lapsed/expired rules
     │   │   ├── logger.ts                     # Structured logging (Winston / Pino)
     │   │   └── response.ts                   # Standardized JSON response envelope
     │   │

@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortalToast } from '@/hooks/usePortalToast';
 import { useApplicationDecision } from '@/hooks/useApplicationDecision';
-import { listMembers, approveApplication, rejectApplication } from '@/services/memberService';
+import { listMembers, approveApplication, rejectApplication, renewMember } from '@/services/memberService';
 import { listNewsPosts, createManualPost } from '@/services/postService';
 import { ForbiddenError } from '@/services/api';
 import type { MemberProfile } from '@/types/member.types';
@@ -24,10 +24,11 @@ import StatPlate from '@/components/portal/StatPlate';
 import PortalToast from '@/components/portal/PortalToast';
 import { apiError, initials, timeAgo, formatDate } from '@/components/admin/format';
 
-type Tab = 'pending' | 'active' | 'all' | 'minutes' | 'announcements';
+type Tab = 'pending' | 'active' | 'expired' | 'all' | 'minutes' | 'announcements';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'pending', label: 'Applications' },
   { key: 'active', label: 'Active' },
+  { key: 'expired', label: 'Expired' },
   { key: 'all', label: 'All members' },
   { key: 'minutes', label: 'Minutes' },
   { key: 'announcements', label: 'Announcements' },
@@ -59,11 +60,13 @@ function MemberRow({
   member,
   onApprove,
   onReject,
+  onRenew,
   busy,
 }: {
   member: MemberProfile;
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
+  onRenew?: (id: string) => void;
   busy?: boolean;
 }) {
   const [confirmReject, setConfirmReject] = useState(false);
@@ -105,6 +108,13 @@ function MemberRow({
               </button>
             </>
           )}
+        </div>
+      ) : member.status === 'expired' && onRenew ? (
+        <div className="flex items-center gap-3 w-full pl-[3.375rem] sm:w-auto sm:pl-0 shrink-0">
+          <span className={`mp-standing mp-standing--${member.status}`}>{MEMBER_STANDING[member.status]}</span>
+          <button type="button" disabled={busy} onClick={() => onRenew(member.id)} className="mp-btn mp-btn--primary mp-btn--sm">
+            Renew<span className="mp-sr-only"> {member.name}</span>
+          </button>
         </div>
       ) : (
         <span className={`mp-standing mp-standing--${member.status} shrink-0`}>{MEMBER_STANDING[member.status]}</span>
@@ -193,10 +203,12 @@ function MemberManagementContent() {
 
   const pendingQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'pending'], queryFn: () => listMembers({ status: 'pending' }), staleTime: 30_000 });
   const activeQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'active'], queryFn: () => listMembers({ status: 'active' }), staleTime: 30_000 });
+  const expiredQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'expired'], queryFn: () => listMembers({ status: 'expired' }), staleTime: 30_000, enabled: tab === 'expired' });
   const allQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'all'], queryFn: () => listMembers(), staleTime: 30_000, enabled: tab === 'all' });
 
   const approve = useApplicationDecision(approveApplication, 'Application approved', show);
   const reject = useApplicationDecision((id) => rejectApplication(id), 'Application rejected', show);
+  const renew = useApplicationDecision(renewMember, 'Membership renewed for this academic year', show);
 
   if (pendingQ.error instanceof ForbiddenError || activeQ.error instanceof ForbiddenError) {
     return (
@@ -210,11 +222,11 @@ function MemberManagementContent() {
     );
   }
 
-  const list = tab === 'pending' ? pendingQ.data : tab === 'active' ? activeQ.data : allQ.data;
-  const loading = tab === 'pending' ? pendingQ.isLoading : tab === 'active' ? activeQ.isLoading : allQ.isLoading;
+  const list = tab === 'pending' ? pendingQ.data : tab === 'active' ? activeQ.data : tab === 'expired' ? expiredQ.data : allQ.data;
+  const loading = tab === 'pending' ? pendingQ.isLoading : tab === 'active' ? activeQ.isLoading : tab === 'expired' ? expiredQ.isLoading : allQ.isLoading;
   const q = search.trim().toLowerCase();
   const shown = (list ?? []).filter((m) => !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q) || m.serialNumber?.toLowerCase().includes(q));
-  const busy = approve.isPending || reject.isPending;
+  const busy = approve.isPending || reject.isPending || renew.isPending;
 
   return (
     <div className="mp-page space-y-8">
@@ -244,7 +256,7 @@ function MemberManagementContent() {
         <Composer type={tab === 'minutes' ? 'MINUTE' : 'ANNOUNCEMENT'} onPublished={(m, ok = true) => show(m, ok ? 'ok' : 'error')} />
       ) : (
         <Panel
-          title={tab === 'pending' ? 'Applications awaiting review' : tab === 'active' ? 'Active members' : 'All members'}
+          title={tab === 'pending' ? 'Applications awaiting review' : tab === 'active' ? 'Active members' : tab === 'expired' ? 'Expired memberships' : 'All members'}
           aside={!loading && <span className="mp-muted">{shown.length} shown</span>}
           flush
         >
@@ -257,16 +269,21 @@ function MemberManagementContent() {
               </div>
             </div>
           )}
+          {tab === 'expired' && (
+            <p className="px-4 sm:px-6 py-3 mp-muted text-[0.875rem] border-b border-[rgb(20_39_24/0.1)]">
+              Membership lasts one academic year (Article III §3). Renewing reactivates the member’s card and event sign-ups for the current year; the fee is recorded separately by the Treasurer.
+            </p>
+          )}
           {loading ? (
             <div className="p-5 space-y-3" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-14" />)}</div>
           ) : shown.length === 0 ? (
             <p className="p-8 mp-muted text-center">
-              {tab === 'pending' ? 'No applications waiting. New ones appear here as soon as they’re submitted.' : q ? 'No members match your search.' : 'No members here yet.'}
+              {tab === 'pending' ? 'No applications waiting. New ones appear here as soon as they’re submitted.' : tab === 'expired' && !q ? 'No expired memberships. Members appear here when their academic year ends.' : q ? 'No members match your search.' : 'No members here yet.'}
             </p>
           ) : (
             <ul className="ap-list">
               {shown.map((m) => (
-                <MemberRow key={m.id} member={m} busy={busy} onApprove={(id) => approve.mutate(id)} onReject={(id) => reject.mutate(id)} />
+                <MemberRow key={m.id} member={m} busy={busy} onApprove={(id) => approve.mutate(id)} onReject={(id) => reject.mutate(id)} onRenew={(id) => renew.mutate(id)} />
               ))}
             </ul>
           )}

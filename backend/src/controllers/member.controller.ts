@@ -8,6 +8,7 @@ import * as attendanceService from '../services/attendance.service.js';
 import { hashPassword, createPasswordResetToken } from '../services/auth.service.js';
 import { logAction } from '../services/audit.service.js';
 import { hashStudentId, decryptStudentId } from '../utils/crypto.js';
+import { effectiveStatus } from '../utils/academicYear.js';
 import { ok, fail } from '../utils/response.js';
 
 type MemberProfileWithUser = Prisma.MemberProfileGetPayload<{ include: { user: true } }>;
@@ -26,7 +27,7 @@ function toMemberDTO(profile: MemberProfileWithUser, attendanceRate: number, nam
     email: profile.user.email,
     collegeOrDept: profile.user.collegeOrDept,
     yearLevel: profile.user.yearLevel,
-    status: profile.status.toLowerCase(),
+    status: effectiveStatus(profile).toLowerCase(),
     academicYear: profile.academicYear,
     attendanceRate,
     joinedAt: profile.joinedAt,
@@ -62,7 +63,7 @@ export async function getMyProfile(req: Request, res: Response) {
   if (!profile) return fail(res, 'Member profile not found', 404);
   const rates = await attendanceService.getAttendanceRatesByMember([profile.id]);
   // standingNote: why the card / event sign-ups are locked (null when active).
-  return ok(res, { ...toMemberDTO(profile, rates[profile.id] ?? 0), standingNote: memberService.standingBlock(profile.status) });
+  return ok(res, { ...toMemberDTO(profile, rates[profile.id] ?? 0), standingNote: memberService.standingBlock(effectiveStatus(profile)) });
 }
 
 export async function listMembers(req: Request, res: Response) {
@@ -98,6 +99,27 @@ export async function approveApplication(req: Request, res: Response) {
   if (!pending.ok) return fail(res, pending.message, pending.status);
   const updated = await memberService.approveApplication(memberId, req.body.academicYear);
   await logAction(req.user!.id, 'member.approve', 'MemberProfile', memberId, { viaProxy: pending.profile.submittedByProxy });
+  return ok(res, decisionDTO(updated));
+}
+
+// Secretary only. Renews an EXPIRED membership for the current academic year (or a later one the
+// Secretary picks). Only lapsed members can be renewed: a pending application is approved, not
+// renewed, and a member in good standing has nothing to renew yet.
+export async function renewMember(req: Request, res: Response) {
+  const { memberId } = req.params;
+  const profile = await prisma.memberProfile.findUnique({ where: { id: memberId } });
+  if (!profile) return fail(res, 'Member not found', 404);
+  const standing = effectiveStatus(profile);
+  if (standing === 'PENDING' || standing === 'REJECTED') {
+    return fail(res, 'Only an expired membership can be renewed. A pending application is approved instead.', 409);
+  }
+  if (standing === 'ACTIVE') return fail(res, 'This membership is still active for the current academic year.', 409);
+  const year: string | undefined = req.body.academicYear;
+  if (year && memberService.isPastAcademicYear(year)) {
+    return fail(res, 'Renew for the current academic year or a later one.', 400);
+  }
+  const updated = await memberService.renewMembership(memberId, year);
+  await logAction(req.user!.id, 'member.renew', 'MemberProfile', memberId, { from: profile.academicYear, to: updated.academicYear });
   return ok(res, decisionDTO(updated));
 }
 
@@ -209,8 +231,9 @@ export async function submitApplication(req: Request, res: Response) {
 export async function getMyQr(req: Request, res: Response) {
   const profile = await prisma.memberProfile.findUnique({ where: { userId: req.user!.id } });
   if (!profile) return fail(res, 'Member profile not found', 404);
-  const blocked = memberService.standingBlock(profile.status);
-  if (blocked) return fail(res, blocked, 403, { standing: profile.status.toLowerCase() });
+  const standing = effectiveStatus(profile);
+  const blocked = memberService.standingBlock(standing);
+  if (blocked) return fail(res, blocked, 403, { standing: standing.toLowerCase() });
   const card = await memberService.getDigitalCard(req.user!.id);
   return ok(res, card);
 }

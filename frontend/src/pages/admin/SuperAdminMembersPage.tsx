@@ -11,7 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { usePortalToast } from '@/hooks/usePortalToast';
 import { prefersReducedMotion } from '@/lib/motion';
 import { useApplicationDecision } from '@/hooks/useApplicationDecision';
-import { listMembers, approveApplication, rejectApplication } from '@/services/memberService';
+import { listMembers, approveApplication, rejectApplication, renewMember } from '@/services/memberService';
 import type { MemberProfile, MembershipStatus } from '@/types/member.types';
 import ApplicationReviewAids from '@/components/common/ApplicationReviewAids';
 import PageHeader from '@/components/portal/PageHeader';
@@ -39,6 +39,7 @@ export default function SuperAdminMembersPage() {
   const { data: members, isLoading, error } = useQuery<MemberProfile[]>({ queryKey: ['members', 'all'], queryFn: () => listMembers(), staleTime: 30_000 });
   const approve = useApplicationDecision(approveApplication, 'Application approved', show);
   const reject = useApplicationDecision((id) => rejectApplication(id), 'Application rejected', show);
+  const renew = useApplicationDecision(renewMember, 'Membership renewed for this academic year', show);
 
   const list = useMemo(() => members ?? [], [members]);
   const counts = useMemo(() => {
@@ -54,7 +55,7 @@ export default function SuperAdminMembersPage() {
     (m) => (filter === 'all' || m.status === filter) && (!q || m.name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q) || m.serialNumber?.toLowerCase().includes(q))
   );
   const groups = byCollege(shown);
-  const busy = approve.isPending || reject.isPending;
+  const busy = approve.isPending || reject.isPending || renew.isPending;
   const active = list.filter((m) => m.status === 'active');
   const avgAttendance = active.length ? Math.round(active.reduce((s, m) => s + m.attendanceRate, 0) / active.length) : 0;
 
@@ -220,6 +221,11 @@ export default function SuperAdminMembersPage() {
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                         </button>
                       </>
+                    )}
+                    {m.status === 'expired' && (
+                      <button type="button" disabled={busy} onClick={() => renew.mutate(m.id)} className="ap-iconbtn ap-iconbtn--ok" aria-label={`Renew ${m.name}`} title="Renew for this academic year">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7" /><path d="M20 4v5h-5" /></svg>
+                      </button>
                     )}
                   </div>
                 </div>

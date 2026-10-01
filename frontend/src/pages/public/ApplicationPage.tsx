@@ -23,20 +23,11 @@ import SectionHeading from '@/components/landing/SectionHeading';
 import MembershipEnvelope, { useFocusAfterOpen } from '@/components/landing/artifacts/MembershipEnvelope';
 import ApplicationDropbox, { type DropboxPhase } from '@/components/landing/artifacts/ApplicationDropbox';
 import { apiError } from '@/utils/apiError';
+import { STUDENT_ID_PATTERN, formatStudentId } from '@/utils/studentId';
 
 const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year'];
 
 const COLLEGES = ['CEA', 'CCIS', 'CCJS', 'COM', 'CAT', 'CON', 'COED'];
-
-// NwSSU student ID: YY-NNNNN (or 6 digits) — enrollment year, then the student's
-// number that year, e.g. 23-00877. Mirrors submitApplicationSchema.studentId.
-const STUDENT_ID_PATTERN = /^\d{2}-\d{5,6}$/;
-
-/** Digits only, hyphen inserted after the year: "2300877" → "23-00877". */
-function formatStudentId(raw: string) {
-  const digits = raw.replace(/\D/g, '').slice(0, 8);
-  return digits.length > 2 ? `${digits.slice(0, 2)}-${digits.slice(2)}` : digits;
-}
 
 /** Minimum time the envelope spends sealing, so a fast response doesn't cut the ceremony. */
 const SEALING_MS = 1700;

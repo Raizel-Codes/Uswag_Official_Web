@@ -17,6 +17,7 @@ import ApplicationReviewAids from '@/components/common/ApplicationReviewAids';
 import PageHeader from '@/components/portal/PageHeader';
 import Panel from '@/components/portal/Panel';
 import PortalToast from '@/components/portal/PortalToast';
+import ResetRequestsPanel from '@/components/admin/ResetRequestsPanel';
 import StackedBar from '@/components/admin/StackedBar';
 import BarList from '@/components/admin/BarList';
 import BoardGroup from '@/components/admin/BoardGroup';
@@ -102,6 +103,8 @@ export default function SuperAdminMembersPage() {
       />
 
       {error && <p role="alert" className="mp-alert">{apiError(error, 'We couldn’t load members.')}</p>}
+
+      <ResetRequestsPanel hideWhenEmpty />
 
       {/* Overview */}
       <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6 items-start">

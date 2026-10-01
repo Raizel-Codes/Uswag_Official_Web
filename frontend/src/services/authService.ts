@@ -31,6 +31,18 @@ export async function forgotPassword(email: string): Promise<{ message: string; 
   return data.data;
 }
 
+/** How a forgotten password is recovered on this server: an emailed link, or a request to the officers. */
+export async function getResetOptions(): Promise<{ method: 'email' | 'officer' }> {
+  const { data } = await api.get<ApiEnvelope<{ method: 'email' | 'officer' }>>('/auth/reset-options');
+  return data.data;
+}
+
+/** Ask the officers for help signing in (no email involved); they confirm it's you and send a private link. */
+export async function requestResetHelp(email: string, studentId: string): Promise<{ message: string }> {
+  const { data } = await api.post<ApiEnvelope<{ message: string }>>('/auth/request-reset-help', { email, studentId });
+  return data.data;
+}
+
 export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
   const { data } = await api.post<ApiEnvelope<{ message: string }>>('/auth/reset-password', { token, newPassword });
   return data.data;

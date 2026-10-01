@@ -22,6 +22,20 @@ export interface MemberProfile {
   standingNote?: string | null;
 }
 
+/** A person asking an officer for help signing in (officer-assisted password reset). */
+export interface ResetRequest {
+  userId: string;
+  name: string;
+  email: string;
+  collegeOrDept: string;
+  yearLevel: string | null;
+  /** An officer's account: only the Super Admin / VP can handle it. */
+  isOfficer: boolean;
+  requestedAt: string;
+  /** Did the student ID they typed match the one on file? null = couldn't be checked (no ID on file). */
+  studentIdMatched: boolean | null;
+}
+
 /** Friend-assisted application: the applicant is present, on someone else's device. */
 export interface ApplicationOnBehalf {
   helperName: string;

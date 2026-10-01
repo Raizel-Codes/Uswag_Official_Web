@@ -4,7 +4,7 @@ import * as attendanceController from '../controllers/attendance.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { requireOfficerPosition, requireRole } from '../middlewares/role.middleware.js';
 import { validateBody } from '../middlewares/validation.middleware.js';
-import { approveApplicationSchema, rejectApplicationSchema, renewMemberSchema, submitApplicationSchema } from './memberSchemas.js';
+import { approveApplicationSchema, issueResetLinkSchema, rejectApplicationSchema, renewMemberSchema, submitApplicationSchema } from './memberSchemas.js';
 import { applyRateLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router = Router();
@@ -32,6 +32,11 @@ router.post('/:memberId/reject', requireOfficerPosition('SECRETARY'), validateBo
 router.post('/:memberId/renew', requireOfficerPosition('SECRETARY'), validateBody(renewMemberSchema), memberController.renewMember);
 // Application review aids (Secretary): the temporary, encrypted student ID,
 // and the one-time password-setup link for friend-assisted applicants.
+// Officer-assisted password reset. Registered before the /:memberId routes; the service decides, per
+// account, who may act (Secretary: members only; Super Admin / VP: everyone but themselves).
+router.get('/reset-requests', requireOfficerPosition('SECRETARY'), memberController.listResetRequests);
+router.post('/reset-requests/:userId/link', requireOfficerPosition('SECRETARY'), validateBody(issueResetLinkSchema), memberController.issueResetLink);
+router.post('/reset-requests/:userId/dismiss', requireOfficerPosition('SECRETARY'), memberController.dismissResetRequest);
 router.get('/:memberId/student-id', requireOfficerPosition('SECRETARY'), memberController.revealStudentId);
 router.post('/:memberId/setup-link', requireOfficerPosition('SECRETARY'), memberController.createSetupLink);
 

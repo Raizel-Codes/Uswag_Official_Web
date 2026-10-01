@@ -6,6 +6,7 @@ import { env } from '../config/env.js';
 import * as memberService from '../services/member.service.js';
 import * as attendanceService from '../services/attendance.service.js';
 import { notifyApplicationReviewers, notifyUsers } from '../services/notification.service.js';
+import * as resetRequests from '../services/resetRequest.service.js';
 import { hashPassword, createPasswordResetToken } from '../services/auth.service.js';
 import { logAction } from '../services/audit.service.js';
 import { hashStudentId, decryptStudentId } from '../utils/crypto.js';
@@ -177,6 +178,31 @@ export async function createSetupLink(req: Request, res: Response) {
   const rawToken = await createPasswordResetToken(profile.userId);
   await logAction(req.user!.id, 'member.setupLink.create', 'MemberProfile', memberId);
   return ok(res, { url: `${env.frontendOrigin}/reset-password?token=${rawToken}`, expiresInMinutes: 60 });
+}
+
+// Officer-assisted password reset (services/resetRequest.service.ts holds the rules about who may handle
+// whose request). The route admits the Secretary and Super Admin / VP; the service narrows it per account.
+export async function listResetRequests(req: Request, res: Response) {
+  return ok(res, await resetRequests.listOpenRequests(req.user!));
+}
+
+export async function issueResetLink(req: Request, res: Response) {
+  try {
+    return ok(res, await resetRequests.issueResetLink(req.user!, req.params.userId, req.body.identityConfirmed));
+  } catch (err) {
+    if (err instanceof resetRequests.ResetRequestError) return fail(res, err.message, err.status);
+    throw err;
+  }
+}
+
+export async function dismissResetRequest(req: Request, res: Response) {
+  try {
+    await resetRequests.dismissRequest(req.user!, req.params.userId);
+    return ok(res, { message: 'Request dismissed.' });
+  } catch (err) {
+    if (err instanceof resetRequests.ResetRequestError) return fail(res, err.message, err.status);
+    throw err;
+  }
 }
 
 const DUPLICATE_EMAIL_MESSAGE = 'An account with this email already exists. Try logging in instead.';

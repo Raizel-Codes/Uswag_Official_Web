@@ -226,6 +226,8 @@ USWAG-OFFICIAL_WEBSITE/
     │   │   ├── qr.service.ts                 # UUID generation & HMAC-SHA256 signature signing
     │   │   ├── facebookSync.service.ts       # Meta Graph API poller & post deduplication
     │   │   ├── notification.service.ts       # Inbox + Web Push (web-push): notifyUsers, notifyActiveMembers
+    │   │   ├── email.service.ts              # Outbound email over Resend's HTTPS API (password-reset links)
+    │   │   ├── resetRequest.service.ts       # Officer-assisted password reset: requests, who may handle whose, one-time links
     │   │   ├── attendance.service.ts         # Attendance logging & streak calculations
     │   │   └── audit.service.ts              # Immutable action logger
     │   │

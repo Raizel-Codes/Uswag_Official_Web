@@ -85,6 +85,13 @@ model User {
   passwordResetTokenHash  String?
   passwordResetExpiresAt  DateTime?
 
+  // Officer-assisted reset (no email): the person asks, an officer confirms who they are and issues a
+  // one-time link (member.controller.ts reset-request endpoints). Open for 7 days; cleared when a link
+  // is issued or the request dismissed. IdMatched: did the student ID they typed match the one on file?
+  // (true / false; null = couldn't be checked — no ID on file.) Never the ID itself.
+  passwordResetRequestedAt DateTime?
+  passwordResetIdMatched   Boolean?
+
   // True for an account created by a friend-assisted application (the
   // helper never sets the applicant's password). The only password is an
   // unguessable random one until the applicant uses the one-time setup link

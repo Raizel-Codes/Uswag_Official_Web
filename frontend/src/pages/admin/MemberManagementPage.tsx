@@ -22,14 +22,17 @@ import PageHeader from '@/components/portal/PageHeader';
 import Panel from '@/components/portal/Panel';
 import StatPlate from '@/components/portal/StatPlate';
 import PortalToast from '@/components/portal/PortalToast';
+import ResetRequestsPanel from '@/components/admin/ResetRequestsPanel';
+import { useResetRequests } from '@/hooks/useResetRequests';
 import { apiError, initials, timeAgo, formatDate } from '@/components/admin/format';
 
-type Tab = 'pending' | 'active' | 'expired' | 'all' | 'minutes' | 'announcements';
+type Tab = 'pending' | 'active' | 'expired' | 'all' | 'resets' | 'minutes' | 'announcements';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'pending', label: 'Applications' },
   { key: 'active', label: 'Active' },
   { key: 'expired', label: 'Expired' },
   { key: 'all', label: 'All members' },
+  { key: 'resets', label: 'Sign-in help' },
   { key: 'minutes', label: 'Minutes' },
   { key: 'announcements', label: 'Announcements' },
 ];
@@ -203,6 +206,7 @@ function MemberManagementContent() {
 
   const pendingQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'pending'], queryFn: () => listMembers({ status: 'pending' }), staleTime: 30_000 });
   const activeQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'active'], queryFn: () => listMembers({ status: 'active' }), staleTime: 30_000 });
+  const resetsQ = useResetRequests();
   const expiredQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'expired'], queryFn: () => listMembers({ status: 'expired' }), staleTime: 30_000, enabled: tab === 'expired' });
   const allQ = useQuery<MemberProfile[]>({ queryKey: ['members', 'all'], queryFn: () => listMembers(), staleTime: 30_000, enabled: tab === 'all' });
 
@@ -248,11 +252,14 @@ function MemberManagementContent() {
           >
             {t.label}
             {t.key === 'pending' && pendingQ.data?.length ? ` · ${pendingQ.data.length}` : ''}
+            {t.key === 'resets' && resetsQ.data?.length ? ` · ${resetsQ.data.length}` : ''}
           </button>
         ))}
       </div>
 
-      {tab === 'minutes' || tab === 'announcements' ? (
+      {tab === 'resets' ? (
+        <ResetRequestsPanel />
+      ) : tab === 'minutes' || tab === 'announcements' ? (
         <Composer type={tab === 'minutes' ? 'MINUTE' : 'ANNOUNCEMENT'} onPublished={(m, ok = true) => show(m, ok ? 'ok' : 'error')} />
       ) : (
         <Panel

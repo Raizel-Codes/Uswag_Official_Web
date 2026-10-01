@@ -9,6 +9,7 @@ import {
   RESET_TOKEN_TTL_MS,
 } from '../services/auth.service.js';
 import { isEmailConfigured, maskEmail, sendPasswordResetEmail } from '../services/email.service.js';
+import { recordResetRequest } from '../services/resetRequest.service.js';
 import { ok, fail } from '../utils/response.js';
 import { prisma } from '../config/db.js';
 import { env } from '../config/env.js';
@@ -129,6 +130,20 @@ export async function forgotPassword(req: Request, res: Response) {
     message: genericMessage,
     ...(!emailOn && env.nodeEnv !== 'production' ? { devResetUrl: resetUrl } : {}),
   });
+}
+
+// Public. The page asks this first so it shows the right form: an email field, or an email + student ID
+// request to the officers.
+export function resetOptions(_req: Request, res: Response) {
+  return ok(res, { method: isEmailConfigured() ? 'email' : 'officer' });
+}
+
+// Public. "I can't get my reset by email": asks the officers for help (services/resetRequest.service.ts).
+// The answer is the same whether or not the email has an account, and is sent before the request is
+// processed, so neither the wording nor the timing says which.
+export function requestResetHelp(req: Request, res: Response) {
+  void recordResetRequest(req.body.email, req.body.studentId);
+  return ok(res, { message: "If that email belongs to a USWAG account, the officers have been told. Someone will contact you with a private link to set a new password." });
 }
 
 export async function resetPassword(req: Request, res: Response) {

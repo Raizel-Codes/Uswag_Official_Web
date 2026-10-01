@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { ApplicationOnBehalf, MemberProfile } from '@/types/member.types';
+import type { ApplicationOnBehalf, MemberProfile, ResetRequest } from '@/types/member.types';
 
 // Public — no auth. Creates the account up front in PENDING status; the
 // applicant can log in immediately afterward to check their status (see
@@ -62,4 +62,26 @@ export async function createSetupLink(memberId: string): Promise<{ url: string; 
     `/members/${memberId}/setup-link`,
   );
   return data.data;
+}
+
+/** Open "I can't sign in" requests this officer may act on (Secretary: members; Super Admin / VP: everyone else too). */
+export async function listResetRequests(): Promise<ResetRequest[]> {
+  const { data } = await api.get<{ success: boolean; data: ResetRequest[] }>('/members/reset-requests');
+  return data.data;
+}
+
+/**
+ * One-time, 1-hour password-reset link for an open request. `identityConfirmed` is required when the
+ * student ID didn't match or couldn't be checked: the officer says they confirmed the person another way.
+ */
+export async function issueResetLink(userId: string, identityConfirmed: boolean): Promise<{ url: string; expiresInMinutes: number }> {
+  const { data } = await api.post<{ success: boolean; data: { url: string; expiresInMinutes: number } }>(
+    `/members/reset-requests/${userId}/link`,
+    { identityConfirmed },
+  );
+  return data.data;
+}
+
+export async function dismissResetRequest(userId: string): Promise<void> {
+  await api.post(`/members/reset-requests/${userId}/dismiss`);
 }

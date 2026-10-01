@@ -4,12 +4,20 @@ import { buildQrValue } from './qr.service.js';
 import { hashStudentId, encryptStudentId } from '../utils/crypto.js';
 import { academicYearEnd, academicYearStart, currentAcademicYear } from '../utils/academicYear.js';
 
-// Serial number format: UW-<academicYearStart>-<zero-padded sequence>.
-// Never sequential in a way that's guessable per-member without a DB lookup —
-// the QR security comes from the HMAC signature, not the serial's obscurity.
+// Serial number format: UW-<academicYearStart>-<zero-padded sequence>: one past the highest already
+// issued for that year. (It used to be "number of profiles + 1", but approving someone doesn't change
+// that number, so the second approval in a row got the same serial and failed.) The QR security comes
+// from the HMAC signature, not the serial's obscurity. Two approvals at the same instant can still pick
+// the same number; the unique index rejects one and approveApplication tries again.
 export async function generateSerialNumber(academicYearStart: number): Promise<string> {
-  const count = await prisma.memberProfile.count();
-  return `UW-${academicYearStart}-${String(count + 1).padStart(6, '0')}`;
+  const prefix = `UW-${academicYearStart}-`;
+  const last = await prisma.memberProfile.findFirst({
+    where: { serialNumber: { startsWith: prefix } },
+    orderBy: { serialNumber: 'desc' },
+    select: { serialNumber: true },
+  });
+  const next = (last ? parseInt(last.serialNumber.slice(prefix.length), 10) || 0 : 0) + 1;
+  return `${prefix}${String(next).padStart(6, '0')}`;
 }
 
 // The default when an approve action doesn't specify a year (e.g. a quick one-click approve from a
@@ -28,12 +36,18 @@ const CLEAR_REVIEW_DATA = { studentIdCiphertext: null, proxyName: null } as cons
 export async function approveApplication(profileId: string, academicYear?: string) {
   const year = academicYear || getCurrentAcademicYear();
   const [yearStart] = year.split('-');
-  const serialNumber = await generateSerialNumber(Number(yearStart));
-
-  return prisma.memberProfile.update({
-    where: { id: profileId },
-    data: { status: 'ACTIVE', serialNumber, academicYear: year, expiresAt: academicYearEnd(year), qrIssuedAt: new Date(), ...CLEAR_REVIEW_DATA },
-  });
+  for (let attempt = 1; ; attempt++) {
+    const serialNumber = await generateSerialNumber(Number(yearStart));
+    try {
+      return await prisma.memberProfile.update({
+        where: { id: profileId },
+        data: { status: 'ACTIVE', serialNumber, academicYear: year, expiresAt: academicYearEnd(year), qrIssuedAt: new Date(), ...CLEAR_REVIEW_DATA },
+      });
+    } catch (err) {
+      const clash = (err as { code?: string; meta?: { target?: unknown } }).code === 'P2002' && String((err as { meta?: { target?: unknown } }).meta?.target).includes('serialNumber');
+      if (!clash || attempt >= 5) throw err;
+    }
+  }
 }
 
 /**

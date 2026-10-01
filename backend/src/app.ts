@@ -1,3 +1,7 @@
+// Must come before any router is created: Express 4 doesn't catch a rejected promise from an async
+// handler, so without this one failed database call crashes the whole process instead of reaching
+// errorHandler (which was written to be exactly that safety net).
+import 'express-async-errors';
 import express from 'express';
 import helmet from 'helmet';
 import { corsMiddleware } from './config/cors.js';

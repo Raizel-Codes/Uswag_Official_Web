@@ -5,7 +5,7 @@ import { prisma } from '../config/db.js';
 import { env } from '../config/env.js';
 import type { AccessTokenPayload, RefreshTokenPayload } from '../types/jwt.types.js';
 
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function hashResetToken(rawToken: string) {
   return crypto.createHash('sha256').update(rawToken).digest('hex');

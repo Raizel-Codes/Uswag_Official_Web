@@ -6,11 +6,16 @@ import {
   revokeAllSessions,
   createPasswordResetToken,
   consumePasswordResetToken,
+  RESET_TOKEN_TTL_MS,
 } from '../services/auth.service.js';
+import { isEmailConfigured, maskEmail, sendPasswordResetEmail } from '../services/email.service.js';
 import { ok, fail } from '../utils/response.js';
 import { prisma } from '../config/db.js';
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
+
+// How soon after one reset email another can be requested for the same account.
+const RESET_COOLDOWN_MS = 2 * 60 * 1000;
 
 // Shared shape between login and refresh — both return the same AuthSession
 // the frontend expects (accessToken, refreshToken, user).
@@ -86,14 +91,15 @@ export async function logout(req: Request, res: Response) {
 // or not the email exists, so this can't be used to enumerate registered
 // emails (a script probing this endpoint learns nothing either way).
 //
-// Email delivery gap: there is no email-sending integration in this project
-// yet (see claude.md's Integrations list — Graph API, storage, Postgres,
-// nothing for outbound mail). Until one is wired up, the reset link is
-// logged server-side, and — outside production only — also returned in the
-// response so this is testable end-to-end locally. It is never present in
-// the response when NODE_ENV=production; a real deployment with no email
-// provider configured would leave a user with no way to actually receive
-// the link, which is the real gap flagged for follow-up.
+// The link is emailed (services/email.service.ts). The reset link is a live credential, so it is
+// never written to the log. With no email provider configured nothing can be sent: the server
+// logs a warning, and — outside production only — the link comes back in the response so the flow
+// stays testable locally. It is never in a production response.
+//
+// Two protections against abuse once mail is on: a short cooldown per account (so the form can't be
+// used to flood someone's inbox, or to keep invalidating the link they're about to use), and the
+// email is sent without waiting for it, so how long the response takes doesn't reveal whether the
+// address has an account.
 export async function forgotPassword(req: Request, res: Response) {
   const { email } = req.body;
   const user = await prisma.user.findFirst({ where: { email: { equals: email.trim(), mode: 'insensitive' } } });
@@ -104,13 +110,24 @@ export async function forgotPassword(req: Request, res: Response) {
     return ok(res, { message: genericMessage });
   }
 
+  const emailOn = isEmailConfigured();
+  if (emailOn) {
+    const issuedAt = user.passwordResetExpiresAt ? user.passwordResetExpiresAt.getTime() - RESET_TOKEN_TTL_MS : 0;
+    if (Date.now() - issuedAt < RESET_COOLDOWN_MS) return ok(res, { message: genericMessage });
+  }
+
   const rawToken = await createPasswordResetToken(user.id);
   const resetUrl = `${env.frontendOrigin}/reset-password?token=${rawToken}`;
-  logger.info(`Password reset requested for ${user.email}: ${resetUrl}`);
+
+  if (emailOn) {
+    void sendPasswordResetEmail(user.email, user.name, resetUrl, RESET_TOKEN_TTL_MS / 60_000);
+  } else {
+    logger.warn(`Password reset requested for ${maskEmail(user.email)}, but no email provider is configured (set RESEND_API_KEY and EMAIL_FROM), so nothing was sent.`);
+  }
 
   return ok(res, {
     message: genericMessage,
-    ...(env.nodeEnv !== 'production' ? { devResetUrl: resetUrl } : {}),
+    ...(!emailOn && env.nodeEnv !== 'production' ? { devResetUrl: resetUrl } : {}),
   });
 }
 

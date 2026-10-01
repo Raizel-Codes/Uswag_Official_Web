@@ -45,6 +45,14 @@ export const env = {
     pageAccessToken: process.env.FACEBOOK_PAGE_ACCESS_TOKEN ?? '',
   },
 
+  // Outbound email (password-reset links). Optional: without both of these nothing is emailed and the
+  // server says so in its log. See backend/.env.example.
+  email: {
+    apiKey: process.env.RESEND_API_KEY ?? '',
+    from: process.env.EMAIL_FROM ?? '',
+    apiUrl: (process.env.RESEND_API_URL ?? 'https://api.resend.com').replace(/\/+$/, ''),
+  },
+
   vapid: {
     publicKey: required('VAPID_PUBLIC_KEY'),
     privateKey: required('VAPID_PRIVATE_KEY'),

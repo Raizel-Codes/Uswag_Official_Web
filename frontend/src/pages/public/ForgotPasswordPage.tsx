@@ -69,6 +69,12 @@ export default function ForgotPasswordPage() {
         <div ref={resultRef} tabIndex={-1} className="lp-card p-6 sm:p-8 space-y-5 focus:outline-none">
           <p role="status" className="lp-notice lp-notice--success">{result.message}</p>
 
+          {!result.devResetUrl && (
+            <p className="lp-small lp-ink-muted">
+              It can take a few minutes to arrive, so check your spam folder too. The link works once and expires in an hour.
+            </p>
+          )}
+
           {result.devResetUrl && (
             <div className="lp-notice lp-notice--warn break-all">
               <p className="lp-eyebrow">Dev-only preview</p>

@@ -10,7 +10,7 @@ import { apiError } from "@/utils/apiError";
 // - "Same name as N other": a flag only — the student ID decides, not the name
 // - Show student ID: decrypted on request, audit-logged; gone once decided
 // - Password setup link: one-time, 1-hour link for a friend-assisted applicant, to be
-//   handed over in person (there is no email delivery yet)
+//   handed over in person, not emailed
 // The server enforces every one of these (requireOfficerPosition('SECRETARY')).
 
 export default function ApplicationReviewAids({ member }: { member: MemberProfile }) {

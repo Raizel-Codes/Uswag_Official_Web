@@ -2,6 +2,10 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import {
+  listForUser,
+  markAllRead,
+  markRead,
+  removeUserSubscription,
   saveSubscription,
   sendPushToUser,
   type RawPushSubscription,
@@ -18,7 +22,35 @@ const subscribeSchema = z.object({
   }),
 });
 
+const unsubscribeSchema = z.object({ endpoint: z.string().url('endpoint must be a valid URL') });
+
 // ─── Controllers ──────────────────────────────────────────────────────────────
+
+/** GET /notifications — the caller's inbox, newest first (the bell and the notifications page). */
+export async function listMine(req: Request, res: Response) {
+  return ok(res, await listForUser(req.user!.id));
+}
+
+/** POST /notifications/mark-all-read */
+export async function readAll(req: Request, res: Response) {
+  await markAllRead(req.user!.id);
+  return ok(res, { message: 'All notifications marked read.' });
+}
+
+/** POST /notifications/:id/read — only the owner's own notification. */
+export async function readOne(req: Request, res: Response) {
+  const found = await markRead(req.user!.id, req.params.id);
+  if (!found) return fail(res, 'Notification not found', 404);
+  return ok(res, { message: 'Marked read.' });
+}
+
+/** POST /notifications/unsubscribe — the caller turning push off on this device. */
+export async function unsubscribe(req: Request, res: Response) {
+  const parsed = unsubscribeSchema.safeParse(req.body);
+  if (!parsed.success) return fail(res, parsed.error.errors.map((e) => e.message).join(', '), 422);
+  await removeUserSubscription(req.user!.id, parsed.data.endpoint);
+  return ok(res, { message: 'Push notifications turned off for this device.' });
+}
 
 /**
  * GET /api/notifications/vapid-public-key

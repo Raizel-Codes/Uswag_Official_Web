@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import * as postService from '../services/post.service.js';
+import { notifyActiveMembers } from '../services/notification.service.js';
 import { runFacebookSync, getSyncStatus } from '../jobs/facebookSync.job.js';
 import { ok } from '../utils/response.js';
 
@@ -12,6 +13,13 @@ function toPostDTO(post: Awaited<ReturnType<typeof postService.listPosts>>[numbe
   return { ...post, source: post.source.toLowerCase() };
 }
 
+/** One line for a notification: whitespace collapsed, cut at a word boundary. */
+function preview(text: string, max = 110) {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  if (flat.length <= max) return flat;
+  return flat.slice(0, max).replace(/\s+\S*$/, '') + '…';
+}
+
 export async function listPosts(_req: Request, res: Response) {
   const posts = await postService.listPosts();
   return ok(res, posts.map(toPostDTO));
@@ -21,6 +29,11 @@ export async function listPosts(_req: Request, res: Response) {
 export async function createManualPost(req: Request, res: Response) {
   const { body, imageUrl, type } = req.body;
   const post = await postService.createManualPost(req.user!.id, body, imageUrl, type);
+  // Official announcements reach every member in good standing, in their inbox and on their devices.
+  // (Not awaited: the post is already saved, and a notification must never fail the request.)
+  if (post.type === 'ANNOUNCEMENT') {
+    void notifyActiveMembers({ kind: 'announcement', title: 'New announcement from USWAG', body: preview(post.body), url: '/dashboard' });
+  }
   return ok(res, toPostDTO(post), 201);
 }
 

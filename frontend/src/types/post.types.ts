@@ -16,6 +16,10 @@ export interface NewsPost {
 
 export interface AnnouncementNotification {
   id: string;
+  /** What it's about: picks the icon. */
+  kind: 'announcement' | 'event' | 'membership' | string;
+  /** In-app path it opens, e.g. "/dashboard/events". */
+  url: string | null;
   title: string;
   body: string;
   createdAt: string;

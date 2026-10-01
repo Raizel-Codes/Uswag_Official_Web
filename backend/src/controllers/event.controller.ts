@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { prisma } from '../config/db.js';
 import * as eventService from '../services/event.service.js';
 import { standingBlock } from '../services/member.service.js';
+import { notifyActiveMembers } from '../services/notification.service.js';
 import { effectiveStatus } from '../utils/academicYear.js';
 import { logAction } from '../services/audit.service.js';
 import { ok, fail } from '../utils/response.js';
@@ -14,6 +15,8 @@ export async function listEvents(_req: Request, res: Response) {
 export async function createEvent(req: Request, res: Response) {
   const event = await eventService.createEvent(req.body);
   await logAction(req.user!.id, 'event.create', 'UswagEvent', event.id);
+  const when = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' }).format(event.startsAt);
+  void notifyActiveMembers({ kind: 'event', title: `New event: ${event.title}`, body: `${when} · ${event.location}`, url: '/dashboard/events' });
   return ok(res, event, 201);
 }
 

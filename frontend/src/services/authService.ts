@@ -1,4 +1,5 @@
 import { api } from './api';
+import { turnOffPushOnThisDevice } from './notificationService';
 import type { AuthSession } from '@/types/auth.types';
 
 // The backend wraps all responses as { success: boolean, data: T }
@@ -20,6 +21,8 @@ export async function refreshSession(refreshToken: string): Promise<AuthSession>
 }
 
 export async function logout(): Promise<void> {
+  // First, while the session is still valid: stop this device receiving the signed-out person's pushes.
+  await turnOffPushOnThisDevice();
   await api.post('/auth/logout');
 }
 

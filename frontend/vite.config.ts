@@ -65,6 +65,8 @@ export default defineConfig(({ mode }) => ({
         // two chunks were about 40% of the precache; the /assets/ rule below caches them on first use.
         globIgnores: [`**${OG_IMAGE}`, '**/assets/PrequelPlayer-*.js', '**/assets/ScanConsolePage-*.js'],
         navigateFallback: '/index.html',
+        // Web Push: the push and notificationclick handlers (public/push-sw.js)
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             // Build chunks are content-hashed, so a cached copy never goes stale.

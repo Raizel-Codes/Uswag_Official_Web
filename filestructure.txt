@@ -46,7 +46,7 @@ USWAG-OFFICIAL_WEBSITE/
 │   ├── public/                               # Static Assets & PWA Shell
 │   │   ├── favicon.ico                       # Website favicon
 │   │   ├── manifest.webmanifest              # PWA Web App Manifest (Standalone, Theme Colors)
-│   │   ├── sw.js                             # Custom Service Worker (Caching, Push Handler)
+│   │   ├── push-sw.js                        # Push + notification-click handlers (imported by the generated service worker)
 │   │   ├── robots.txt                        # Search engine crawling rules
 │   │   └── icons/                            # PWA Icons & Brand Graphics
 │   │       ├── icon-72x72.png
@@ -102,6 +102,8 @@ USWAG-OFFICIAL_WEBSITE/
 │   │   │   ├── useAuth.ts                    # User login, logout, role checks
 │   │   │   ├── useEvents.ts                  # Event querying, filtering, RSVP
 │   │   │   ├── useQRScanner.ts               # Camera scanner lifecycle & verification
+│   │   │   ├── useNotifications.ts           # Inbox query + mark-read (the bell and the notifications page)
+│   │   │   ├── usePushSubscription.ts        # Turn Web Push on/off for this device
 │   │   │   └── usePWAInstall.ts              # beforeinstallprompt handler hook
 │   │   │
 │   │   ├── pages/                            # Application View Pages
@@ -223,7 +225,7 @@ USWAG-OFFICIAL_WEBSITE/
     │   ├── services/                         # Core Business Logic & External Integrations
     │   │   ├── qr.service.ts                 # UUID generation & HMAC-SHA256 signature signing
     │   │   ├── facebookSync.service.ts       # Meta Graph API poller & post deduplication
-    │   │   ├── push.service.ts               # Web Push API dispatcher (web-push)
+    │   │   ├── notification.service.ts       # Inbox + Web Push (web-push): notifyUsers, notifyActiveMembers
     │   │   ├── attendance.service.ts         # Attendance logging & streak calculations
     │   │   └── audit.service.ts              # Immutable action logger
     │   │

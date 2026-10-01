@@ -84,6 +84,7 @@ export default function MemberProfilePage() {
             <div className="flex-1 min-w-0">
               <p id="pf-push" className="font-semibold">Push notifications</p>
               <p className="mp-muted text-[0.875rem]">Events, announcements and updates.</p>
+              {push.error && <p role="alert" className="text-danger text-[0.8125rem] font-medium mt-1">{push.error}</p>}
             </div>
             {push.isSupported ? (
               <button
@@ -98,7 +99,7 @@ export default function MemberProfilePage() {
                 <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${push.isSubscribed ? 'translate-x-5' : ''}`} />
               </button>
             ) : (
-              <span className="mp-muted text-[0.8125rem] font-semibold">Not supported on this browser</span>
+              <span className="mp-muted text-[0.8125rem] font-semibold text-right">{push.needsInstall ? 'Add USWAG to your Home Screen first' : 'Not supported on this browser'}</span>
             )}
           </div>
           <div className="py-4 flex items-center gap-4 border-t border-[rgb(20_39_24/0.1)]">

@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { prisma } from '../config/db.js';
 import { currentAcademicYear } from '../utils/academicYear.js';
+import { notifyUsers } from '../services/notification.service.js';
 import { logger } from '../utils/logger.js';
 
 // Article III §3: membership is valid for one academic year. Once a member's year has ended this
@@ -21,7 +22,7 @@ export function findLapsedMembers(now: Date = new Date()) {
       status: 'ACTIVE',
       OR: [{ expiresAt: { lte: now } }, { academicYear: { lt: currentAcademicYear(now) } }],
     },
-    select: { id: true, academicYear: true },
+    select: { id: true, userId: true, academicYear: true },
   });
 }
 
@@ -42,6 +43,18 @@ export async function runMemberRenewal(now: Date = new Date()) {
     // of who was expired lives in the server log.
     const years = [...new Set(lapsed.map((m) => m.academicYear))].sort().join(', ');
     logger.info(`Membership renewal: expired ${count} member(s) from academic year ${years} (current: ${currentAcademicYear(now)})`);
+    // Tell each of them, so the first they hear of it isn't a locked card. Only those still
+    // EXPIRED: someone the Secretary renewed in the meantime shouldn't be told it expired.
+    const stillExpired = await prisma.memberProfile.findMany({
+      where: { id: { in: lapsed.map((m) => m.id) }, status: 'EXPIRED' },
+      select: { userId: true },
+    });
+    await notifyUsers(stillExpired.map((m) => m.userId), {
+      kind: 'membership',
+      title: 'Your membership has expired',
+      body: 'Membership lasts one academic year. Renew with the Secretary to get your card and event sign-ups back.',
+      url: '/dashboard',
+    });
     return { expired: count };
   } catch (err) {
     logger.error('Membership renewal job failed', err);

@@ -5,6 +5,7 @@ import { prisma } from '../config/db.js';
 import { env } from '../config/env.js';
 import * as memberService from '../services/member.service.js';
 import * as attendanceService from '../services/attendance.service.js';
+import { notifyApplicationReviewers, notifyUsers } from '../services/notification.service.js';
 import { hashPassword, createPasswordResetToken } from '../services/auth.service.js';
 import { logAction } from '../services/audit.service.js';
 import { hashStudentId, decryptStudentId } from '../utils/crypto.js';
@@ -99,6 +100,7 @@ export async function approveApplication(req: Request, res: Response) {
   if (!pending.ok) return fail(res, pending.message, pending.status);
   const updated = await memberService.approveApplication(memberId, req.body.academicYear);
   await logAction(req.user!.id, 'member.approve', 'MemberProfile', memberId, { viaProxy: pending.profile.submittedByProxy });
+  void notifyUsers([updated.userId], { kind: 'membership', title: 'Your membership is active', body: 'Welcome to USWAG! Your digital card is ready.', url: '/dashboard/qr' });
   return ok(res, decisionDTO(updated));
 }
 
@@ -120,6 +122,7 @@ export async function renewMember(req: Request, res: Response) {
   }
   const updated = await memberService.renewMembership(memberId, year);
   await logAction(req.user!.id, 'member.renew', 'MemberProfile', memberId, { from: profile.academicYear, to: updated.academicYear });
+  void notifyUsers([updated.userId], { kind: 'membership', title: 'Membership renewed', body: `Your membership is active for ${updated.academicYear}. Your card and event sign-ups are back.`, url: '/dashboard/qr' });
   return ok(res, decisionDTO(updated));
 }
 
@@ -129,6 +132,7 @@ export async function rejectApplication(req: Request, res: Response) {
   if (!pending.ok) return fail(res, pending.message, pending.status);
   const updated = await memberService.rejectApplication(memberId);
   await logAction(req.user!.id, 'member.reject', 'MemberProfile', memberId, { reason: req.body.reason });
+  void notifyUsers([updated.userId], { kind: 'membership', title: 'About your application', body: 'Your membership application was not approved. Contact the Secretary if you have questions.', url: '/dashboard' });
   return ok(res, decisionDTO(updated));
 }
 
@@ -214,6 +218,8 @@ export async function submitApplication(req: Request, res: Response) {
       studentId,
       proxyName: onBehalf?.helperName,
     });
+    // Nothing about the applicant in the notification: push payloads pass through the browser vendor's servers.
+    void notifyApplicationReviewers({ kind: 'membership', title: 'New membership application', body: 'An application is waiting for review.', url: '/admin/members' });
     return ok(res, { id: user.id, email: user.email, status: 'pending' }, 201);
   } catch (err: any) {
     // Two submissions racing past the checks above: the unique indexes decide.

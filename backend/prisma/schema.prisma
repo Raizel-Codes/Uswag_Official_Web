@@ -100,6 +100,7 @@ model User {
   postsAuthored      Post[]
   auditLogEntries    AuditLogEntry[]
   pushSubscriptions  PushSubscription[]
+  notifications      Notification[]
   financeEntries     FinanceEntry[]
   purchaseRequests   PurchaseRequest[]
 }
@@ -245,6 +246,24 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// A person's in-app inbox. One row per recipient (the bell and the notifications page read it);
+// the same event also goes out as a Web Push to their registered devices (notification.service.ts),
+// but the inbox is the record, so it works when push is off, blocked or unsupported. Wording stays
+// plain and non-sensitive: push payloads pass through the browser vendor's push service.
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String    // "announcement" | "event" | "membership"
+  title     String
+  body      String
+  url       String?   // in-app path to open, e.g. "/dashboard/events"
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // Finance ledger — written by Treasurer, read by Treasurer + Auditor + Super Admin.

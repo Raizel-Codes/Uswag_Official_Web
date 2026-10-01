@@ -11,8 +11,14 @@ router.get('/vapid-public-key', notificationController.getVapidPublicKey);
 // Authenticated routes
 router.use(requireAuth);
 
-// Save a PushSubscription from the browser
+// The caller's inbox
+router.get('/', notificationController.listMine);
+router.post('/mark-all-read', notificationController.readAll);
+router.post('/:id/read', notificationController.readOne);
+
+// Save / remove a PushSubscription from the browser
 router.post('/subscribe', notificationController.subscribe);
+router.post('/unsubscribe', notificationController.unsubscribe);
 
 // Dev-only: fire a test push to the authenticated caller's devices
 router.post('/test', notificationController.sendTestPush);

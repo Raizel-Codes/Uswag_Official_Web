@@ -33,6 +33,7 @@ const ResetPasswordPage = lazy(() => import('@/pages/public/ResetPasswordPage'))
 const MemberDashboardPage = lazy(() => import('@/pages/member/MemberDashboardPage'));
 const MyQRPage = lazy(() => import('@/pages/member/MyQRPage'));
 const MyAttendancePage = lazy(() => import('@/pages/member/MyAttendancePage'));
+const NotificationsPage = lazy(() => import('@/pages/member/NotificationsPage'));
 const MemberEventsPage = lazy(() => import('@/pages/member/MemberEventsPage'));
 
 // Admin pages
@@ -87,6 +88,7 @@ export default function AppRoutes() {
             <Route path="/dashboard/qr" element={<MyQRPage />} />
             <Route path="/dashboard/attendance" element={<MyAttendancePage />} />
             <Route path="/dashboard/events" element={<MemberEventsPage />} />
+            <Route path="/dashboard/notifications" element={<NotificationsPage />} />
             <Route path="/dashboard/profile" element={<PortalProfilePage />} />
           </Route>
         </Route>

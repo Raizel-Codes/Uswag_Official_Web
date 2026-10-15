@@ -12,6 +12,8 @@ import { createEventSchema } from './eventSchemas.js';
 
 router.use(requireAuth);
 router.post('/', requireRole('SUPER_ADMIN', 'OFFICER_ADMIN'), validateBody(createEventSchema), eventController.createEvent);
+router.get('/drafts', requireRole('SUPER_ADMIN', 'OFFICER_ADMIN'), eventController.listDraftEvents);
+router.post('/:eventId/publish', requireRole('SUPER_ADMIN', 'OFFICER_ADMIN'), eventController.publishEvent);
 router.get('/me/rsvps', requireRole('MEMBER'), eventController.myRsvps);
 router.post('/:eventId/rsvp', requireRole('MEMBER'), eventController.rsvp);
 

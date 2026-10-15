@@ -15,7 +15,9 @@ const ACTIONS: { prefix: string; label: string; sentence: string; tone: 'active'
   { prefix: 'bylaws.approved', label: 'Amendment approved', sentence: 'approved a bylaws amendment', tone: 'active' },
   { prefix: 'bylaws.rejected', label: 'Amendment rejected', sentence: 'rejected a bylaws amendment', tone: 'rejected' },
   { prefix: 'bylaws', label: 'Bylaws updated', sentence: 'updated a bylaws amendment', tone: 'info' },
+  { prefix: 'event.create_draft', label: 'Draft saved', sentence: 'saved an event as a draft', tone: 'neutral' },
   { prefix: 'event.create', label: 'Event created', sentence: 'created an event', tone: 'info' },
+  { prefix: 'event.publish', label: 'Event published', sentence: 'published a drafted event', tone: 'info' },
 ];
 
 function match(action: string) {

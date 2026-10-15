@@ -12,12 +12,29 @@ export async function listEvents(_req: Request, res: Response) {
   return ok(res, events);
 }
 
-export async function createEvent(req: Request, res: Response) {
-  const event = await eventService.createEvent(req.body);
-  await logAction(req.user!.id, 'event.create', 'UswagEvent', event.id);
+export async function listDraftEvents(_req: Request, res: Response) {
+  return ok(res, await eventService.listDraftEvents());
+}
+
+// Members hear about an event once, when it goes live (created as CONFIRMED, or a draft published).
+function announceEvent(event: { title: string; startsAt: Date; location: string }) {
   const when = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' }).format(event.startsAt);
   void notifyActiveMembers({ kind: 'event', title: `New event: ${event.title}`, body: `${when} · ${event.location}`, url: '/dashboard/events' });
+}
+
+export async function createEvent(req: Request, res: Response) {
+  const event = await eventService.createEvent(req.body);
+  await logAction(req.user!.id, event.status === 'DRAFT' ? 'event.create_draft' : 'event.create', 'UswagEvent', event.id);
+  if (event.status === 'CONFIRMED') announceEvent(event);
   return ok(res, event, 201);
+}
+
+export async function publishEvent(req: Request, res: Response) {
+  const event = await eventService.publishEvent(req.params.eventId);
+  if (!event) return fail(res, 'That draft was not found, or it has already been published.', 404);
+  await logAction(req.user!.id, 'event.publish', 'UswagEvent', event.id);
+  announceEvent(event);
+  return ok(res, event);
 }
 
 // Only ACTIVE members may RSVP / apply (Article III) — pending, expired and
@@ -33,7 +50,7 @@ export async function rsvp(req: Request, res: Response) {
   if (blocked) return fail(res, blocked, 403, { standing: standing.toLowerCase() });
 
   const event = await prisma.uswagEvent.findUnique({ where: { id: eventId } });
-  if (!event) return fail(res, 'Event not found', 404);
+  if (!event || event.status === 'DRAFT') return fail(res, 'Event not found', 404); // drafts aren't public
   if (event.status === 'COMPLETED' || event.status === 'CANCELLED') {
     return fail(res, `This event is ${event.status.toLowerCase()} and no longer takes sign-ups.`, 409);
   }

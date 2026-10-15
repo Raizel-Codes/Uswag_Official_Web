@@ -9,7 +9,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortalToast } from '@/hooks/usePortalToast';
-import { listEvents, createEvent, type CreateEventPayload } from '@/services/eventService';
+import { listEvents, listDraftEvents, createEvent, publishEvent, type CreateEventPayload } from '@/services/eventService';
 import { PILLAR_LABELS, STATUS_LABELS, type EventStatus, type UswagEvent } from '@/types/event.types';
 import PageHeader from '@/components/portal/PageHeader';
 import Panel from '@/components/portal/Panel';
@@ -29,23 +29,26 @@ const statusSegments = (list: UswagEvent[]): BarSegment[] =>
 
 const EMPTY: CreateEventPayload = { title: '', description: '', pillar: 'YOUTH_VOICE', scope: 'IN_CAMPUS', location: '', startsAt: '', limitedSlots: null };
 
-function CreateEventForm({ onCreated }: { onCreated: () => void }) {
+const DRAFTS_KEY = ['events', 'drafts'];
+
+function CreateEventForm({ onCreated }: { onCreated: (status: 'DRAFT' | 'CONFIRMED') => void }) {
   const [form, setForm] = useState<CreateEventPayload>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: createEvent,
-    onSuccess: () => {
+    onSuccess: (event) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: DRAFTS_KEY });
       setForm(EMPTY);
-      onCreated();
+      onCreated(event.status === 'DRAFT' ? 'DRAFT' : 'CONFIRMED');
     },
     onError: (err) => setError(apiError(err, 'Could not create the event. Please try again.')),
   });
   const set = (patch: Partial<CreateEventPayload>) => setForm((f) => ({ ...f, ...patch }));
   const outOfCampus = form.scope === 'OUT_OF_CAMPUS';
 
-  function submit(e: FormEvent) {
+  function submit(e: Pick<FormEvent, 'preventDefault'>, status: 'DRAFT' | 'CONFIRMED') {
     e.preventDefault();
     setError(null);
     if (!form.title.trim()) return setError('Give the event a title.');
@@ -60,11 +63,12 @@ function CreateEventForm({ onCreated }: { onCreated: () => void }) {
       description: form.description.trim(),
       startsAt: new Date(form.startsAt).toISOString(),
       limitedSlots: outOfCampus ? Number(form.limitedSlots) : null,
+      status,
     });
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate>
+    <form onSubmit={(e) => submit(e, 'CONFIRMED')} className="space-y-4" noValidate>
       <div>
         <label htmlFor="ev-title" className="ap-label">Title</label>
         <input id="ev-title" value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. Coastal Cleanup Drive" className="ap-input" />
@@ -107,9 +111,15 @@ function CreateEventForm({ onCreated }: { onCreated: () => void }) {
         <textarea id="ev-desc" rows={3} value={form.description} onChange={(e) => set({ description: e.target.value })} placeholder="What is this event about?" className="ap-input" />
       </div>
       {error && <p role="alert" className="mp-alert">{error}</p>}
-      <button type="submit" disabled={mutation.isPending} className="mp-btn mp-btn--primary w-full sm:w-auto">
-        {mutation.isPending ? 'Publishing…' : 'Publish event'}
-      </button>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <button type="submit" disabled={mutation.isPending} className="mp-btn mp-btn--primary w-full sm:w-auto">
+          {mutation.isPending ? 'Saving…' : 'Publish event'}
+        </button>
+        <button type="button" disabled={mutation.isPending} onClick={(e) => submit(e, 'DRAFT')} className="mp-btn mp-btn--ghost w-full sm:w-auto">
+          Save as draft
+        </button>
+      </div>
+      <p className="mp-muted text-[0.8125rem]">Publishing makes the event visible and notifies active members. A draft stays visible only to officers until you publish it.</p>
     </form>
   );
 }
@@ -121,16 +131,32 @@ export default function EventManagementPage() {
   const { toast, show } = usePortalToast();
   const { data: events, isLoading } = useQuery<UswagEvent[]>({ queryKey: ['events'], queryFn: listEvents, staleTime: 2 * 60 * 1000 });
   const canCreate = user?.role === 'super_admin' || user?.role === 'officer_admin';
+  const queryClient = useQueryClient();
+  const { data: drafts } = useQuery<UswagEvent[]>({ queryKey: DRAFTS_KEY, queryFn: listDraftEvents, enabled: canCreate, staleTime: 60_000 });
+  const publish = useMutation({
+    mutationFn: (e: UswagEvent) => publishEvent(e.id).then(() => e),
+    onSuccess: (e) => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: DRAFTS_KEY });
+      show(`“${e.title}” published. Members have been notified.`);
+    },
+    onError: (err) => show(apiError(err, 'Could not publish the draft. Please try again.')),
+  });
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(['cancelled']));
 
-  const all = events ?? [];
+  const publishedIds = new Set((events ?? []).map((e) => e.id));
+  const draftList = (drafts ?? []).filter((d) => !publishedIds.has(d.id)); // a just-published draft can linger here for a moment
+  const published = events ?? []; // drafts are listed in their own group
+  const all = [...published, ...draftList];
   const now = Date.now();
   const byDate = (dir: 1 | -1) => (a: UswagEvent, b: UswagEvent) => dir * (+new Date(a.startsAt) - +new Date(b.startsAt));
   const groups = [
-    { key: 'upcoming', title: 'Upcoming', accent: 0, list: all.filter((e) => e.status !== 'CANCELLED' && +new Date(e.startsAt) >= now).sort(byDate(1)) },
-    { key: 'past', title: 'Past', accent: 5, list: all.filter((e) => e.status !== 'CANCELLED' && +new Date(e.startsAt) < now).sort(byDate(-1)) },
-    { key: 'cancelled', title: 'Cancelled', accent: 2, list: all.filter((e) => e.status === 'CANCELLED').sort(byDate(-1)) },
+    { key: 'drafts', title: 'Drafts', accent: 3, list: [...draftList].sort(byDate(1)) },
+    { key: 'upcoming', title: 'Upcoming', accent: 0, list: published.filter((e) => e.status !== 'CANCELLED' && +new Date(e.startsAt) >= now).sort(byDate(1)) },
+    { key: 'past', title: 'Past', accent: 5, list: published.filter((e) => e.status !== 'CANCELLED' && +new Date(e.startsAt) < now).sort(byDate(-1)) },
+    { key: 'cancelled', title: 'Cancelled', accent: 2, list: published.filter((e) => e.status === 'CANCELLED').sort(byDate(-1)) },
   ].filter((g) => g.list.length > 0);
+  const nothingYet = !events?.length && draftList.length === 0;
   const busiest = Math.max(0, ...all.map((e) => e._count?.rsvps ?? 0));
   const pillars = (Object.keys(PILLAR_LABELS) as UswagEvent['pillar'][]).map((p) => ({
     key: p,
@@ -163,9 +189,9 @@ export default function EventManagementPage() {
       {showForm && canCreate && (
         <Panel title="New event" id="new-event" className="max-w-2xl">
           <CreateEventForm
-            onCreated={() => {
+            onCreated={(status) => {
               toggleForm(false);
-              show('Event published');
+              show(status === 'DRAFT' ? 'Draft saved. Only officers can see it until you publish.' : 'Event published. Members have been notified.');
             }}
           />
         </Panel>
@@ -173,7 +199,7 @@ export default function EventManagementPage() {
 
       {isLoading ? (
         <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-14" />)}</div>
-      ) : all.length === 0 ? (
+      ) : nothingYet ? (
         <p className="mp-card p-10 mp-muted text-center">No events yet.{canCreate ? ' Create the first one with “New event”.' : ''}</p>
       ) : (
         <>
@@ -220,7 +246,14 @@ export default function EventManagementPage() {
                       </div>
                       <div data-label="Date" className="mp-muted whitespace-nowrap text-[0.875rem]">{formatDate(e.startsAt)}</div>
                       <div data-label="Sign-ups"><Meter percent={meter.percent} text={meter.text} label="Sign-ups" tone={meter.tone} /></div>
-                      <div data-label="Status"><span className={`mp-standing ${EVENT_BADGE[e.status]}`}>{STATUS_LABELS[e.status]}</span></div>
+                      <div data-label="Status" className="flex flex-col items-start gap-2">
+                        <span className={`mp-standing ${EVENT_BADGE[e.status]}`}>{STATUS_LABELS[e.status]}</span>
+                        {e.status === 'DRAFT' && canCreate && (
+                          <button type="button" disabled={publish.isPending} onClick={() => publish.mutate(e)} className="mp-btn mp-btn--primary mp-btn--sm">
+                            Publish<span className="mp-sr-only"> {e.title}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

@@ -36,14 +36,12 @@ function MoneyFlow({ s }: { s?: FinanceSummary }) {
   if (!s) return <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="mp-skeleton h-6" />)}</div>;
   const dues = Math.abs(s.totalDues);
   const spent = Math.abs(s.totalExpenses);
-  const owed = Math.abs(s.pendingDuesAmount);
   return (
     <BarList
-      label="Money in, out and outstanding"
+      label="Money in and out"
       rows={[
         { key: 'in', label: 'Dues collected', value: currency(dues), segments: [{ label: 'Dues collected', value: dues, tone: 'success' }] },
         { key: 'out', label: 'Expenses', value: currency(spent), segments: [{ label: 'Expenses', value: spent, tone: 'danger' }] },
-        { key: 'owed', label: 'Dues outstanding', value: currency(owed), segments: [{ label: 'Dues outstanding', value: owed, tone: 'warn' }] },
       ]}
     />
   );
@@ -227,7 +225,7 @@ function TreasurerFinanceView() {
       <dl className="ap-stats-row">
         <StatPlate label="On hand" value={s ? currency(s.fundsOnHand) : '…'} tone="primary" hint="Funds" />
         <StatPlate label="Collected" value={s ? currency(s.totalDues) : '…'} tone="primary" hint="Dues" />
-        <StatPlate label="Outstanding" value={s ? currency(s.pendingDuesAmount) : '…'} tone="warn" hint="Dues to follow up" />
+        <StatPlate label="Spent" value={s ? currency(s.totalExpenses) : '…'} tone="warn" hint="Expenses" />
       </dl>
 
       <Panel title="Money in and out">
@@ -303,7 +301,7 @@ function AuditorFinanceView() {
       <dl className="ap-stats-row">
         <StatPlate label="To review" value={entriesQ.data ? toReview.length : '…'} tone={toReview.length ? 'warn' : 'neutral'} hint="Expenses, 30 days" />
         <StatPlate label="On hand" value={s ? currency(s.fundsOnHand) : '…'} tone="primary" hint="Funds" />
-        <StatPlate label="Outstanding" value={s ? currency(s.pendingDuesAmount) : '…'} tone="warn" hint="Dues" />
+        <StatPlate label="Spent" value={s ? currency(s.totalExpenses) : '…'} tone="warn" hint="Expenses" />
       </dl>
 
       <Panel title="Expenses to review" aside={<span className="mp-muted">Last 30 days</span>} flush>

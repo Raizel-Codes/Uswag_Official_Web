@@ -214,7 +214,7 @@ function TreasurerHome() {
       stats={[
         { icon: I.peso, label: 'On hand', value: currency(summary?.fundsOnHand ?? 0), tone: 'primary', hint: 'Funds' },
         { icon: I.check, label: 'Collected', value: currency(summary?.totalDues ?? 0), tone: 'primary', hint: 'Dues' },
-        { icon: I.alert, label: 'Outstanding', value: currency(summary?.pendingDuesAmount ?? 0), tone: 'warn', hint: 'Dues to follow up' },
+        { icon: I.alert, label: 'Spent', value: currency(summary?.totalExpenses ?? 0), tone: 'warn', hint: 'Expenses' },
       ]}
       statsLoading={sLoading}
       actions={[

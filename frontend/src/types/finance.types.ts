@@ -18,7 +18,6 @@ export interface FinanceSummary {
   fundsOnHand: number;
   totalDues: number;
   totalExpenses: number;
-  pendingDuesAmount: number;
   activeMembers: number;
   pendingApplications: number;
 }

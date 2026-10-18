@@ -24,17 +24,10 @@ export async function getFinanceSummary(req: Request, res: Response) {
 
   const fundsOnHand = totalDues - totalExpenses;
 
-  // Pending dues: members who are ACTIVE × the membership fee, minus what's already
-  // recorded. The fee is ₱50 (Article III; "as determined by the officers and approved by
-  // the adviser" — same figure the application page shows). Update both if it changes.
-  const membershipFee = 50;
-  const pendingDuesAmount = activeCount * membershipFee - totalDues;
-
   return ok(res, {
     fundsOnHand,
     totalDues,
     totalExpenses,
-    pendingDuesAmount: Math.max(0, pendingDuesAmount),
     activeMembers: activeCount,
     pendingApplications: pendingCount,
   });

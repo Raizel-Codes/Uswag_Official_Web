@@ -1,0 +1,141 @@
+/*
+  The maintenance page. It borrows the landing / login look (Mist page with the fine green grain, Lora
+  headlines, a Deep Forest "vault" plate with the inset double Sage rule), but is self-contained: it is
+  part of the main bundle (it has to show even when a lazy chunk can't load mid-deploy), so it must not
+  pull in landing.css (60 KB) or the animation library. Brand tokens only (tokens.css). Everything is
+  scoped under `.mt`.
+*/
+
+.mt {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-deep);
+  font-family: var(--font-body, 'Inter', system-ui, sans-serif);
+  background-color: var(--color-mist);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .08 0 0 0 0 .15 0 0 0 0 .09 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23f)'/%3E%3C/svg%3E");
+  padding: clamp(1.5rem, 5vw, 4rem) 1rem max(2rem, env(safe-area-inset-bottom));
+}
+.mt a { color: inherit; }
+.mt :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+
+.mt-wrap {
+  width: 100%;
+  max-width: 1120px;
+  margin: auto;
+  display: grid;
+  gap: 2.5rem;
+  align-items: center;
+}
+@media (min-width: 1024px) {
+  .mt-wrap { grid-template-columns: 1fr 1fr; gap: 4rem; }
+}
+
+.mt-brand { display: flex; align-items: center; gap: 0.75rem; }
+.mt-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgb(20 39 24 / 0.75); /* ≈ 6.1:1 on Mist */
+}
+.mt-h1 {
+  margin-top: 1.5rem;
+  font-family: var(--font-display, 'Lora', Georgia, serif);
+  font-weight: 600;
+  font-size: clamp(2.25rem, 5.4vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+.mt-lead { margin-top: 1rem; max-width: 34rem; font-size: 1.0625rem; line-height: 1.65; color: rgb(20 39 24 / 0.8); }
+.mt-note {
+  margin-top: 1.5rem;
+  max-width: 34rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--color-sage);
+  font-family: var(--font-display, 'Lora', Georgia, serif);
+  font-style: italic;
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+.mt-foot { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-size: 0.875rem; color: rgb(20 39 24 / 0.75); }
+.mt-foot a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--color-sage); }
+.mt-foot a:hover { text-decoration-color: currentColor; }
+
+/* The vault plate: Deep Forest, lit from the corners, with the inset double Sage rule (same as the login canvas). */
+.mt-vault {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 3px;
+  color: var(--color-mist);
+  padding: clamp(1.75rem, 4vw, 3rem);
+  background:
+    radial-gradient(80% 70% at 12% 0%, rgb(46 91 65 / 0.85), transparent 62%),
+    radial-gradient(70% 60% at 100% 100%, rgb(46 91 65 / 0.55), transparent 60%),
+    var(--color-deep);
+}
+.mt-vault::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .6 0 0 0 0 .8 0 0 0 0 .69 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+.mt-vault::after {
+  content: '';
+  position: absolute;
+  inset: clamp(10px, 1.6vw, 18px);
+  pointer-events: none;
+  border: 1px solid rgb(152 203 176 / 0.4);
+  box-shadow: inset 0 0 0 4px transparent, inset 0 0 0 5px rgb(152 203 176 / 0.18);
+}
+.mt-vault > * { position: relative; }
+
+.mt-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-sage); }
+
+/* The countdown. Tabular lining figures so the digits don't jitter as they change. */
+.mt-clock {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.1em 0.25em;
+  font-family: var(--font-display, 'Lora', Georgia, serif);
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-size: clamp(3rem, 14vw, 5.75rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.mt-sep { color: var(--color-sage); font-weight: 400; opacity: 0.8; }
+.mt-units { margin-top: 0.5rem; display: flex; gap: 0.25rem; font-size: 0.6875rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgb(231 239 228 / 0.7); }
+
+.mt-bar { margin-top: 1.5rem; height: 3px; background: rgb(152 203 176 / 0.22); border-radius: 2px; overflow: hidden; }
+.mt-bar > span { display: block; height: 100%; background: var(--color-sage); border-radius: 2px; transition: width 1s linear; }
+.mt-expect { margin-top: 0.875rem; font-size: 0.9375rem; color: rgb(231 239 228 / 0.9); }
+.mt-expect strong { color: var(--color-mist); font-weight: 600; }
+
+/* Past the estimate: no zero, no negative; a calm "still working" in place of the clock. */
+.mt-late { margin-top: 0.75rem; font-family: var(--font-display, 'Lora', Georgia, serif); font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 1.15; font-weight: 600; }
+.mt-late em { color: var(--color-sage); }
+.mt-bar--busy > span { width: 38% !important; animation: mt-slide 2.4s ease-in-out infinite; }
+@keyframes mt-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+
+.mt-list { margin-top: 2rem; display: grid; gap: 1rem; list-style: none; padding: 0; }
+.mt-list li { display: flex; gap: 0.875rem; font-size: 0.9375rem; line-height: 1.55; color: rgb(231 239 228 / 0.9); }
+.mt-list li::before { content: ''; flex: none; width: 8px; height: 8px; margin-top: 0.5rem; transform: rotate(45deg); background: var(--color-sage); }
+.mt-list strong { color: var(--color-mist); font-weight: 600; }
+
+.mt-crest { animation: mt-breathe 4.5s ease-in-out infinite; }
+@keyframes mt-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+
+.mt-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-crest, .mt-bar--busy > span { animation: none; }
+  .mt-bar > span { transition: none; }
+}

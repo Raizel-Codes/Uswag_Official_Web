@@ -8,6 +8,7 @@ import { corsMiddleware } from './config/cors.js';
 import { prisma } from './config/db.js';
 import routes from './routes/index.js';
 import { errorHandler } from './middlewares/errorHandler.middleware.js';
+import { maintenanceGate } from './middlewares/maintenance.middleware.js';
 
 export const app = express();
 
@@ -43,6 +44,7 @@ app.get('/health', async (_req, res) => {
   }
 });
 
-app.use('/api/v1', routes);
+// The maintenance lock sits in front of every API route (after cors, so its 503 is readable by the app).
+app.use('/api/v1', maintenanceGate, routes);
 
 app.use(errorHandler);

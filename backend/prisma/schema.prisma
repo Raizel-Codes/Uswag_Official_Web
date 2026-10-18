@@ -328,3 +328,18 @@ model Supplier {
   updatedAt   DateTime @updatedAt
 }
 
+
+// The site-wide maintenance switch: ONE row (id = 1), flipped from the developer's /dev console or
+// scripts/maintenance.ts. In the database rather than memory or an env var because a deploy restarts the
+// server, and the switch has to survive exactly that. While `enabled`, the API answers everything except
+// the status check, /health and the developer's own sign-in with 503 (middlewares/maintenance.middleware.ts).
+// endsAt is only an estimate shown to visitors: it never reopens the site by itself.
+model SiteMaintenance {
+  id        Int       @id @default(1)
+  enabled   Boolean   @default(false)
+  startedAt DateTime?
+  endsAt    DateTime?
+  message   String?
+  setById   String?   // the developer account that last changed it (no relation: it must never block deleting a user)
+  updatedAt DateTime  @updatedAt
+}

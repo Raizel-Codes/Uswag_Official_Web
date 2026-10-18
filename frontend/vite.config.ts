@@ -78,6 +78,12 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
+            // The maintenance check must never come from the cache: a stale "all clear" would hide a live
+            // maintenance, and a stale "maintenance" would keep the site shut after it reopened.
+            urlPattern: /\/api\/v1\/status/,
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: /\/api\/scan/,
             handler: 'NetworkOnly', // Scan verification must require a live network call
           },

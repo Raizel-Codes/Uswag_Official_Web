@@ -3,6 +3,7 @@ import { prisma } from '../config/db.js';
 import { currentAcademicYear } from '../utils/academicYear.js';
 import { notifyUsers } from '../services/notification.service.js';
 import { logger } from '../utils/logger.js';
+import { getMaintenance } from '../services/maintenance.service.js';
 
 // Article III §3: membership is valid for one academic year. Once a member's year has ended this
 // marks them EXPIRED, which switches off their digital card, event sign-ups and QR check-in until
@@ -38,6 +39,8 @@ export function findLapsedMembers(now: Date = new Date()) {
 /** Marks every lapsed member EXPIRED. Safe to run any time and as often as you like. */
 export async function runMemberRenewal(now: Date = new Date()) {
   if (isRunning) return { expired: 0 };
+  // Not while the site is in maintenance: a deploy may be mid-migration. The next run catches up (idempotent).
+  if ((await getMaintenance()).enabled) return { expired: 0 };
   isRunning = true;
   try {
     const lapsed = await findLapsedMembers(now);

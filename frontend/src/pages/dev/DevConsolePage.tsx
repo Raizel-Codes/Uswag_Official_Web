@@ -29,6 +29,11 @@ const HELP = [
   'jobs            Facebook sync and membership-renewal jobs',
   'config          which settings are on (never their values)',
   'errors [n]      recent server errors (cleared when the server restarts)',
+  'maintenance     close the site for everyone but you. examples:',
+  '                   maintenance on                  (60 minutes)',
+  '                   maintenance on 90 Updating the database',
+  '                   maintenance extend 30 · maintenance off · maintenance status',
+  '                 (add --force to skip the warning about scans in progress)',
   'whoami          who you are signed in as',
   'admin           open the admin console (view only)',
   'clear           clear the screen',
@@ -49,6 +54,12 @@ const span = (sec: number) => {
 const tally = (o: Record<string, number>) => (Object.keys(o).length ? Object.entries(o).map(([k, v]) => `${k.toLowerCase()} ${v}`).join(' · ') : 'none');
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+function maintenanceLine(m: any) {
+  const left = m.endsAt ? Math.round((Date.parse(m.endsAt) - Date.now()) / 60000) : null;
+  const est = left === null ? 'no estimate' : left > 0 ? `about ${left} min left (until ${when(m.endsAt)})` : `${-left} min past the estimate, still on`;
+  return `${est}${m.message ? ` · “${m.message}”` : ''}`;
+}
+
 const FORMAT: Record<Remote, (d: any) => { text: string; bad?: boolean }> = {
   status: (d) => ({
     bad: !d.db.ok,
@@ -56,6 +67,7 @@ const FORMAT: Record<Remote, (d: any) => { text: string; bad?: boolean }> = {
       `${pad('api', 10)}ok · up ${span(d.uptimeSeconds)} · node ${d.node} · ${d.environment}${d.commit ? ` · commit ${d.commit}` : ''}`,
       `${pad('database', 10)}${d.db.ok ? `ok · ${d.db.latencyMs} ms` : `DOWN · ${d.db.error}`}`,
       `${pad('memory', 10)}${d.memoryMb} MB`,
+      `${pad('site', 10)}${d.maintenance?.enabled ? `UNDER MAINTENANCE · ${maintenanceLine(d.maintenance)}` : 'open'}`,
       `${pad('time', 10)}${when(d.time)}`,
     ].join('\n'),
   }),
@@ -107,6 +119,7 @@ const TONE: Record<Kind, string> = {
 interface Pulse {
   ok: boolean;
   text: string;
+  maintenance?: boolean;
 }
 
 export default function DevConsolePage() {
@@ -117,6 +130,7 @@ export default function DevConsolePage() {
   const [busy, setBusy] = useState(false);
   const [pulse, setPulse] = useState<Pulse | null>(null);
   const queue = useRef<Promise<void>>(Promise.resolve());
+  const pulseNow = useRef<() => Promise<void>>(async () => {}); // re-reads the status strip (after a maintenance change)
   const history = useRef<string[]>([]);
   const cursor = useRef(-1);
   const nextId = useRef(1);
@@ -140,6 +154,37 @@ export default function DevConsolePage() {
     [print],
   );
 
+  // maintenance on [minutes] [message] | off | extend [minutes] | status   (+ --force)
+  async function runMaintenance(tokens: string[]) {
+    const force = tokens.includes('--force');
+    // "[60]" and "[Test]" are read as 60 and Test: square brackets in a usage line mean "optional", but they get typed.
+    const t = tokens.filter((x) => x !== '--force').map((x) => x.replace(/^\[(.*)\]$/, '$1'));
+    const sub = t[0] ?? 'status';
+    const minutes = t[1] !== undefined && /^\d+$/.test(t[1]) ? Number(t[1]) : undefined;
+    try {
+      if (sub === 'status') {
+        const { data } = await api.get<{ data: any }>('/dev/maintenance');
+        print('out', data.data.enabled ? `maintenance ON · ${maintenanceLine(data.data)}` : 'maintenance is off · the site is open');
+        return;
+      }
+      if (sub !== 'on' && sub !== 'off' && sub !== 'extend') {
+        print('err', 'usage: maintenance on 90 Updating the database · maintenance extend 30 · maintenance off · maintenance status');
+        return;
+      }
+      const message = sub === 'on' ? t.slice(minutes === undefined ? 1 : 2).join(' ') || undefined : undefined;
+      const { data } = await api.post<{ data: any }>('/dev/maintenance', { action: sub, minutes, message, force: force || undefined });
+      print(
+        'out',
+        data.data.enabled
+          ? `maintenance ON · ${maintenanceLine(data.data)}\neveryone but you now sees the maintenance page. turn it off with: maintenance off`
+          : 'maintenance OFF · the site is open again',
+      );
+      void pulseNow.current();
+    } catch (err) {
+      print('err', apiError(err, 'maintenance: the server didn’t answer.'));
+    }
+  }
+
   async function execute(raw: string) {
     const [cmd = '', arg] = raw.trim().split(/\s+/);
     if (!cmd) return;
@@ -148,6 +193,10 @@ export default function DevConsolePage() {
     if ((REMOTE as readonly string[]).includes(cmd)) {
       setBusy(true);
       await runRemote(cmd as Remote, n);
+      setBusy(false);
+    } else if (cmd === 'maintenance') {
+      setBusy(true);
+      await runMaintenance(raw.trim().split(/\s+/).slice(1));
       setBusy(false);
     } else if (cmd === 'help') print('out', HELP);
     else if (cmd === 'clear') setLines([]);
@@ -195,13 +244,14 @@ export default function DevConsolePage() {
     let live = true;
     const beat = async () => {
       try {
-        const { data } = await api.get<{ data: { db: { ok: boolean; latencyMs?: number }; uptimeSeconds: number } }>('/dev/status');
+        const { data } = await api.get<{ data: { db: { ok: boolean; latencyMs?: number }; uptimeSeconds: number; maintenance?: { enabled: boolean } } }>('/dev/status');
         const d = data.data;
-        if (live) setPulse({ ok: d.db.ok, text: d.db.ok ? `api ok · db ${d.db.latencyMs} ms · up ${span(d.uptimeSeconds)}` : 'database down' });
+        if (live) setPulse({ ok: d.db.ok, maintenance: d.maintenance?.enabled, text: d.db.ok ? `api ok · db ${d.db.latencyMs} ms · up ${span(d.uptimeSeconds)}` : 'database down' });
       } catch {
         if (live) setPulse({ ok: false, text: 'api unreachable' });
       }
     };
+    pulseNow.current = beat;
     void beat();
     const timer = setInterval(beat, 10_000);
     return () => {
@@ -221,6 +271,7 @@ export default function DevConsolePage() {
         <span className={`flex items-center gap-2 ${pulse && !pulse.ok ? 'text-dangerBg' : 'text-mist/80'}`} role="status">
           <span aria-hidden="true" className={`inline-block w-2 h-2 rounded-full ${!pulse ? 'bg-mist/40' : pulse.ok ? 'bg-sage' : 'bg-dangerBg'}`} />
           {pulse ? pulse.text : 'checking…'}
+          {pulse?.maintenance && <span className="ml-1 px-1.5 py-0.5 rounded-[3px] bg-warnBg text-forest font-semibold uppercase tracking-wider text-[0.6875rem]">maintenance on</span>}
         </span>
         <span className="ml-auto flex gap-4">
           <Link to="/admin" className="text-sage underline underline-offset-2">admin</Link>

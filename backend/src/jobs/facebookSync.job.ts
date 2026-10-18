@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { fetchRecentPagePosts, isFacebookConfigured } from '../services/facebook.service.js';
 import { deleteMockSyncedPosts, upsertSyncedPost } from '../services/post.service.js';
 import { logger } from '../utils/logger.js';
+import { getMaintenance } from '../services/maintenance.service.js';
 
 // In-memory sync status — a single persistent backend process (per claude.md,
 // this is why Facebook sync can't run on serverless), so this is safe to hold
@@ -20,6 +21,8 @@ export function getSyncStatus() {
 // "Sync Now" trigger so both paths dedupe identically via upsertSyncedPost.
 export async function runFacebookSync() {
   if (isSyncing) return getSyncStatus();
+  // Paused while the site is in maintenance (it writes posts); the next scheduled run picks it up.
+  if ((await getMaintenance()).enabled) return getSyncStatus();
   isSyncing = true;
   try {
     const posts = await fetchRecentPagePosts();

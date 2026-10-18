@@ -1,5 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY } from '@/context/AuthContext';
+import { MAINTENANCE_EVENT, type MaintenanceInfo } from '@/config/maintenance';
 
 // Base Axios instance.
 // The request interceptor attaches the access token from localStorage.
@@ -25,7 +26,7 @@ export class ForbiddenError extends Error {
   }
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api/v1';
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api/v1';
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -52,9 +53,23 @@ function clearSessionAndRedirect() {
 // Plain axios (not the `api` instance) so this call never recurses through
 // these same interceptors, and so it still goes out even if the access
 // token that just 401'd is still attached to `api`'s defaults.
-async function refreshAccessToken(): Promise<string | null> {
+type RefreshOutcome = { ok: true; token: string } | { ok: false; sessionInvalid: boolean };
+
+// The server's MAINTENANCE refusal, if that's what this error is (503 + details.code), else null.
+function maintenanceFrom(err: unknown): MaintenanceInfo | null {
+  const e = err as { response?: { status?: number; data?: { details?: MaintenanceInfo & { code?: string } } } };
+  const details = e?.response?.data?.details;
+  return e?.response?.status === 503 && details?.code === 'MAINTENANCE' ? details : null;
+}
+
+function announceMaintenance(err: unknown) {
+  const info = maintenanceFrom(err);
+  if (info) window.dispatchEvent(new CustomEvent(MAINTENANCE_EVENT, { detail: info }));
+}
+
+async function refreshAccessToken(): Promise<RefreshOutcome> {
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!refreshToken) return null;
+  if (!refreshToken) return { ok: false, sessionInvalid: true };
 
   try {
     const { data } = await axios.post<{ success: boolean; data: { accessToken: string; refreshToken: string; user: unknown } }>(
@@ -65,9 +80,14 @@ async function refreshAccessToken(): Promise<string | null> {
     localStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, session.refreshToken);
     localStorage.setItem(USER_KEY, JSON.stringify(session.user));
-    return session.accessToken;
-  } catch {
-    return null;
+    return { ok: true, token: session.accessToken };
+  } catch (err) {
+    announceMaintenance(err);
+    // Only a clear "this session is no longer valid" ends the session. A 503 (maintenance), a gateway error
+    // or a dropped connection says nothing about the person's login, and signing them out for it was how a
+    // server restart turned into everyone being locked out.
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    return { ok: false, sessionInvalid: status === 400 || status === 401 };
   }
 }
 
@@ -75,7 +95,7 @@ async function refreshAccessToken(): Promise<string | null> {
 // 401 at the same moment (e.g. a dashboard firing several queries at once),
 // they all await this one in-flight refresh instead of each hitting
 // /auth/refresh separately.
-let inFlightRefresh: Promise<string | null> | null = null;
+let inFlightRefresh: Promise<RefreshOutcome> | null = null;
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retriedAfterRefresh?: boolean };
 
@@ -88,6 +108,7 @@ type RetriableConfig = InternalAxiosRequestConfig & { _retriedAfterRefresh?: boo
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    announceMaintenance(error);
     const status = error.response?.status;
     const originalRequest = error.config as RetriableConfig | undefined;
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/login') || originalRequest?.url?.includes('/auth/refresh');
@@ -100,14 +121,14 @@ api.interceptors.response.use(
           inFlightRefresh = null;
         });
       }
-      const newAccessToken = await inFlightRefresh;
+      const outcome = await inFlightRefresh;
 
-      if (newAccessToken) {
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      if (outcome.ok) {
+        originalRequest.headers.Authorization = `Bearer ${outcome.token}`;
         return api(originalRequest);
       }
 
-      clearSessionAndRedirect();
+      if (outcome.sessionInvalid) clearSessionAndRedirect();
       return Promise.reject(error);
     }
 

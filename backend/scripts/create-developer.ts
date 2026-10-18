@@ -27,8 +27,11 @@ async function main() {
 
   if (process.argv.includes('--remove')) {
     if (!existing) throw new Error(`No developer account for ${email}.`);
+    // The database won't delete a user who still has audit entries (the maintenance switch writes them), so the
+    // account's own entries go with it, as they do when the Super Admin deletes an account in the console.
+    const entries = await prisma.auditLogEntry.deleteMany({ where: { actorId: existing.id } });
     await prisma.user.delete({ where: { id: existing.id } });
-    console.log(`Removed the developer account ${email}.`);
+    console.log(`Removed the developer account ${email}${entries.count ? ` and its ${entries.count} audit entr${entries.count === 1 ? 'y' : 'ies'}` : ''}.`);
     return;
   }
 

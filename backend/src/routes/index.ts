@@ -13,6 +13,7 @@ import procurementRoutes from './procurement.routes.js';
 import attendanceRoutes from './attendance.routes.js';
 import accountRoutes from './account.routes.js';
 import devRoutes from './dev.routes.js';
+import statusRoutes from './status.routes.js';
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router.use('/procurement', procurementRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/accounts', accountRoutes);
 router.use('/dev', devRoutes);
+router.use('/status', statusRoutes);
 
 export default router;
 

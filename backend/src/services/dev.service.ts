@@ -5,6 +5,7 @@ import { getRenewalStatus } from '../jobs/memberRenewal.job.js';
 import { isFacebookConfigured } from './facebook.service.js';
 import { isEmailConfigured } from './email.service.js';
 import { recentErrors } from '../utils/errorBuffer.js';
+import { getMaintenance } from './maintenance.service.js';
 
 // Everything the developer's /dev console can ask for. Read-only by construction: each command is a
 // fixed query, nothing takes SQL or a shell command, and nothing returns a secret (settings are
@@ -27,6 +28,7 @@ export async function status() {
     // Set by Render on every deploy; absent locally.
     commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? null,
     memoryMb: Math.round(process.memoryUsage().rss / 1_048_576),
+    maintenance: await getMaintenance(),
     db,
   };
 }

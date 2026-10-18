@@ -7,10 +7,12 @@ import type { AccessTokenPayload } from '../types/jwt.types.js';
 // The only requests an account that still has to choose its own password may make.
 const PASSWORD_CHANGE_ALLOWED = new Set(['POST /auth/me/password', 'POST /auth/logout']);
 
-// The only changes the developer's account may make: its own sign-out, password and navigation style.
+// The only changes the developer's account may make: its own sign-out, password and navigation style,
+// and the maintenance switch.
 // Everything else that writes is refused, so the account can oversee the whole site and alter none of it
 // (and so there is nothing of its own to appear in the audit log).
-const DEVELOPER_MAY_WRITE = new Set(['POST /auth/logout', 'POST /auth/me/password', 'PATCH /auth/me/preference']);
+// POST /dev/maintenance is the site's maintenance switch (the one thing the overseer operates; audited).
+const DEVELOPER_MAY_WRITE = new Set(['POST /auth/logout', 'POST /auth/me/password', 'PATCH /auth/me/preference', 'POST /dev/maintenance']);
 
 // A GET that is not a pure read: it decrypts an applicant's student ID (and writes an audit entry).
 // The overseer has no need to see people's IDs.

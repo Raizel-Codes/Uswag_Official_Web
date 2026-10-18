@@ -29,6 +29,8 @@ import { auditSentence, auditTone } from '@/components/admin/audit';
 import { EVENT_BADGE, signupMeter } from '@/components/admin/events';
 import { groupByCollege, standingSegments } from '@/components/admin/memberCharts';
 import { currentAcademicYear, formatDate, initials, timeAgo } from '@/components/admin/format';
+import FeeLine from '@/components/admin/FeeLine';
+import { feeAllowsActivation } from '@/components/admin/fee';
 
 const UPCOMING_COLS = 'minmax(14rem,2.2fr) minmax(7rem,0.9fr) minmax(10rem,1.2fr) 8rem';
 
@@ -163,9 +165,10 @@ export default function SuperAdminDashboardPage() {
                       {m.submittedByProxy ? ' · via a friend' : ''}
                       {m.nameMatches > 0 ? ' · same-name flag' : ''}
                     </p>
+                    <FeeLine member={m} />
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button type="button" disabled={busy} onClick={() => approve.mutate(m.id)} className="ap-iconbtn ap-iconbtn--ok" aria-label={`Approve ${m.name}`} title="Approve">
+                    <button type="button" disabled={busy || !feeAllowsActivation(m.fee)} aria-describedby={feeAllowsActivation(m.fee) ? undefined : `fee-block-${m.id}`} onClick={() => approve.mutate(m.id)} className="ap-iconbtn ap-iconbtn--ok" aria-label={`Approve ${m.name}`} title={feeAllowsActivation(m.fee) ? 'Approve' : 'The fee has to be recorded first'}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                     </button>
                     <button type="button" disabled={busy} onClick={() => reject.mutate(m.id)} className="ap-iconbtn ap-iconbtn--no" aria-label={`Reject ${m.name}`} title="Reject">

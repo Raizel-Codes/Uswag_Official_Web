@@ -14,11 +14,13 @@ router.use(requireAuth);
 const canReadFinance = requireOfficerPosition('TREASURER', 'AUDITOR');
 router.get('/summary', canReadFinance, financeController.getFinanceSummary);
 router.get('/entries', canReadFinance, financeController.listFinanceEntries);
+router.get('/roster', canReadFinance, financeController.getFeeRoster);
 
 // ---- Write endpoints — Treasurer + Super Admin ONLY ----
 // Auditor intentionally excluded here; will get 403 if they somehow hit these.
 const canWriteFinance = requireOfficerPosition('TREASURER');
 router.post('/dues', canWriteFinance, financeController.recordDues);
+router.post('/roster/:memberId/extend', canWriteFinance, financeController.extendApplication);
 router.post('/expense', canWriteFinance, financeController.recordExpense);
 
 export default router;

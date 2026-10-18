@@ -1,3 +1,5 @@
+import type { FeeStanding } from './finance.types';
+
 export type MembershipStatus = 'active' | 'pending' | 'expired' | 'rejected';
 
 export interface MemberProfile {
@@ -19,6 +21,8 @@ export interface MemberProfile {
   proxyName: string | null; // who helped; deleted once the application is decided
   awaitingPasswordSetup: boolean; // needs the Secretary's one-time setup link
   nameMatches: number; // other member accounts with the same name (pending only)
+  /** Membership-fee standing: what the Secretary's approve / renew buttons check. */
+  fee?: FeeStanding;
   /** GET /members/me only: why the card / event sign-ups are locked (null when active). */
   standingNote?: string | null;
 }

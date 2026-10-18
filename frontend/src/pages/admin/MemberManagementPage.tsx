@@ -10,6 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePortalToast } from '@/hooks/usePortalToast';
 import { useApplicationDecision } from '@/hooks/useApplicationDecision';
 import { listMembers, approveApplication, rejectApplication, renewMember } from '@/services/memberService';
+import FeeLine from '@/components/admin/FeeLine';
+import { feeAllowsActivation } from '@/components/admin/fee';
 import { listNewsPosts, createManualPost } from '@/services/postService';
 import { ForbiddenError } from '@/services/api';
 import type { MemberProfile } from '@/types/member.types';
@@ -88,6 +90,7 @@ function MemberRow({
           {pending ? ` · applied ${timeAgo(member.joinedAt)}` : member.serialNumber ? ` · ${member.serialNumber}` : ''}
         </p>
         <ApplicationReviewAids member={member} />
+        <FeeLine member={member} />
       </div>
 
       {pending && onApprove && onReject ? (
@@ -103,7 +106,7 @@ function MemberRow({
             </>
           ) : (
             <>
-              <button type="button" disabled={busy} onClick={() => onApprove(member.id)} className="mp-btn mp-btn--primary mp-btn--sm">
+              <button type="button" disabled={busy || !feeAllowsActivation(member.fee)} aria-describedby={feeAllowsActivation(member.fee) ? undefined : `fee-block-${member.id}`} onClick={() => onApprove(member.id)} className="mp-btn mp-btn--primary mp-btn--sm">
                 Approve<span className="mp-sr-only"> {member.name}</span>
               </button>
               <button type="button" disabled={busy} onClick={() => setConfirmReject(true)} className="mp-btn mp-btn--ghost mp-btn--sm">
@@ -115,7 +118,7 @@ function MemberRow({
       ) : member.status === 'expired' && onRenew ? (
         <div className="flex items-center gap-3 w-full pl-[3.375rem] sm:w-auto sm:pl-0 shrink-0">
           <span className={`mp-standing mp-standing--${member.status}`}>{MEMBER_STANDING[member.status]}</span>
-          <button type="button" disabled={busy} onClick={() => onRenew(member.id)} className="mp-btn mp-btn--primary mp-btn--sm">
+          <button type="button" disabled={busy || !feeAllowsActivation(member.fee)} aria-describedby={feeAllowsActivation(member.fee) ? undefined : `fee-block-${member.id}`} onClick={() => onRenew(member.id)} className="mp-btn mp-btn--primary mp-btn--sm">
             Renew<span className="mp-sr-only"> {member.name}</span>
           </button>
         </div>

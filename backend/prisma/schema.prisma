@@ -157,6 +157,12 @@ model MemberProfile {
   submittedByProxy Boolean  @default(false)
   proxyName        String?
 
+  // Membership fee rules (services/fee.service.ts). An application that has never been approved and
+  // has no payment is removed after APPLICANT_DAYS; the Treasurer can give it more time (graceUntil),
+  // and expiryWarnedAt remembers that the "2 days left" notice went out so it isn't sent every day.
+  graceUntil       DateTime?
+  expiryWarnedAt   DateTime?
+
   rsvps            EventRsvp[]
   attendance       AttendanceRecord[]
 }
@@ -294,12 +300,14 @@ model FinanceEntry {
   description      String
   amount           Float    // positive for income, negative for expenses
   relatedMemberId  String?  // links a DUES entry to the paying member (MemberProfile.id)
+  academicYear     String?  // the membership year a DUES entry pays for, e.g. "2026-2027"
   recordedById     String
   recordedBy       User     @relation(fields: [recordedById], references: [id])
   createdAt        DateTime @default(now())
 
   @@index([recordedById])
   @@index([createdAt])
+  @@index([relatedMemberId])
 }
 
 enum PurchaseRequestStatus {

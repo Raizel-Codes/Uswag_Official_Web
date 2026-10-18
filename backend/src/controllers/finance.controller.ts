@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { prisma } from '../config/db.js';
 import { logAction } from '../services/audit.service.js';
 import { ok, fail } from '../utils/response.js';
+import { PaymentError, extendApplicant, listRoster, recordMembershipPayment } from '../services/fee.service.js';
 
 // ---------------------------------------------------------------------------
 // GET /finance/summary
@@ -55,33 +56,47 @@ export async function listFinanceEntries(req: Request, res: Response) {
 }
 
 // ---------------------------------------------------------------------------
+// GET /finance/roster
+// Access: Treasurer + Auditor (read-only) + Super Admin
+// Everyone who is or is applying to be a member, with their membership-fee standing:
+// the Treasurer's "who has paid" list and the picker behind the record-a-payment form.
+// ---------------------------------------------------------------------------
+export async function getFeeRoster(_req: Request, res: Response) {
+  return ok(res, await listRoster());
+}
+
+// ---------------------------------------------------------------------------
 // POST /finance/dues
 // Access: Treasurer + Super Admin ONLY — Auditor blocked by requireOfficerPosition
-// Body: { memberName: string; memberId?: string; amount: number; note?: string }
+// Body: { memberId: string (MemberProfile.id); amount: number; note?: string }
+// A membership-fee payment against one member. Part payments are fine; more than is owed, a member
+// who has paid in full, and a serving officer (no fee) are refused (services/fee.service.ts).
 // ---------------------------------------------------------------------------
 export async function recordDues(req: Request, res: Response) {
-  const { memberName, memberId, amount, note } = req.body;
-
-  if (!memberName || !amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-    return fail(res, 'memberName and a positive amount are required', 400);
+  const { memberId, amount, note } = req.body;
+  if (typeof memberId !== 'string' || !memberId) return fail(res, 'Choose the member who paid.', 400);
+  if (amount === undefined || amount === null || isNaN(Number(amount)) || Number(amount) <= 0) return fail(res, 'Enter an amount greater than zero.', 400);
+  try {
+    const { entry, fee } = await recordMembershipPayment(req.user!.id, { memberId, amount: Number(amount), note: typeof note === 'string' && note.trim() ? note.trim().slice(0, 120) : undefined });
+    return ok(res, { ...entry, fee }, 201);
+  } catch (err) {
+    if (err instanceof PaymentError) return fail(res, err.message, err.status);
+    throw err;
   }
+}
 
-  const entry = await prisma.financeEntry.create({
-    data: {
-      type: 'DUES',
-      description: note ? `${memberName} — ${note}` : `${memberName} — Dues`,
-      amount: Number(amount),
-      relatedMemberId: memberId ?? null,
-      recordedById: req.user!.id,
-    },
-  });
-
-  await logAction(req.user!.id, 'finance.dues', 'FinanceEntry', entry.id, {
-    memberName,
-    amount: Number(amount),
-  });
-
-  return ok(res, entry, 201);
+// ---------------------------------------------------------------------------
+// POST /finance/roster/:memberId/extend
+// Access: Treasurer + Super Admin ONLY
+// More time for an unpaid application before it is removed (a cash payment not yet written down).
+// ---------------------------------------------------------------------------
+export async function extendApplication(req: Request, res: Response) {
+  try {
+    return ok(res, await extendApplicant(req.user!.id, req.params.memberId));
+  } catch (err) {
+    if (err instanceof PaymentError) return fail(res, err.message, err.status);
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,8 @@ import { logAction } from '../services/audit.service.js';
 import { ProfileError, changeStudentId } from '../services/profile.service.js';
 import { hashStudentId, decryptStudentId } from '../utils/crypto.js';
 import { effectiveStatus } from '../utils/academicYear.js';
+import { applicantDeadline, FeeRequiredError, feeFor, isApplicant, toFeeDTO, type FeeInfo } from '../services/fee.service.js';
+import { MEMBERSHIP_FEE } from '../config/fee.js';
 import { ok, fail } from '../utils/response.js';
 
 type MemberProfileWithUser = Prisma.MemberProfileGetPayload<{ include: { user: true } }>;
@@ -22,8 +24,11 @@ type MemberProfileWithUser = Prisma.MemberProfileGetPayload<{ include: { user: t
 // the raw Prisma shape (nested `user`, uppercase `status`, no attendanceRate
 // field at all) silently breaks every consumer that reads `.name` or
 // compares `.status === 'active'`.
-function toMemberDTO(profile: MemberProfileWithUser, attendanceRate: number, nameMatches = 0) {
+function toMemberDTO(profile: MemberProfileWithUser, attendanceRate: number, nameMatches = 0, fee?: FeeInfo) {
   return {
+    // Membership fee standing (services/fee.service.ts): what the Secretary's approve/renew buttons check.
+    // removedOn: the day an unpaid application is removed, so the person (and the Treasurer) can see it coming.
+    fee: fee ? toFeeDTO(fee, isApplicant(profile) && fee.state === 'unpaid' ? applicantDeadline(profile) : null) : undefined,
     id: profile.id,
     userId: profile.userId, // the account behind the profile (Super Admin "Delete account")
     serialNumber: profile.serialNumber,
@@ -65,9 +70,21 @@ async function countNameMatches(profiles: MemberProfileWithUser[]): Promise<Reco
 export async function getMyProfile(req: Request, res: Response) {
   const profile = await prisma.memberProfile.findUnique({ where: { userId: req.user!.id }, include: { user: true } });
   if (!profile) return fail(res, 'Member profile not found', 404);
-  const rates = await attendanceService.getAttendanceRatesByMember([profile.id]);
+  const [rates, fees] = await Promise.all([attendanceService.getAttendanceRatesByMember([profile.id]), feeFor([profile])]);
+  const fee = fees.get(profile.id)!;
   // standingNote: why the card / event sign-ups are locked (null when active).
-  return ok(res, { ...toMemberDTO(profile, rates[profile.id] ?? 0), standingNote: memberService.standingBlock(effectiveStatus(profile)) });
+  let standingNote = memberService.standingBlock(effectiveStatus(profile));
+  if (standingNote && profile.status === 'PENDING') {
+    const day = (d: Date) => d.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', timeZone: 'Asia/Manila' });
+    if (fee.state === 'unpaid' && isApplicant(profile)) {
+      standingNote = `Pay the ₱${MEMBERSHIP_FEE} membership fee to the Treasurer by ${day(applicantDeadline(profile))}, or this application is removed (you can apply again later). The Secretary approves it once the payment is recorded.`;
+    } else if (fee.state === 'unpaid') {
+      standingNote = `Your membership is pending until the ₱${MEMBERSHIP_FEE} fee is paid to the Treasurer. The Secretary approves it once the payment is recorded.`;
+    } else if (fee.state === 'overdue') {
+      standingNote = `The remaining ₱${fee.due.toFixed(2)} wasn’t paid in time, so your membership is pending again. Pay the balance to the Treasurer and the Secretary can approve you.`;
+    }
+  }
+  return ok(res, { ...toMemberDTO(profile, rates[profile.id] ?? 0, 0, fee), standingNote });
 }
 
 export async function listMembers(req: Request, res: Response) {
@@ -80,11 +97,12 @@ export async function listMembers(req: Request, res: Response) {
     include: { user: true },
     orderBy: { joinedAt: 'desc' },
   });
-  const [rates, nameMatches] = await Promise.all([
+  const [rates, nameMatches, fees] = await Promise.all([
     attendanceService.getAttendanceRatesByMember(members.map((m) => m.id)),
     countNameMatches(members),
+    feeFor(members),
   ]);
-  return ok(res, members.map((m) => toMemberDTO(m, rates[m.id] ?? 0, nameMatches[m.id] ?? 0)));
+  return ok(res, members.map((m) => toMemberDTO(m, rates[m.id] ?? 0, nameMatches[m.id] ?? 0, fees.get(m.id))));
 }
 
 async function findPending(profileId: string) {
@@ -101,7 +119,13 @@ export async function approveApplication(req: Request, res: Response) {
   const { memberId } = req.params;
   const pending = await findPending(memberId);
   if (!pending.ok) return fail(res, pending.message, pending.status);
-  const updated = await memberService.approveApplication(memberId, req.body.academicYear);
+  let updated;
+  try {
+    updated = await memberService.approveApplication(memberId, req.body.academicYear);
+  } catch (err) {
+    if (err instanceof FeeRequiredError) return fail(res, err.message, 409, err.details);
+    throw err;
+  }
   await logAction(req.user!.id, 'member.approve', 'MemberProfile', memberId, { viaProxy: pending.profile.submittedByProxy });
   void notifyUsers([updated.userId], { kind: 'membership', title: 'Your membership is active', body: 'Welcome to USWAG! Your digital card is ready.', url: '/dashboard/qr' });
   return ok(res, decisionDTO(updated));
@@ -123,7 +147,13 @@ export async function renewMember(req: Request, res: Response) {
   if (year && memberService.isPastAcademicYear(year)) {
     return fail(res, 'Renew for the current academic year or a later one.', 400);
   }
-  const updated = await memberService.renewMembership(memberId, year);
+  let updated;
+  try {
+    updated = await memberService.renewMembership(memberId, year);
+  } catch (err) {
+    if (err instanceof FeeRequiredError) return fail(res, err.message, 409, err.details);
+    throw err;
+  }
   await logAction(req.user!.id, 'member.renew', 'MemberProfile', memberId, { from: profile.academicYear, to: updated.academicYear });
   void notifyUsers([updated.userId], { kind: 'membership', title: 'Membership renewed', body: `Your membership is active for ${updated.academicYear}. Your card and event sign-ups are back.`, url: '/dashboard/qr' });
   return ok(res, decisionDTO(updated));

@@ -3,6 +3,7 @@ import { prisma } from '../config/db.js';
 import { buildQrValue } from './qr.service.js';
 import { hashStudentId, encryptStudentId } from '../utils/crypto.js';
 import { academicYearEnd, academicYearStart, currentAcademicYear } from '../utils/academicYear.js';
+import { assertCanActivate } from './fee.service.js';
 
 // Serial number format: UW-<academicYearStart>-<zero-padded sequence>: one past the highest already
 // issued for that year. (It used to be "number of profiles + 1", but approving someone doesn't change
@@ -35,6 +36,9 @@ const CLEAR_REVIEW_DATA = { studentIdCiphertext: null, proxyName: null } as cons
 
 export async function approveApplication(profileId: string, academicYear?: string) {
   const year = academicYear || getCurrentAcademicYear();
+  // The fee has to be recorded first, for everyone: this is the one door to ACTIVE for an application,
+  // so the Super Admin's approval goes through it too (services/fee.service.ts).
+  await assertCanActivate(profileId, year);
   const [yearStart] = year.split('-');
   for (let attempt = 1; ; attempt++) {
     const serialNumber = await generateSerialNumber(Number(yearStart));
@@ -57,6 +61,7 @@ export async function approveApplication(profileId: string, academicYear?: strin
  */
 export async function renewMembership(profileId: string, academicYear?: string) {
   const year = academicYear || getCurrentAcademicYear();
+  await assertCanActivate(profileId, year);
   return prisma.memberProfile.update({
     where: { id: profileId },
     data: { status: 'ACTIVE', academicYear: year, expiresAt: academicYearEnd(year), qrIssuedAt: new Date() },

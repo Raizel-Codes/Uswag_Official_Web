@@ -13,6 +13,8 @@ import { usePortalToast } from '@/hooks/usePortalToast';
 import { prefersReducedMotion } from '@/lib/motion';
 import { useApplicationDecision } from '@/hooks/useApplicationDecision';
 import { listMembers, approveApplication, rejectApplication, renewMember } from '@/services/memberService';
+import FeeLine from '@/components/admin/FeeLine';
+import { feeAllowsActivation } from '@/components/admin/fee';
 import type { MemberProfile, MembershipStatus } from '@/types/member.types';
 import ApplicationReviewAids from '@/components/common/ApplicationReviewAids';
 import DeleteAccountDialog from '@/components/admin/DeleteAccountDialog';
@@ -205,6 +207,7 @@ export default function SuperAdminMembersPage() {
                       <p className="mp-muted text-[0.8125rem] truncate">{m.email}</p>
                       {m.status === 'pending' && <p className="mp-muted text-[0.8125rem]">Applied {timeAgo(m.joinedAt)}</p>}
                       <ApplicationReviewAids member={m} />
+                      <FeeLine member={m} />
                     </div>
                   </div>
                   <div data-label="Serial" className="font-mono text-[0.8125rem] whitespace-nowrap">{m.status === 'pending' ? '—' : m.serialNumber || '—'}</div>
@@ -221,7 +224,7 @@ export default function SuperAdminMembersPage() {
                   <div className="flex gap-2 md:justify-end ml-auto md:ml-0">
                     {m.status === 'pending' && (
                       <>
-                        <button type="button" disabled={busy} onClick={() => approve.mutate(m.id)} className="ap-iconbtn ap-iconbtn--ok" aria-label={`Approve ${m.name}`} title="Approve">
+                        <button type="button" disabled={busy || !feeAllowsActivation(m.fee)} aria-describedby={feeAllowsActivation(m.fee) ? undefined : `fee-block-${m.id}`} onClick={() => approve.mutate(m.id)} className="ap-iconbtn ap-iconbtn--ok" aria-label={`Approve ${m.name}`} title={feeAllowsActivation(m.fee) ? 'Approve' : 'The fee has to be recorded first'}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                         </button>
                         <button type="button" disabled={busy} onClick={() => reject.mutate(m.id)} className="ap-iconbtn ap-iconbtn--no" aria-label={`Reject ${m.name}`} title="Reject">
@@ -230,7 +233,7 @@ export default function SuperAdminMembersPage() {
                       </>
                     )}
                     {m.status === 'expired' && (
-                      <button type="button" disabled={busy} onClick={() => renew.mutate(m.id)} className="ap-iconbtn ap-iconbtn--ok" aria-label={`Renew ${m.name}`} title="Renew for this academic year">
+                      <button type="button" disabled={busy || !feeAllowsActivation(m.fee)} aria-describedby={feeAllowsActivation(m.fee) ? undefined : `fee-block-${m.id}`} onClick={() => renew.mutate(m.id)} className="ap-iconbtn ap-iconbtn--ok" aria-label={`Renew ${m.name}`} title={feeAllowsActivation(m.fee) ? 'Renew for this academic year' : 'The fee has to be recorded first'}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7" /><path d="M20 4v5h-5" /></svg>
                       </button>
                     )}

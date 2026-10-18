@@ -1,6 +1,7 @@
 import { api } from './api';
 import type {
   FinanceEntry,
+  FeeRoster,
   FinanceSummary,
   RecordDuesPayload,
   RecordExpensePayload,
@@ -38,5 +39,17 @@ export async function recordExpense(payload: RecordExpensePayload): Promise<Fina
     '/finance/expense',
     payload,
   );
+  return data.data;
+}
+
+// GET /finance/roster — Treasurer + Auditor (read-only) + Super Admin: everyone with their fee standing
+export async function getFeeRoster(): Promise<FeeRoster> {
+  const { data } = await api.get<{ success: boolean; data: FeeRoster }>('/finance/roster');
+  return data.data;
+}
+
+// POST /finance/roster/:memberId/extend — Treasurer + Super Admin: more time for an unpaid application
+export async function extendApplication(memberId: string): Promise<{ removedOn: string }> {
+  const { data } = await api.post<{ success: boolean; data: { removedOn: string } }>(`/finance/roster/${memberId}/extend`);
   return data.data;
 }

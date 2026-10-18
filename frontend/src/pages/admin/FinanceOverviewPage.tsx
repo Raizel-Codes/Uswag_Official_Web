@@ -14,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortalToast } from '@/hooks/usePortalToast';
 import { useFocusParam } from '@/hooks/useFocusParam';
-import { getFinanceSummary, listFinanceEntries, recordDues, recordExpense } from '@/services/financeService';
+import { getFinanceSummary, listFinanceEntries, recordExpense } from '@/services/financeService';
 import { listAttendance } from '@/services/attendanceService';
 import { isSuperAdminEquivalent } from '@/utils/roles';
 import type { FinanceEntry, FinanceSummary } from '@/types/finance.types';
@@ -23,6 +23,8 @@ import LockedState from '@/components/common/LockedState';
 import PageHeader from '@/components/portal/PageHeader';
 import Panel from '@/components/portal/Panel';
 import StatPlate from '@/components/portal/StatPlate';
+import DuesForm from '@/components/admin/DuesForm';
+import FeeRoster from '@/components/admin/FeeRoster';
 import PortalToast from '@/components/portal/PortalToast';
 import StackedBar from '@/components/admin/StackedBar';
 import BarList from '@/components/admin/BarList';
@@ -210,7 +212,6 @@ function TreasurerFinanceView() {
     queryClient.invalidateQueries({ queryKey: ['finance'] });
     show(msg);
   };
-  const dues = useMutation({ mutationFn: (p: { memberName: string; amount: number }) => recordDues(p), onSuccess: () => onSaved('Payment recorded') });
   const expense = useMutation({ mutationFn: (p: { description: string; amount: number }) => recordExpense(p), onSuccess: () => onSaved('Expense logged') });
   const s = summaryQ.data;
 
@@ -233,17 +234,7 @@ function TreasurerFinanceView() {
       </Panel>
 
       <div className="grid lg:grid-cols-2 gap-6 items-start">
-        <RecordForm
-          id="record-dues"
-          title="Record a dues payment"
-          firstLabel="Member name"
-          firstPlaceholder="Full name as on the roster"
-          amountPlaceholder="50.00"
-          submitLabel="Record payment"
-          pendingLabel="Recording…"
-          pending={dues.isPending}
-          onSubmit={(memberName, amount) => dues.mutateAsync({ memberName, amount })}
-        />
+        <DuesForm onSaved={show} />
         <RecordForm
           id="record-expense"
           title="Log an expense"
@@ -256,6 +247,8 @@ function TreasurerFinanceView() {
           onSubmit={(description, amount) => expense.mutateAsync({ description, amount })}
         />
       </div>
+
+      <FeeRoster onMessage={(m, ok = true) => show(m, ok ? 'ok' : 'error')} />
 
       <section id="ledger" aria-labelledby="ledger-title" className="scroll-mt-6 space-y-4">
         <div className="flex items-center gap-4">

@@ -69,7 +69,7 @@ export async function listNomineesHandler(_req: Request, res: Response) {
 // Installs an elected batch for a new term (see officer.service.ts installTerm).
 export async function installOfficerTerm(req: Request, res: Response) {
   try {
-    return ok(res, await installTerm(req.user!.id, req.body.assignments));
+    return ok(res, await installTerm(req.user!.id, req.body.assignments, req.body.mode));
   } catch (err) {
     return failOfficer(res, err);
   }

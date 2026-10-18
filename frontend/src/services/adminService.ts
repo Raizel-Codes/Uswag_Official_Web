@@ -49,13 +49,24 @@ export async function listOfficerNominees(): Promise<OfficerNominee[]> {
   return data.data;
 }
 
+type SeatedOfficer = { userId: string; name: string; officerPosition: string };
+
 export interface InstallTermResult {
-  installed: { userId: string; name: string; officerPosition: string }[];
+  /** Everyone in office after the save. */
+  installed: SeatedOfficer[];
+  /** Newly seated by this save (a vacant seat filled, or a move). */
+  added: SeatedOfficer[];
+  /** Kept the seat they already held. */
+  continuing: SeatedOfficer[];
   steppedDown: { userId: string; name: string; previous: string | null }[];
 }
 
-export async function installOfficerTerm(assignments: { userId: string; officerPosition: string }[]): Promise<InstallTermResult> {
-  const { data } = await api.post<{ success: boolean; data: InstallTermResult }>('/officers/term', { assignments });
+/** `term` = a new election (installs the whole batch); `update` = a mid-term save of the current term. */
+export async function installOfficerTerm(
+  assignments: { userId: string; officerPosition: string }[],
+  mode: 'term' | 'update' = 'term',
+): Promise<InstallTermResult> {
+  const { data } = await api.post<{ success: boolean; data: InstallTermResult }>('/officers/term', { assignments, mode });
   return data.data;
 }
 

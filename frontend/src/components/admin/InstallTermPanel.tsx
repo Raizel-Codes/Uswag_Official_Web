@@ -7,8 +7,13 @@
 // Auditor and Business Manager, plus one Public Relations Officer per college/department. A PRO seat
 // only offers members of that college. Seats can stay vacant (not every college has a PRO every year).
 //
-// Two steps in one plate: a ballot (one row per seat), then a review of who takes office and who
-// steps down before anything is written.
+// Two modes in one plate:
+//  - Current term (default once anyone sits): the seats show who holds them now. Fill a vacant seat,
+//    replace or vacate one, then "Save changes". Only what changed is saved and logged — nobody is
+//    called re-elected. A review step appears only when someone would step down.
+//  - New term ("Start a new term", or the very first term): every seat starts vacant, then "Review the
+//    new term" shows who takes office and who steps down before anything is written. Only here does a
+//    member keep their old seat as "Re-elected".
 
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
@@ -58,7 +63,7 @@ const seatName = (o: OfficerUser) => {
 const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 
-export default function InstallTermPanel({ officers, onDone }: { officers: OfficerUser[]; onDone: (msg: string) => void }) {
+export default function InstallTermPanel({ officers, loading = false, onDone }: { officers: OfficerUser[]; loading?: boolean; onDone: (msg: string) => void }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: nominees = [], isLoading, error: loadError } = useQuery<OfficerNominee[]>({
@@ -66,16 +71,20 @@ export default function InstallTermPanel({ officers, onDone }: { officers: Offic
     queryFn: listOfficerNominees,
   });
 
-  // Start from the sitting officers who are still active members, so re-electing someone is "change
-  // nothing"; only the seats that really change need touching. `picks` holds the Super Admin's edits.
+  // `current` is who holds each seat now (sitting officers who are still active members). `picks` holds
+  // the Super Admin's edits on top of the base: the current term when saving changes, or an empty
+  // ballot when electing a new term.
   const nomineeIds = new Set(nominees.map((n) => n.id));
   const current: Record<string, string> = {};
   for (const o of officers) {
     const key = seatKeyOf(o);
     if (SEATS.some((s) => s.key === key) && nomineeIds.has(o.id)) current[key] = o.id;
   }
+  const [newTerm, setNewTerm] = useState(false);
+  const electing = newTerm || (!loading && officers.length === 0);
   const [picks, setPicks] = useState<Record<string, string>>({});
-  const valueFor = (s: Seat) => picks[s.key] ?? current[s.key] ?? '';
+  const baseFor = (s: Seat) => (electing ? '' : current[s.key] ?? '');
+  const valueFor = (s: Seat) => picks[s.key] ?? baseFor(s);
 
   const [reviewing, setReviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,45 +93,77 @@ export default function InstallTermPanel({ officers, onDone }: { officers: Offic
   const chosenIds = new Set(chosen.map((c) => c.userId));
   const byId = new Map(nominees.map((n) => [n.id, n]));
   const steppingDown = officers.filter((o) => !chosenIds.has(o.id));
+  // Saving changes: only seats that differ from today. A new term seats the whole ballot.
+  const changed = (s: Seat) => valueFor(s) !== (current[s.key] ?? '');
+  const dirty = SEATS.some(changed);
+  const takingOffice = electing ? chosen : chosen.filter((c) => changed(c.seat));
   const vacant = SEATS.filter((s) => !valueFor(s));
   const vacantPros = vacant.filter((s) => s.college).map((s) => s.college!);
   const vacantOthers = vacant.filter((s) => !s.college).map((s) => s.label);
   const iAmStepping = steppingDown.some((o) => o.id === user?.id);
 
+  function startNewTerm() {
+    setPicks({});
+    setError(null);
+    setNewTerm(true);
+  }
+  function leaveNewTerm() {
+    setPicks({});
+    setError(null);
+    setNewTerm(false);
+  }
+
   const mutation = useMutation({
-    mutationFn: () => installOfficerTerm(chosen.map((c) => ({ userId: c.userId, officerPosition: c.seat.position }))),
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['officers'] });
-      queryClient.invalidateQueries({ queryKey: ['officer-nominees'] });
+    mutationFn: () => installOfficerTerm(chosen.map((c) => ({ userId: c.userId, officerPosition: c.seat.position })), electing ? 'term' : 'update'),
+    onSuccess: async (result) => {
+      // Wait for the fresh roster so the form never flashes the old seats after saving.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['officers'] }),
+        queryClient.invalidateQueries({ queryKey: ['officer-nominees'] }),
+      ]);
+      const wasElecting = electing;
       setPicks({});
       setReviewing(false);
+      setNewTerm(false);
       const down = result.steppedDown.length;
-      onDone(`Term installed · ${result.installed.length} in office${down ? `, ${down} stepped down` : ''}`);
+      if (wasElecting) {
+        onDone(`Term installed · ${result.installed.length} in office${down ? `, ${down} stepped down` : ''}`);
+      } else {
+        const parts = [result.added.length ? `${result.added.length} seated` : '', down ? `${down} stepped down` : ''].filter(Boolean);
+        onDone(`Saved · ${parts.join(', ') || 'no changes'}`);
+      }
     },
     onError: (err) => {
       setReviewing(false);
-      setError(apiError(err, 'Could not install the term. Please try again.'));
+      setError(apiError(err, electing ? 'Could not install the term. Please try again.' : 'Could not save the changes. Please try again.'));
     },
   });
 
-  function review(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     if (!valueFor(SEATS[0]!)) return setError('Choose a President — the President runs the Super Admin console.');
-    setReviewing(true);
+    if (!electing && !dirty) return;
+    // A new term is always reviewed; a save is reviewed only when someone would step down.
+    if (electing || steppingDown.length > 0) return setReviewing(true);
+    mutation.mutate();
   }
 
   return (
     <Panel
-      title={`Install the ${currentAcademicYear()} term`}
+      title={electing ? `Install the ${currentAcademicYear()} term` : `Seats for the ${currentAcademicYear()} term`}
       id="install-term"
       flush
       aside={<span className="mp-standing mp-standing--neutral">{chosen.length} of {SEATS.length} seats filled</span>}
     >
       {!reviewing ? (
-        <form onSubmit={review} noValidate>
+        <form onSubmit={submit} noValidate>
           <p className="ap-panel__body pb-2 mp-muted text-[0.9375rem] leading-relaxed">
-            Seat the officers elected for the coming term. Anyone in office who isn’t seated steps down to a regular member.
+            {electing ? (
+              <>Every seat starts vacant. Seat the officers elected for the coming term; anyone in office who isn’t seated steps down to a regular member. </>
+            ) : (
+              <>This is who holds each seat now. Fill a vacant seat, replace someone or vacate a seat, then save — officers you don’t touch are left as they are. </>
+            )}
             Only <strong className="font-semibold text-[color:var(--color-deep)]">active members</strong> can be chosen. Each college has one PRO (Article VI §1g),
             chosen from that college’s members.
           </p>
@@ -132,7 +173,13 @@ export default function InstallTermPanel({ officers, onDone }: { officers: Offic
           <ul className="ap-list">
             {SEATS.map((s, i) => {
               const picked = valueFor(s);
-              const tag = !picked ? null : picked === current[s.key] ? 'Re-elected' : 'New';
+              // Re-elected only exists in an election; when saving the current term an unchanged seat has no tag.
+              const was = current[s.key] ?? '';
+              const tag: { text: string; tone: string } | null = electing
+                ? picked ? { text: picked === was ? 'Re-elected' : 'New', tone: picked === was ? 'neutral' : 'info' } : null
+                : picked === was
+                  ? picked ? null : { text: 'Vacant', tone: 'neutral' }
+                  : !picked ? { text: 'Will be vacated', tone: 'pending' } : was ? { text: 'Replacing', tone: 'info' } : { text: 'Filling', tone: 'info' };
               const options = s.college ? nominees.filter((n) => n.collegeOrDept === s.college) : nominees;
               const firstPro = s.college && !SEATS[i - 1]?.college;
               return (
@@ -147,8 +194,8 @@ export default function InstallTermPanel({ officers, onDone }: { officers: Offic
                       <div className="flex items-center gap-2">
                         <label htmlFor={`term-${s.key}`} className="font-heading font-semibold text-[0.9375rem]">{s.label}</label>
                         {tag && (
-                          <span className={`mp-standing ${tag === 'New' ? 'mp-standing--info' : 'mp-standing--neutral'}`} style={{ fontSize: '0.6875rem', padding: '0.125rem 0.5rem' }}>
-                            {tag}
+                          <span className={`mp-standing mp-standing--${tag.tone}`} style={{ fontSize: '0.6875rem', padding: '0.125rem 0.5rem' }}>
+                            {tag.text}
                           </span>
                         )}
                       </div>
@@ -179,17 +226,38 @@ export default function InstallTermPanel({ officers, onDone }: { officers: Offic
               Someone missing from a list isn’t an active member yet. Add their account above, or send them through <Link to="/admin/members" className="underline">Members</Link> (application,
               fee, orientation, Secretary’s approval — Article III).
             </p>
-            <button type="submit" disabled={isLoading} className="mp-btn mp-btn--primary w-full sm:w-auto">Review the new term</button>
+            {electing ? (
+              <>
+                {officers.length > 0 && (
+                  <button type="button" onClick={leaveNewTerm} className="mp-btn mp-btn--ghost w-full sm:w-auto">Keep the current term</button>
+                )}
+                <button type="submit" disabled={isLoading} className="mp-btn mp-btn--primary w-full sm:w-auto">Review the new term</button>
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={startNewTerm} disabled={isLoading || loading} className="mp-btn mp-btn--ghost w-full sm:w-auto">Start a new term</button>
+                {dirty && <button type="button" onClick={() => setPicks({})} className="mp-btn mp-btn--ghost w-full sm:w-auto">Discard changes</button>}
+                <button type="submit" disabled={isLoading || loading || !dirty || mutation.isPending} className="mp-btn mp-btn--primary w-full sm:w-auto">
+                  {mutation.isPending ? 'Saving…' : 'Save changes'}
+                </button>
+              </>
+            )}
           </div>
+          {!electing && dirty && steppingDown.length > 0 && (
+            <p className="mp-muted text-[0.875rem] px-5 sm:px-6 pb-4">
+              Saving will step down {steppingDown.map((o) => `${o.name} (${seatName(o)})`).join(', ')} to regular member.
+            </p>
+          )}
           {error && <p role="alert" className="mp-alert mx-5 sm:mx-6 mb-5">{error}</p>}
         </form>
       ) : (
-        <div className="ap-panel__body space-y-6" role="group" aria-label="Confirm the new term">
+        <div className="ap-panel__body space-y-6" role="group" aria-label={electing ? 'Confirm the new term' : 'Confirm the changes'}>
           <div className="grid gap-6 sm:grid-cols-2">
             <section aria-labelledby="term-in">
               <p id="term-in" className="mp-eyebrow" style={{ fontSize: '0.6875rem' }}>Taking office</p>
+              {takingOffice.length === 0 && <p className="mp-muted text-[0.9375rem] mt-3">No one new.</p>}
               <ul className="mt-3 space-y-3">
-                {chosen.map((c) => (
+                {takingOffice.map((c) => (
                   <li key={c.seat.key} className="flex items-center gap-3">
                     <span className="ap-avatar" aria-hidden="true">{initials(byId.get(c.userId)?.name ?? '')}</span>
                     <span className="min-w-0">
@@ -222,16 +290,16 @@ export default function InstallTermPanel({ officers, onDone }: { officers: Offic
 
           {vacant.length > 0 && (
             <p className="mp-muted text-[0.875rem]">
-              Left vacant: {[...vacantOthers, ...(vacantPros.length ? [`PRO for ${vacantPros.join(', ')}`] : [])].join('; ')}. Fill them later with a mid-term change.
+              Left vacant: {[...vacantOthers, ...(vacantPros.length ? [`PRO for ${vacantPros.join(', ')}`] : [])].join('; ')}. Fill them later from this panel.
             </p>
           )}
           {iAmStepping && <p role="alert" className="mp-alert">You’re stepping down, so this console will stop working for you once your session refreshes.</p>}
 
           <div className="flex flex-wrap items-center gap-3 border-t pt-5" style={{ borderColor: 'rgb(20 39 24 / 0.1)' }}>
             <button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()} className="mp-btn mp-btn--primary">
-              {mutation.isPending ? 'Installing…' : 'Install term'}
+              {mutation.isPending ? (electing ? 'Installing…' : 'Saving…') : electing ? 'Install term' : 'Save changes'}
             </button>
-            <button type="button" disabled={mutation.isPending} onClick={() => setReviewing(false)} className="mp-btn mp-btn--ghost">Back to the ballot</button>
+            <button type="button" disabled={mutation.isPending} onClick={() => setReviewing(false)} className="mp-btn mp-btn--ghost">{electing ? 'Back to the ballot' : 'Back'}</button>
             <p className="mp-muted text-[0.8125rem] sm:ml-auto">Article VI §4 · recorded in the audit log</p>
           </div>
         </div>

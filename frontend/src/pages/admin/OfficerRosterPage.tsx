@@ -221,7 +221,7 @@ export default function OfficerRosterPage() {
       <div className="grid lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 min-w-0 space-y-6">
           <AddAccountPanel onDone={(m) => show(m)} />
-          <InstallTermPanel officers={officers} onDone={(m) => show(m)} />
+          <InstallTermPanel officers={officers} loading={isLoading} onDone={(m) => show(m)} />
         </div>
         <div className="space-y-6 min-w-0">
           <AssignPanel onDone={(m) => show(m)} />

@@ -75,8 +75,12 @@ interface Assignment {
  * Installs an elected batch for a new term. Officers are never created here: every nominee is an
  * existing active member. Anyone holding office who is not in the batch steps down to a plain
  * member. Nothing is deleted, so the outgoing officer keeps their membership and history.
+ *
+ * `mode: 'term'` is an election: someone who keeps the seat they already hold is recorded as
+ * re-elected. `mode: 'update'` is a mid-term save (filling a vacant seat, replacing or vacating
+ * one): officers whose seat is unchanged are left alone and not logged at all.
  */
-export async function installTerm(actorId: string, assignments: Assignment[]) {
+export async function installTerm(actorId: string, assignments: Assignment[], mode: 'term' | 'update' = 'term') {
   const positions = assignments.map((a) => a.officerPosition);
   const userIds = assignments.map((a) => a.userId);
   // Every position has one seat except PRO, which has one per college (checked below).
@@ -123,9 +127,18 @@ export async function installTerm(actorId: string, assignments: Assignment[]) {
   ]);
 
   const names = new Map((await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
-  const installed = assignments.map((a) => ({ userId: a.userId, name: names.get(a.userId) ?? '', officerPosition: a.officerPosition }));
+  const seated = assignments.map((a) => ({ userId: a.userId, name: names.get(a.userId) ?? '', officerPosition: a.officerPosition }));
+  // Same seat as before = continuing; anything else (a vacant seat filled, or a move) = newly seated.
+  const continuing = seated.filter((s) => sittingById.get(s.userId)?.officerPosition === s.officerPosition);
+  const continuingIds = new Set(continuing.map((s) => s.userId));
+  const added = seated.filter((s) => !continuingIds.has(s.userId));
   const steppedDown = outgoing.map((u) => ({ userId: u.id, name: u.name, previous: u.officerPosition }));
-  await logAction(actorId, 'officer.term.install', 'OfficerTerm', undefined, { installed, steppedDown });
 
-  return { installed, steppedDown };
+  if (mode === 'update') {
+    await logAction(actorId, 'officer.seats.update', 'OfficerTerm', undefined, { added, steppedDown });
+  } else {
+    await logAction(actorId, 'officer.term.install', 'OfficerTerm', undefined, { installed: added, reelected: continuing, steppedDown });
+  }
+
+  return { installed: seated, added, continuing, steppedDown };
 }

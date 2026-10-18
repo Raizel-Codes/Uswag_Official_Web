@@ -12,12 +12,16 @@ export function useQRScanner(eventId?: string) {
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cooldownRef = useRef(false);
+  // A ref, not the isVerifying state: reading the state made handleDecoded a new function at every
+  // verification, and a new callback is what used to make the camera restart (see QRScannerCamera).
+  const verifyingRef = useRef(false);
 
   const handleDecoded = useCallback(
     async (rawValue: string) => {
       // Skip if we are already in a cooldown window or actively verifying
-      if (cooldownRef.current || isVerifying) return;
+      if (cooldownRef.current || verifyingRef.current) return;
       cooldownRef.current = true;
+      verifyingRef.current = true;
 
       setIsVerifying(true);
       setError(null);
@@ -29,6 +33,7 @@ export function useQRScanner(eventId?: string) {
         const e = err as { response?: { data?: { message?: string } }; message?: string };
         setError(e?.response?.data?.message ?? e?.message ?? "Network error — check your connection");
       } finally {
+        verifyingRef.current = false;
         setIsVerifying(false);
         // Hold the cooldown for 3 s so the same QR code is not re-submitted
         // before the officer has had a chance to read the result.
@@ -37,7 +42,7 @@ export function useQRScanner(eventId?: string) {
         }, 3000);
       }
     },
-    [eventId, isVerifying],
+    [eventId],
   );
 
   function reset() {

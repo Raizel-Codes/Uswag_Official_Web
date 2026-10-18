@@ -56,6 +56,7 @@ function ScanConsoleContent() {
   const [target, setTarget] = useState(''); // '' | OFFICER_MODE | a UswagEvent id
   const [scanning, setScanning] = useState(false);
   const [log, setLog] = useState<LoggedScan[]>([]);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const mode: ScanMode = target === OFFICER_MODE ? 'officer' : 'event';
   const eventId = mode === 'event' ? target : undefined;
@@ -117,7 +118,14 @@ function ScanConsoleContent() {
 
           <div className="mp-vault mp-vault--panel mp-on-dark ap-scanner">
             <div className="ap-scanner__view">
-              <QRScannerCamera onDecoded={handleDecoded} active={scanning} />
+              <QRScannerCamera
+                onDecoded={handleDecoded}
+                active={scanning}
+                onError={(message) => {
+                  setCameraError(message);
+                  setScanning(false);
+                }}
+              />
               {scanning ? (
                 <>
                   <span className="ap-scanner__corner ap-scanner__corner--tl" aria-hidden="true" />
@@ -147,7 +155,10 @@ function ScanConsoleContent() {
             type="button"
             disabled={!target}
             onClick={() => {
-              if (!scanning) reset();
+              if (!scanning) {
+                reset();
+                setCameraError(null);
+              }
               setScanning((v) => !v);
             }}
             className={`mp-btn w-full ${scanning ? 'mp-btn--danger' : 'mp-btn--primary'}`}
@@ -155,6 +166,7 @@ function ScanConsoleContent() {
             {scanning ? 'Stop scanning' : 'Start scanning'}
           </button>
           {!target && <p className="ap-hint text-center">Choose an event, or an officer ID check, to start.</p>}
+          {cameraError && <p role="alert" className="mp-alert">{cameraError}</p>}
         </div>
 
         <div className="space-y-6">

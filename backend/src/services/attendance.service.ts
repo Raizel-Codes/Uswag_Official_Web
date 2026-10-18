@@ -2,15 +2,12 @@ import { prisma } from '../config/db.js';
 import { verifyQrValue } from './qr.service.js';
 import type { ScanResult } from '@prisma/client';
 
-// Every scan attempt gets logged regardless of outcome — this is what
-// makes a cloned QR detectable (same serial scanned in two places
-// minutes apart shows up here). See claude.md "QR membership system".
-//
-// A member checks in once per event. Scanning a card that is already checked in is still logged,
-// as DUPLICATE, but it never counts as attendance, and the result carries `checkedInAt` (the
-// time of the first scan) so the officer can say so. The database backs this up with a partial
-// unique index on (eventId, memberId) where result = VALID, so two officers scanning the same
-// card at the same moment can't both count.
+// Every scan attempt gets logged regardless of outcome (valid, invalid, expired). The one
+// exception is a card that is already checked in to this event: only the FIRST scan is saved, and
+// a later scan of the same card (forgotten, or a borrowed card) saves nothing. It answers with
+// `checkedInAt`, the time of the first scan, so the officer can tell the person and decide. The
+// database backs this up with a partial unique index on (eventId, memberId) where result = VALID,
+// so two officers scanning the same card at the same moment can't both count.
 export async function recordScan(rawQrValue: string, eventId: string, scannedByOfficerId: string) {
   const outcome = await verifyQrValue(rawQrValue);
 
@@ -28,17 +25,20 @@ export async function recordScan(rawQrValue: string, eventId: string, scannedByO
     prisma.attendanceRecord.findFirst({
       where: { eventId, memberId: profileId, result: 'VALID' },
       orderBy: { scannedAt: 'asc' },
-      select: { scannedAt: true },
+      select: { scannedAt: true, member: include.member },
     });
-  const logRepeat = (checkedInAt: Date) =>
-    prisma.attendanceRecord.create({
-      data: { eventId, memberId: profileId, scannedByOfficerId, result: 'DUPLICATE', reason: 'Already checked in' },
-      include,
-    }).then((record) => ({ outcome, record, checkedInAt }));
+  // Nothing is written: the existing record is the one that counts.
+  type Prior = NonNullable<Awaited<ReturnType<typeof firstCheckIn>>>;
+  const alreadyCheckedIn = (prior: Prior) => ({
+    outcome,
+    member: prior.member,
+    scannedAt: new Date(),
+    checkedInAt: prior.scannedAt as Date | null,
+  });
 
   if (outcome.status === 'valid' && profileId) {
     const prior = await firstCheckIn();
-    if (prior) return logRepeat(prior.scannedAt);
+    if (prior) return alreadyCheckedIn(prior);
   }
 
   try {
@@ -52,12 +52,12 @@ export async function recordScan(rawQrValue: string, eventId: string, scannedByO
       },
       include,
     });
-    return { outcome, record, checkedInAt: null as Date | null };
+    return { outcome, member: record.member, scannedAt: record.scannedAt, checkedInAt: null as Date | null };
   } catch (err) {
     // Lost the race to another officer's scan of the same card: the unique index refused this row.
     if ((err as { code?: string }).code === 'P2002' && profileId) {
       const prior = await firstCheckIn();
-      if (prior) return logRepeat(prior.scannedAt);
+      if (prior) return alreadyCheckedIn(prior);
     }
     throw err;
   }

@@ -59,7 +59,7 @@ enum ScanResult {
   VALID
   INVALID
   EXPIRED
-  DUPLICATE // a valid card scanned again for an event it already checked in to; never counts as attendance
+  DUPLICATE // legacy: extra scans of an already checked-in card. No longer written (only the first scan is saved); never counts as attendance
 }
 
 enum PostSource {

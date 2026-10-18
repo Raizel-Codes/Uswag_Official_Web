@@ -67,7 +67,7 @@ export default function ScanResultCard({ result, mode }: { result: ScanVerificat
             Checked in at <strong>{formatCheckedInAt(result.checkedInAt!)}</strong>
             {result.member?.serialNumber ? ` · ${result.member.serialNumber}` : ''}
           </p>
-          <p className="mp-muted text-[0.8125rem] mt-0.5">Not counted again.</p>
+          <p className="mp-muted text-[0.8125rem] mt-0.5">Only the first scan is recorded.</p>
         </div>
       </div>
     );

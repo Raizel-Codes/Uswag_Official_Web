@@ -48,12 +48,11 @@ export async function verifyScan(req: Request, res: Response) {
     return ok(res, { status: 'invalid', reason: 'This QR code isn’t an officer ID.', scannedAt: new Date().toISOString() });
   }
 
-  const { outcome, record, checkedInAt } = await recordScan(rawQrValue, eventId, req.user!.id);
-  const member = record.member;
+  const { outcome, member, scannedAt, checkedInAt } = await recordScan(rawQrValue, eventId, req.user!.id);
   return ok(res, {
     status: outcome.status,
     reason: 'reason' in outcome ? outcome.reason : undefined,
-    scannedAt: record.scannedAt,
+    scannedAt,
     // Set when this card was already checked in to the event: the time of the first scan. The
     // status stays 'valid' (the card is good); it just isn't counted again.
     ...(checkedInAt ? { alreadyCheckedIn: true, checkedInAt } : {}),

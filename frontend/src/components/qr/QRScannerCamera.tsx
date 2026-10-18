@@ -14,6 +14,7 @@ function cameraMessage(err: unknown): string {
   const text = String((err as { message?: string })?.message ?? err);
   if (/permission|denied|notallowed/i.test(text)) return 'Camera access was blocked. Allow the camera for this site in your browser, then start scanning again.';
   if (/notfound|no camera|requested device/i.test(text)) return 'No camera was found on this device.';
+  if (/timeout|abort/i.test(text)) return 'The camera took too long to start. Close any other app or tab using the camera, then start scanning again.';
   if (/notreadable|in use|could not start/i.test(text)) return 'The camera is busy in another app or tab. Close it there, then start scanning again.';
   return 'The camera couldn’t start. Reload the page and try again.';
 }

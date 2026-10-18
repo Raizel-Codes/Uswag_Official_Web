@@ -250,7 +250,8 @@ textarea.ap-input { resize: vertical; min-height: 6rem; line-height: 1.55; }
 /* Scan result plate: a coloured rule down the left for the outcome */
 .ap-result { box-shadow: inset 4px 0 0 var(--ap-result, var(--color-success)); }
 .ap-result--invalid { --ap-result: var(--color-danger); }
-.ap-result--expired { --ap-result: var(--color-warn); }
+.ap-result--expired,
+.ap-result--repeat { --ap-result: var(--color-warn); }
 
 @media (prefers-reduced-motion: reduce) {
   .ap-toast { animation: none; }

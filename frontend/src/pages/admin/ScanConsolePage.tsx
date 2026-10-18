@@ -13,13 +13,14 @@ import { isSuperAdminEquivalent } from '@/utils/roles';
 import type { UswagEvent } from '@/types/event.types';
 import type { ScanVerificationResponse } from '@/types/qr.types';
 import QRScannerCamera from '@/components/qr/QRScannerCamera';
-import ScanResultCard from '@/components/qr/ScanResultCard';
+import ScanResultCard, { formatCheckedInAt } from '@/components/qr/ScanResultCard';
 import LockedState from '@/components/common/LockedState';
 import PageHeader from '@/components/portal/PageHeader';
 import Panel from '@/components/portal/Panel';
 import { initials } from '@/components/admin/format';
 
 const LOG_BADGE = {
+  repeat: 'mp-standing--pending',
   valid: 'mp-standing--active',
   invalid: 'mp-standing--rejected',
   expired: 'mp-standing--expired',
@@ -76,7 +77,7 @@ function ScanConsoleContent() {
     .filter((e) => e.status !== 'COMPLETED' && e.status !== 'CANCELLED')
     .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
   const selectedEvent = open.find((e) => e.id === target);
-  const checkedIn = log.filter((e) => e.mode === 'event' && e.status === 'valid').length;
+  const checkedIn = log.filter((e) => e.mode === 'event' && e.status === 'valid' && !e.alreadyCheckedIn).length;
   const officerChecks = log.filter((e) => e.mode === 'officer' && e.status === 'valid').length;
 
   return (
@@ -205,8 +206,11 @@ function ScanConsoleContent() {
               <ul className="ap-list max-h-[440px] overflow-y-auto uw-scroll">
                 {log.map((e, i) => {
                   const who = e.mode === 'officer' ? e.officer?.name : e.member?.name;
+                  const repeat = e.mode === 'event' && e.status === 'valid' && !!e.alreadyCheckedIn && !!e.checkedInAt;
                   const sub =
-                    e.mode === 'officer'
+                    repeat
+                      ? `Already checked in at ${formatCheckedInAt(e.checkedInAt!)}`
+                      : e.mode === 'officer'
                       ? e.status === 'valid'
                         ? 'Officer ID'
                         : e.reason ?? 'Verification failed'
@@ -224,7 +228,7 @@ function ScanConsoleContent() {
                           {sub}
                         </p>
                       </div>
-                      <span className={`mp-standing ${LOG_BADGE[e.status]} shrink-0`}>{e.status}</span>
+                      <span className={`mp-standing ${LOG_BADGE[repeat ? 'repeat' : e.status]} shrink-0`}>{repeat ? 'repeat' : e.status}</span>
                     </li>
                   );
                 })}

@@ -279,6 +279,7 @@ const RESULT: Record<AttendanceOversightEntry['result'], { cls: string; label: s
   VALID: { cls: 'mp-standing--active', label: 'Valid' },
   EXPIRED: { cls: 'mp-standing--expired', label: 'Expired' },
   INVALID: { cls: 'mp-standing--rejected', label: 'Invalid' },
+  DUPLICATE: { cls: 'mp-standing--pending', label: 'Repeat' },
 };
 
 function AuditorFinanceView() {

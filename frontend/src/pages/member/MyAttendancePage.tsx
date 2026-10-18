@@ -13,6 +13,7 @@ const RESULT: Record<AttendanceHistoryEntry['result'], { cls: string; label: str
   VALID: { cls: 'mp-standing--active', label: 'Present' },
   EXPIRED: { cls: 'mp-standing--expired', label: 'Expired card' },
   INVALID: { cls: 'mp-standing--rejected', label: 'Not accepted' },
+  DUPLICATE: { cls: 'mp-standing--pending', label: 'Repeat scan' }, // not returned to members; keeps the map total
 };
 
 function formatWhen(iso: string) {

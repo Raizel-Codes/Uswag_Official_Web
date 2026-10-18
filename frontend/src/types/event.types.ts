@@ -38,7 +38,7 @@ export interface AttendanceRecord {
   memberId: string;
   scannedAt: string;
   scannedByOfficerId: string;
-  result: 'VALID' | 'INVALID' | 'EXPIRED';
+  result: 'VALID' | 'INVALID' | 'EXPIRED' | 'DUPLICATE';
 }
 
 // --- Attendance history (GET /members/me/attendance, GET /attendance) ---
@@ -47,7 +47,7 @@ export interface AttendanceRecord {
 export interface AttendanceHistoryEntry {
   id: string;
   eventId: string;
-  result: 'VALID' | 'INVALID' | 'EXPIRED';
+  result: 'VALID' | 'INVALID' | 'EXPIRED' | 'DUPLICATE';
   reason: string | null;
   scannedAt: string;
   event: { id: string; title: string; startsAt: string; pillar: EventPillar } | null;

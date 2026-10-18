@@ -59,6 +59,7 @@ enum ScanResult {
   VALID
   INVALID
   EXPIRED
+  DUPLICATE // a valid card scanned again for an event it already checked in to; never counts as attendance
 }
 
 enum PostSource {
@@ -205,6 +206,9 @@ model AttendanceRecord {
   result            ScanResult
   reason            String?       // populated when result != VALID (e.g. "signature mismatch", "membership expired")
   scannedAt         DateTime      @default(now())
+
+  // Not expressible in Prisma: a partial unique index (migration 20261018160000) allows only one
+  // VALID row per (eventId, memberId). Keep it if `prisma migrate dev` ever offers to drop it.
 }
 
 model Post {

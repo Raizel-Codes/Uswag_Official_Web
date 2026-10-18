@@ -25,6 +25,10 @@ export interface ScanVerificationResponse {
     name: string;
     officerPosition: string | null;
   };
+  // Set when the card was already checked in to this event: `checkedInAt` is the first scan's time.
+  // `status` stays 'valid' (the card is good); it just wasn't counted again.
+  alreadyCheckedIn?: boolean;
+  checkedInAt?: string;
   reason?: string; // populated when status !== 'valid'
   scannedAt: string;
 }

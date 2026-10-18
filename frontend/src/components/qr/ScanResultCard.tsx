@@ -3,6 +3,7 @@ import { positionLabel } from '@/components/admin/positions';
 import type { OfficerPosition } from '@/types/auth.types';
 
 const CONFIG = {
+  repeat: { cls: 'ap-result--repeat', mark: '!' }, // a valid card that is already checked in (not a fourth server status)
   valid: { cls: 'ap-result--valid', mark: '✓' },
   invalid: { cls: 'ap-result--invalid', mark: '✕' },
   expired: { cls: 'ap-result--expired', mark: '!' },
@@ -16,6 +17,13 @@ const MEMBER_BADGE = { valid: 'mp-standing--active', invalid: 'mp-standing--reje
 const OFFICER_LABEL = { valid: 'Officer verified', invalid: 'Not a valid officer ID' } as const;
 const OFFICER_BADGE = { valid: 'mp-standing--active', invalid: 'mp-standing--rejected' } as const;
 
+/** "2:14 PM", or "Oct 17, 2:14 PM" when the first scan wasn't today. */
+export function formatCheckedInAt(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  const time = d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+  return d.toDateString() === now.toDateString() ? time : `${d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}, ${time}`;
+}
+
 /**
  * The valid / invalid / expired outcome of one scan, as a plate with the outcome's colour down
  * the left. Every state renders explicitly — never collapsed into a generic error — so the
@@ -27,7 +35,8 @@ const OFFICER_BADGE = { valid: 'mp-standing--active', invalid: 'mp-standing--rej
  * populated either way, so guessing from the payload would misattribute it.
  */
 export default function ScanResultCard({ result, mode }: { result: ScanVerificationResponse; mode: 'event' | 'officer' }) {
-  const cfg = CONFIG[result.status];
+  const repeat = mode === 'event' && result.status === 'valid' && !!result.alreadyCheckedIn && !!result.checkedInAt;
+  const cfg = CONFIG[repeat ? 'repeat' : result.status];
 
   if (mode === 'officer') {
     const status = result.status === 'expired' ? 'invalid' : result.status; // no "expired" concept for officer IDs
@@ -42,6 +51,23 @@ export default function ScanResultCard({ result, mode }: { result: ScanVerificat
             {' · '}
             {new Date(result.scannedAt).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (repeat) {
+    return (
+      <div className={`mp-card ap-result ${cfg.cls} p-5 flex items-center gap-4`}>
+        <span className="mp-seal w-12 h-12 text-[1.125rem] font-bold" aria-hidden="true">{cfg.mark}</span>
+        <div className="min-w-0 flex-1">
+          <span className="mp-standing mp-standing--pending">Already checked in</span>
+          <p className="mp-h3 mt-2 truncate" style={{ fontSize: '1.125rem' }}>{result.member?.name ?? 'Member'}</p>
+          <p className="mp-muted text-[0.875rem] mt-0.5">
+            Checked in at <strong>{formatCheckedInAt(result.checkedInAt!)}</strong>
+            {result.member?.serialNumber ? ` · ${result.member.serialNumber}` : ''}
+          </p>
+          <p className="mp-muted text-[0.8125rem] mt-0.5">Not counted again.</p>
         </div>
       </div>
     );

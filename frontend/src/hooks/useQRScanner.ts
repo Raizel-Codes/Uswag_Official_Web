@@ -7,6 +7,10 @@ import type { ScanVerificationResponse } from "@/types/qr.types";
 // single physical QR code doesn't trigger multiple API calls.
 // Call reset() to clear the last result and allow the next scan immediately.
 // eventId is omitted when checking an officer's own ID (not tied to an event).
+// While a card stays in front of the camera it is decoded over and over (10 times a second). Decodes of
+// the same card closer together than this are one continuous hold, not a second presentation.
+const HOLD_GAP_MS = 1500;
+
 export function useQRScanner(eventId?: string) {
   const [result, setResult] = useState<ScanVerificationResponse | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -15,11 +19,21 @@ export function useQRScanner(eventId?: string) {
   // A ref, not the isVerifying state: reading the state made handleDecoded a new function at every
   // verification, and a new callback is what used to make the camera restart (see QRScannerCamera).
   const verifyingRef = useRef(false);
+  const lastSeenRef = useRef({ value: '', at: 0 });
 
   const handleDecoded = useCallback(
     async (rawValue: string) => {
+      // A card held in view is one scan: only taking it away and showing it again scans it again (and
+      // gets "already checked in" from the server), instead of a request every few seconds.
+      const now = Date.now();
+      const last = lastSeenRef.current;
+      if (last.value === rawValue && now - last.at < HOLD_GAP_MS) {
+        last.at = now;
+        return;
+      }
       // Skip if we are already in a cooldown window or actively verifying
       if (cooldownRef.current || verifyingRef.current) return;
+      lastSeenRef.current = { value: rawValue, at: now };
       cooldownRef.current = true;
       verifyingRef.current = true;
 
@@ -49,6 +63,7 @@ export function useQRScanner(eventId?: string) {
     setResult(null);
     setError(null);
     cooldownRef.current = false;
+    lastSeenRef.current = { value: '', at: 0 };
   }
 
   return { result, isVerifying, error, handleDecoded, reset };

@@ -1,6 +1,6 @@
 import { api } from './api';
 import { turnOffPushOnThisDevice } from './notificationService';
-import type { AuthSession } from '@/types/auth.types';
+import type { AuthSession, AuthUser } from '@/types/auth.types';
 
 // The backend wraps all responses as { success: boolean, data: T }
 // (see utils/response.ts). We unwrap here so callers get clean types.
@@ -50,5 +50,17 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
 export async function updateNavPreference(navStyle: 'auto' | 'bottom' | 'sidebar'): Promise<{ navStyle: 'auto' | 'bottom' | 'sidebar' }> {
   const { data } = await api.patch<ApiEnvelope<{ navStyle: 'auto' | 'bottom' | 'sidebar' }>>('/auth/me/preference', { navStyle });
+  return data.data;
+}
+
+/** Fix your own name, college/department or year level. The email is the login, so it isn't here. */
+export async function updateProfile(payload: { name: string; collegeOrDept: string; yearLevel: string | null }): Promise<AuthUser> {
+  const { data } = await api.patch<ApiEnvelope<{ user: AuthUser }>>('/auth/me/profile', payload);
+  return data.data.user;
+}
+
+/** Every other device is signed out; the returned session keeps this one in (the caller stores it). */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<AuthSession> {
+  const { data } = await api.post<ApiEnvelope<AuthSession>>('/auth/me/password', { currentPassword, newPassword });
   return data.data;
 }

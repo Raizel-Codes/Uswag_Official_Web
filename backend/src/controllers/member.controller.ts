@@ -9,6 +9,7 @@ import { notifyApplicationReviewers, notifyUsers } from '../services/notificatio
 import * as resetRequests from '../services/resetRequest.service.js';
 import { hashPassword, createPasswordResetToken } from '../services/auth.service.js';
 import { logAction } from '../services/audit.service.js';
+import { ProfileError, changeStudentId } from '../services/profile.service.js';
 import { hashStudentId, decryptStudentId } from '../utils/crypto.js';
 import { effectiveStatus } from '../utils/academicYear.js';
 import { ok, fail } from '../utils/response.js';
@@ -269,4 +270,15 @@ export async function getMyQr(req: Request, res: Response) {
   if (blocked) return fail(res, blocked, 403, { standing: standing.toLowerCase() });
   const card = await memberService.getDigitalCard(req.user!.id);
   return ok(res, card);
+}
+
+// Self-service: a member (officers included) corrects their own student ID. Needs their password.
+// The ID is checked against everyone else's fingerprint, so it can't collide with another account.
+export async function changeMyStudentId(req: Request, res: Response) {
+  try {
+    return ok(res, await changeStudentId(req.user!.id, req.body.password, req.body.studentId));
+  } catch (err) {
+    if (err instanceof ProfileError) return fail(res, err.message, err.status);
+    throw err;
+  }
 }

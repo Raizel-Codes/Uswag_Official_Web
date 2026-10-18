@@ -20,8 +20,11 @@ export async function validateCredentials(email: string, password: string) {
   return matches ? user : null;
 }
 
-export function issueTokens(user: { id: string; role: any; officerPosition: any; tokenVersion: number }) {
+export function issueTokens(user: { id: string; role: any; officerPosition: any; tokenVersion: number; isDeveloper?: boolean; mustChangePassword?: boolean }) {
   const accessPayload: AccessTokenPayload = { sub: user.id, role: user.role, officerPosition: user.officerPosition };
+  // Restricting claims (see auth.middleware.ts): the developer's view-only account, and "choose a password first".
+  if (user.isDeveloper) accessPayload.dev = true;
+  if (user.mustChangePassword) accessPayload.mcp = true;
   const refreshPayload: RefreshTokenPayload = { sub: user.id, tokenVersion: user.tokenVersion };
 
   const accessToken = jwt.sign(accessPayload, env.jwt.accessSecret, { expiresIn: env.jwt.accessExpiresIn as any });
@@ -91,6 +94,7 @@ export async function consumePasswordResetToken(rawToken: string, newPassword: s
       passwordResetTokenHash: null,
       passwordResetExpiresAt: null,
       awaitingPasswordSetup: false, // a friend-assisted applicant's first password
+      mustChangePassword: false,
       tokenVersion: { increment: 1 },
     },
   });

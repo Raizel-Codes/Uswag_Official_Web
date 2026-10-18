@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import * as authController from '../controllers/auth.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
-import { loginRateLimiter, forgotPasswordRateLimiter } from '../middlewares/rateLimit.middleware.js';
+import { loginRateLimiter, forgotPasswordRateLimiter, passwordCheckRateLimiter } from '../middlewares/rateLimit.middleware.js';
 import { validateBody } from '../middlewares/validation.middleware.js';
-import { forgotPasswordSchema, requestResetHelpSchema, resetPasswordSchema } from './authSchemas.js';
+import { changePasswordSchema, forgotPasswordSchema, requestResetHelpSchema, resetPasswordSchema, updateProfileSchema } from './authSchemas.js';
 
 const router = Router();
 
@@ -21,5 +21,8 @@ router.post('/request-reset-help', forgotPasswordRateLimiter, validateBody(reque
 router.post('/reset-password', validateBody(resetPasswordSchema), authController.resetPassword);
 
 router.patch('/me/preference', requireAuth, authController.updatePreference);
+// Self-service account edits. Changing the password tests the current one, so it is rate-limited.
+router.patch('/me/profile', requireAuth, validateBody(updateProfileSchema), authController.updateProfile);
+router.post('/me/password', requireAuth, passwordCheckRateLimiter, validateBody(changePasswordSchema), authController.changePassword);
 
 export default router;

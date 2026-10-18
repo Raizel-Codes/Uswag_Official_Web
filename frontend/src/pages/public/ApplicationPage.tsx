@@ -24,10 +24,7 @@ import MembershipEnvelope, { useFocusAfterOpen } from '@/components/landing/arti
 import ApplicationDropbox, { type DropboxPhase } from '@/components/landing/artifacts/ApplicationDropbox';
 import { apiError } from '@/utils/apiError';
 import { STUDENT_ID_PATTERN, formatStudentId } from '@/utils/studentId';
-
-const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year'];
-
-const COLLEGES = ['CEA', 'CCIS', 'CCJS', 'COM', 'CAT', 'CON', 'COED'];
+import { COLLEGES, YEAR_LEVELS } from '@/config/colleges';
 
 /** Minimum time the envelope spends sealing, so a fast response doesn't cut the ceremony. */
 const SEALING_MS = 1700;

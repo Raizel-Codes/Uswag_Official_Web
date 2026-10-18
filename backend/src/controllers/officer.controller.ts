@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import type { OfficerPosition } from '@prisma/client';
 import { prisma } from '../config/db.js';
 import { logAction } from '../services/audit.service.js';
-import { OFFICER_POSITIONS, OfficerError, assertActiveMembers, installTerm, listNominees, roleForPosition } from '../services/officer.service.js';
+import { OFFICER_POSITIONS, OfficerError, assertActiveMembers, assertCollegeHasNoOtherPro, installTerm, listNominees, roleForPosition } from '../services/officer.service.js';
 import { buildOfficerQrValue } from '../services/qr.service.js';
 import { ok, fail } from '../utils/response.js';
 
@@ -16,6 +16,7 @@ const OFFICER_FIELDS = {
   officerPosition: true,
   collegeOrDept: true,
   createdAt: true,
+  awaitingPasswordSetup: true, // the Super Admin still has to hand them a setup link
 } as const;
 
 // Turns a rule the Super Admin can fix (not an active member, duplicate position…) into a 4xx
@@ -29,7 +30,8 @@ function failOfficer(res: Response, err: unknown) {
 // applied in officer.routes.ts.
 export async function listOfficers(_req: Request, res: Response) {
   const officers = await prisma.user.findMany({
-    where: { role: { in: ['OFFICER_ADMIN', 'SUPER_ADMIN'] } },
+    // The developer's account is a Super Admin in role only: it is never an officer, so it isn't listed.
+    where: { role: { in: ['OFFICER_ADMIN', 'SUPER_ADMIN'] }, isDeveloper: false },
     select: OFFICER_FIELDS,
   });
   return ok(res, officers);
@@ -45,6 +47,7 @@ export async function assignOfficer(req: Request, res: Response) {
 
   try {
     await assertActiveMembers([user.id]);
+    if (officerPosition === 'PRO') await assertCollegeHasNoOtherPro(user.id, user.collegeOrDept);
   } catch (err) {
     return failOfficer(res, err);
   }
@@ -83,7 +86,7 @@ export async function getMyOfficerQr(req: Request, res: Response) {
 // PUBLIC READ — for landing pages and public officer roster
 export async function listPublicOfficers(_req: Request, res: Response) {
   const officers = await prisma.user.findMany({
-    where: { role: { in: ['OFFICER_ADMIN', 'SUPER_ADMIN'] } },
+    where: { role: { in: ['OFFICER_ADMIN', 'SUPER_ADMIN'] }, isDeveloper: false },
     select: {
       id: true,
       name: true,

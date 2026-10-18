@@ -54,6 +54,18 @@ export async function assertActiveMembers(userIds: string[]) {
   }
 }
 
+/**
+ * Article VI §1(g): one Public Relations Officer per college/department. Throws if a different
+ * account already holds the PRO seat for `college`. (Every other position has one seat in all.)
+ */
+export async function assertCollegeHasNoOtherPro(userId: string, college: string) {
+  const other = await prisma.user.findFirst({
+    where: { officerPosition: 'PRO', collegeOrDept: college, id: { not: userId } },
+    select: { name: true },
+  });
+  if (other) throw new OfficerError(`${other.name} is already the PRO for ${college}. Each college has one Public Relations Officer (Article VI §1g).`, 409);
+}
+
 interface Assignment {
   userId: string;
   officerPosition: OfficerPosition;
@@ -67,15 +79,29 @@ interface Assignment {
 export async function installTerm(actorId: string, assignments: Assignment[]) {
   const positions = assignments.map((a) => a.officerPosition);
   const userIds = assignments.map((a) => a.userId);
-  if (new Set(positions).size !== positions.length) throw new OfficerError('Each position can have only one officer.', 422);
+  // Every position has one seat except PRO, which has one per college (checked below).
+  const singleSeats = positions.filter((p) => p !== 'PRO');
+  if (new Set(singleSeats).size !== singleSeats.length) throw new OfficerError('Each position can have only one officer.', 422);
   if (new Set(userIds).size !== userIds.length) throw new OfficerError('A member can hold only one position at a time.', 422);
   // Without a President there would be no Super Admin left to run the console.
   if (!positions.includes('PRESIDENT')) throw new OfficerError('A term needs a President — the President runs the Super Admin console.', 422);
 
   await assertActiveMembers(userIds);
 
+  const proIds = assignments.filter((a) => a.officerPosition === 'PRO').map((a) => a.userId);
+  if (proIds.length > 0) {
+    const pros = await prisma.user.findMany({ where: { id: { in: proIds } }, select: { name: true, collegeOrDept: true } });
+    const byCollege = new Map<string, string>();
+    for (const p of pros) {
+      const first = byCollege.get(p.collegeOrDept);
+      if (first) throw new OfficerError(`${first} and ${p.name} are both PROs for ${p.collegeOrDept}. Each college has one Public Relations Officer (Article VI §1g).`, 422);
+      byCollege.set(p.collegeOrDept, p.name);
+    }
+  }
+
+  // The developer's account is a Super Admin in role only. A term never seats it and never steps it down.
   const sitting = await prisma.user.findMany({
-    where: { role: { in: ['OFFICER_ADMIN', 'SUPER_ADMIN'] } },
+    where: { role: { in: ['OFFICER_ADMIN', 'SUPER_ADMIN'] }, isDeveloper: false },
     select: { id: true, name: true, role: true, officerPosition: true },
   });
   const sittingById = new Map(sitting.map((u) => [u.id, u]));

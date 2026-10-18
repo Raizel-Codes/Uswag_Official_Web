@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getNavItems, type NavItem } from '@/config/navigation';
 import { isSuperAdminEquivalent } from '@/utils/roles';
 import PortalShell from '@/components/portal/PortalShell';
+import DeveloperBanner from './DeveloperBanner';
 import { positionLabel } from './positions';
 import '@/styles/member.css';
 import '@/styles/admin.css';
@@ -27,8 +28,9 @@ export default function AdminLayout() {
       lockReason="not part of the Auditor's scope"
       railLabel={superAdmin ? 'Admin console' : 'Officer console'}
       name={user.name}
-      subtitle={positionLabel(user.officerPosition)}
+      subtitle={user.isDeveloper ? 'Developer' : positionLabel(user.officerPosition)}
     >
+      <DeveloperBanner />
       <Outlet />
     </PortalShell>
   );

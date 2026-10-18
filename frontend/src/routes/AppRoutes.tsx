@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import PublicLayout from '@/components/layout/PublicLayout';
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
+import DeveloperRoute from './DeveloperRoute';
 import PortalLayout, { PortalProfilePage } from './PortalLayout';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
@@ -28,6 +29,10 @@ const ContactPage = lazy(() => import('@/pages/public/ContactPage'));
 const LoginPage = lazy(() => import('@/pages/public/LoginPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/public/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@/pages/public/ResetPasswordPage'));
+
+// Account + developer pages (the developer console is the site developer's own, view-only)
+const ChangePasswordRequiredPage = lazy(() => import('@/pages/account/ChangePasswordRequiredPage'));
+const DevConsolePage = lazy(() => import('@/pages/dev/DevConsolePage'));
 
 // Member pages
 const MemberDashboardPage = lazy(() => import('@/pages/member/MemberDashboardPage'));
@@ -91,6 +96,14 @@ export default function AppRoutes() {
             <Route path="/dashboard/notifications" element={<NotificationsPage />} />
             <Route path="/dashboard/profile" element={<PortalProfilePage />} />
           </Route>
+        </Route>
+
+        {/* A handed-over password must be replaced first; ProtectedRoute / RoleRoute send people here. */}
+        <Route path="/account/password" element={<ChangePasswordRequiredPage />} />
+
+        {/* The developer's terminal console — DeveloperRoute here, requireDeveloper on the server */}
+        <Route element={<DeveloperRoute />}>
+          <Route path="/dev" element={<DevConsolePage />} />
         </Route>
 
         {/* Admin — Super Admin + Officer Admin, scoped further inside each page */}

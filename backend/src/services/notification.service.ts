@@ -156,7 +156,7 @@ export async function activeMemberUserIds(now: Date = new Date()): Promise<strin
 export async function notifyApplicationReviewers(n: NotificationInput): Promise<void> {
   try {
     const users = await prisma.user.findMany({
-      where: { OR: [{ role: 'SUPER_ADMIN' }, { role: 'OFFICER_ADMIN', officerPosition: 'SECRETARY' }] },
+      where: { isDeveloper: false, OR: [{ role: 'SUPER_ADMIN' }, { role: 'OFFICER_ADMIN', officerPosition: 'SECRETARY' }] },
       select: { id: true },
     });
     await notifyUsers(users.map((u) => u.id), n);

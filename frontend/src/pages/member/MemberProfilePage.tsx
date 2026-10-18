@@ -7,6 +7,7 @@ import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { logout, updateNavPreference } from '@/services/authService';
 import PageHeader from '@/components/portal/PageHeader';
+import AccountSettings from '@/components/account/AccountSettings';
 import StandingNote from '@/components/member/StandingNote';
 import { STANDING_LABEL } from '@/components/member/standing';
 
@@ -76,6 +77,8 @@ export default function MemberProfilePage() {
           ))}
         </dl>
       </section>
+
+      <AccountSettings />
 
       <section aria-labelledby="pf-prefs">
         <h2 id="pf-prefs" className="mp-h2">Preferences</h2>

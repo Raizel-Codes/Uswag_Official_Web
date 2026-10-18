@@ -21,5 +21,6 @@ export default function RoleRoute({ allow }: RoleRouteProps) {
   const passes = !!user && (allow.includes(user.role) || (allow.includes('super_admin') && isSuperAdminEquivalent(user)));
 
   if (!passes) return <Navigate to="/" replace />;
+  if (user?.mustChangePassword) return <Navigate to="/account/password" replace />;
   return <Outlet />;
 }

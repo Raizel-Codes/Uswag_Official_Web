@@ -4,8 +4,9 @@ import * as attendanceController from '../controllers/attendance.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { requireOfficerPosition, requireRole } from '../middlewares/role.middleware.js';
 import { validateBody } from '../middlewares/validation.middleware.js';
+import { changeStudentIdSchema } from './authSchemas.js';
 import { approveApplicationSchema, issueResetLinkSchema, rejectApplicationSchema, renewMemberSchema, submitApplicationSchema } from './memberSchemas.js';
-import { applyRateLimiter } from '../middlewares/rateLimit.middleware.js';
+import { applyRateLimiter, passwordCheckRateLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use(requireAuth);
 
 router.get('/me', memberController.getMyProfile);
 router.get('/me/qr', memberController.getMyQr);
+router.post('/me/student-id', passwordCheckRateLimiter, validateBody(changeStudentIdSchema), memberController.changeMyStudentId);
 router.get('/me/attendance', attendanceController.getMyAttendance);
 
 // Secretary owns membership records per Article VI §2(c) — Super Admin (and

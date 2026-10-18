@@ -21,6 +21,10 @@ export interface AuthUser {
   officerPosition?: OfficerPosition; // only present when role === 'officer_admin' | 'super_admin'
   collegeOrDept: string;
   navStyle: 'auto' | 'bottom' | 'sidebar';
+  /** The site developer's view-only account: sees everything, changes nothing, reaches /dev. */
+  isDeveloper?: boolean;
+  /** A handed-over password: nothing else works until the person has chosen their own. */
+  mustChangePassword?: boolean;
 }
 
 export interface AuthSession {

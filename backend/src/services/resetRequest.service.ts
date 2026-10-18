@@ -44,7 +44,7 @@ export function canHandle(handler: Actor, target: { id: string; role: UserRole }
 /** Everyone who may handle a request from this account. */
 async function handlersFor(target: { id: string; role: UserRole }): Promise<string[]> {
   const candidates = await prisma.user.findMany({
-    where: { OR: [{ role: 'SUPER_ADMIN' }, { officerPosition: { in: ['VICE_PRESIDENT', 'SECRETARY'] } }] },
+    where: { isDeveloper: false, OR: [{ role: 'SUPER_ADMIN' }, { officerPosition: { in: ['VICE_PRESIDENT', 'SECRETARY'] } }] },
     select: { id: true, role: true, officerPosition: true },
   });
   return candidates.filter((c) => canHandle(c, target)).map((c) => c.id);
@@ -61,12 +61,14 @@ export async function recordResetRequest(email: string, studentId: string): Prom
       select: {
         id: true,
         role: true,
+        isDeveloper: true,
         passwordResetRequestedAt: true,
         passwordResetIdMatched: true,
         memberProfile: { select: { studentIdHash: true } },
       },
     });
-    if (!user) return;
+    // Nobody can be handed a link to the developer's account (it is reset with scripts/create-developer.ts).
+    if (!user || user.isDeveloper) return;
 
     const onFile = user.memberProfile?.studentIdHash ?? null;
     const idMatched = onFile === null ? null : hashStudentId(studentId) === onFile;

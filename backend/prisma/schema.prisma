@@ -99,6 +99,13 @@ model User {
   // createSetupLink); consumePasswordResetToken() clears this flag.
   awaitingPasswordSetup   Boolean  @default(false)
 
+  // The site developer's account (scripts/create-developer.ts): a Super Admin who only OVERSEES. It can
+  // see everything and change nothing (auth.middleware.ts), is never listed as an officer, and can reach
+  // the /dev console. mustChangePassword: the password was handed over, so the person has to choose their
+  // own at first login; nothing else works until they do.
+  isDeveloper        Boolean  @default(false)
+  mustChangePassword Boolean  @default(false)
+
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

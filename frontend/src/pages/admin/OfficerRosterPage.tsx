@@ -7,10 +7,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortalToast } from '@/hooks/usePortalToast';
-import { listOfficers, listOfficerNominees, assignOfficer, type OfficerUser } from '@/services/adminService';
+import { listOfficers, listOfficerNominees, assignOfficer, issueSetupLink, type OfficerUser } from '@/services/adminService';
 import OfficerAvatar from '@/components/common/OfficerAvatar';
+import AddAccountPanel from '@/components/admin/AddAccountPanel';
 import DeleteAccountDialog from '@/components/admin/DeleteAccountDialog';
 import InstallTermPanel from '@/components/admin/InstallTermPanel';
+import SetupLinkBox from '@/components/admin/SetupLinkBox';
 import PageHeader from '@/components/portal/PageHeader';
 import Panel from '@/components/portal/Panel';
 import PortalToast from '@/components/portal/PortalToast';
@@ -96,6 +98,12 @@ function AssignPanel({ onDone }: { onDone: (msg: string) => void }) {
 }
 
 function OfficerDetailDialog({ officer, onClose, onDelete }: { officer: OfficerUser; onClose: () => void; onDelete?: () => void }) {
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const link = useMutation({
+    mutationFn: () => issueSetupLink(officer.id),
+    onError: (err) => setLinkError(apiError(err, 'Could not make a setup link. Please try again.')),
+  });
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -135,6 +143,22 @@ function OfficerDetailDialog({ officer, onClose, onDelete }: { officer: OfficerU
             <dd className="mt-1">{formatDate(officer.createdAt)}</dd>
           </div>
         </dl>
+        {officer.awaitingPasswordSetup && (
+          <div className="mt-6 pt-5 border-t border-[rgb(20_39_24/0.1)] space-y-3">
+            <p className="font-semibold">Hasn’t set a password yet</p>
+            {link.data ? (
+              <SetupLinkBox url={link.data.url} minutes={link.data.expiresInMinutes} />
+            ) : (
+              <>
+                <p className="mp-muted text-[0.8125rem]">Make a one-time link they use to choose their own password.</p>
+                <button type="button" onClick={() => { setLinkError(null); link.mutate(); }} disabled={link.isPending} className="mp-btn mp-btn--primary w-full sm:w-auto">
+                  {link.isPending ? 'Making link…' : 'Make a setup link'}
+                </button>
+              </>
+            )}
+            {linkError && <p role="alert" className="mp-alert">{linkError}</p>}
+          </div>
+        )}
         {onDelete && (
           <div className="mt-6 pt-5 border-t border-[rgb(20_39_24/0.1)]">
             <button type="button" onClick={onDelete} className="mp-btn mp-btn--ghost w-full sm:w-auto">Delete account…</button>
@@ -195,7 +219,8 @@ export default function OfficerRosterPage() {
       </section>
 
       <div className="grid lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 min-w-0">
+        <div className="lg:col-span-2 min-w-0 space-y-6">
+          <AddAccountPanel onDone={(m) => show(m)} />
           <InstallTermPanel officers={officers} onDone={(m) => show(m)} />
         </div>
         <div className="space-y-6 min-w-0">

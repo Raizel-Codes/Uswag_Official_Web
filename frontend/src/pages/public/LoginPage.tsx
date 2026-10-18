@@ -39,7 +39,11 @@ export default function LoginPage() {
     try {
       const session = await login(email.trim(), password);
       const role = session.user.role;
-      if (role === 'super_admin' || role === 'officer_admin') {
+      if (session.user.mustChangePassword) {
+        navigate('/account/password', { replace: true });
+      } else if (session.user.isDeveloper) {
+        navigate('/dev', { replace: true });
+      } else if (role === 'super_admin' || role === 'officer_admin') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });

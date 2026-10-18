@@ -12,6 +12,7 @@ import financeRoutes from './finance.routes.js';
 import procurementRoutes from './procurement.routes.js';
 import attendanceRoutes from './attendance.routes.js';
 import accountRoutes from './account.routes.js';
+import devRoutes from './dev.routes.js';
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.use('/finance', financeRoutes);
 router.use('/procurement', procurementRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/accounts', accountRoutes);
+router.use('/dev', devRoutes);
 
 export default router;
 

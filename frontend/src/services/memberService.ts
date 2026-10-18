@@ -85,3 +85,9 @@ export async function issueResetLink(userId: string, identityConfirmed: boolean)
 export async function dismissResetRequest(userId: string): Promise<void> {
   await api.post(`/members/reset-requests/${userId}/dismiss`);
 }
+
+/** Correct your own student ID; the password is asked again because the ID is what proves who you are. */
+export async function changeStudentId(studentId: string, password: string): Promise<{ changed: boolean }> {
+  const { data } = await api.post<{ success: boolean; data: { changed: boolean } }>('/members/me/student-id', { studentId, password });
+  return data.data;
+}

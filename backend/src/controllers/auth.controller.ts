@@ -8,6 +8,7 @@ import {
   consumePasswordResetToken,
   RESET_TOKEN_TTL_MS,
 } from '../services/auth.service.js';
+import { ProfileError, changePassword as changeOwnPassword, updateDetails } from '../services/profile.service.js';
 import { isEmailConfigured, maskEmail, sendPasswordResetEmail } from '../services/email.service.js';
 import { recordResetRequest } from '../services/resetRequest.service.js';
 import { ok, fail } from '../utils/response.js';
@@ -20,7 +21,7 @@ const RESET_COOLDOWN_MS = 2 * 60 * 1000;
 
 // Shared shape between login and refresh — both return the same AuthSession
 // the frontend expects (accessToken, refreshToken, user).
-function toAuthSession(user: {
+type SessionUser = {
   id: string;
   name: string;
   email: string;
@@ -29,20 +30,27 @@ function toAuthSession(user: {
   collegeOrDept: string;
   navStyle: string;
   tokenVersion: number;
-}) {
-  const tokens = issueTokens(user as any);
+  isDeveloper: boolean;
+  mustChangePassword: boolean;
+};
+
+function toAuthUser(user: SessionUser) {
   return {
-    ...tokens,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role.toLowerCase(),                                      // e.g. 'super_admin'
-      officerPosition: user.officerPosition?.toLowerCase() ?? undefined,  // e.g. 'president'
-      collegeOrDept: user.collegeOrDept,
-      navStyle: user.navStyle,
-    },
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role.toLowerCase(),                                      // e.g. 'super_admin'
+    officerPosition: user.officerPosition?.toLowerCase() ?? undefined,  // e.g. 'president'
+    collegeOrDept: user.collegeOrDept,
+    navStyle: user.navStyle,
+    ...(user.isDeveloper ? { isDeveloper: true } : {}),
+    ...(user.mustChangePassword ? { mustChangePassword: true } : {}),
   };
+}
+
+function toAuthSession(user: SessionUser) {
+  const tokens = issueTokens(user as any);
+  return { ...tokens, user: toAuthUser(user) };
 }
 
 export async function login(req: Request, res: Response) {
@@ -167,4 +175,27 @@ export async function updatePreference(req: Request, res: Response) {
   });
 
   return ok(res, { navStyle: updatedUser.navStyle });
+}
+
+// Self-service: the signed-in person fixes their own name, college/department or year level.
+// Returns the session user so the client can refresh what it shows; the tokens don't change
+// (they carry the role and position, not these fields).
+export async function updateProfile(req: Request, res: Response) {
+  try {
+    return ok(res, { user: toAuthUser(await updateDetails(req.user!.id, req.body)) });
+  } catch (err) {
+    if (err instanceof ProfileError) return fail(res, err.message, err.status);
+    throw err;
+  }
+}
+
+// Needs the current password. Signs out every other device, and returns a fresh session so this one stays in.
+export async function changePassword(req: Request, res: Response) {
+  try {
+    const user = await changeOwnPassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
+    return ok(res, toAuthSession(user));
+  } catch (err) {
+    if (err instanceof ProfileError) return fail(res, err.message, err.status);
+    throw err;
+  }
 }

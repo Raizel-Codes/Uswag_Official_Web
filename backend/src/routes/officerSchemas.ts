@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { COLLEGES } from '../config/colleges.js';
 
 const OFFICER_POSITIONS = ['PRESIDENT', 'VICE_PRESIDENT', 'SECRETARY', 'TREASURER', 'AUDITOR', 'BUSINESS_MANAGER', 'PRO'] as const;
 
@@ -12,5 +13,6 @@ export const installTermSchema = z.object({
       }),
     )
     .min(1, 'Choose at least the President.')
-    .max(OFFICER_POSITIONS.length),
+    // Six single seats plus one PRO per college (Article VI §1); the service checks the rest.
+    .max(OFFICER_POSITIONS.length - 1 + COLLEGES.length),
 });

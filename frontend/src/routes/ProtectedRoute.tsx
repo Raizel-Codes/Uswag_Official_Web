@@ -9,5 +9,7 @@ export default function ProtectedRoute() {
   if (isLoading) return null;
 
   if (!user) return <Navigate to="/login" replace />;
+  // A handed-over password has to be replaced before anything else (the server refuses everything else too).
+  if (user.mustChangePassword) return <Navigate to="/account/password" replace />;
   return <Outlet />;
 }

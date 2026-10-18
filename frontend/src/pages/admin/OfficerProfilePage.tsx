@@ -4,12 +4,14 @@
 // be legible, not silently absent — plus notifications, navigation preference and log out.
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthContext } from '@/context/AuthContext';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { logout, updateNavPreference } from '@/services/authService';
 import type { OfficerPosition } from '@/types/auth.types';
 import { isSuperAdminEquivalent } from '@/utils/roles';
 import PageHeader from '@/components/portal/PageHeader';
+import AccountSettings from '@/components/account/AccountSettings';
 import Panel from '@/components/portal/Panel';
 import { positionLabel } from '@/components/admin/positions';
 import { initials } from '@/components/admin/format';
@@ -114,13 +116,18 @@ export default function OfficerProfilePage() {
         <div className="relative min-w-0">
           <p className="font-heading font-semibold text-[1.5rem] leading-tight text-mist">{user.name}</p>
           <p className="mp-muted mt-1">{user.collegeOrDept}</p>
-          <span className="mp-standing mp-standing--active mt-3">{positionLabel(user.officerPosition)}</span>
+          <span className="mp-standing mp-standing--active mt-3">{user.isDeveloper ? 'Developer · view only' : positionLabel(user.officerPosition)}</span>
         </div>
       </section>
 
       <section aria-labelledby="pf-scope">
         <h2 id="pf-scope" className="mp-h2">Your scope</h2>
-        {superAdmin ? (
+        {user.isDeveloper ? (
+          <p className="mp-card p-5 mt-4 text-[0.9375rem]">
+            You’re the site developer: an overseer, not an officer. You can see everything the Super Admin sees, plus the{' '}
+            <Link to="/dev" className="mp-link">developer console</Link>, and you can change nothing (the server refuses every edit).
+          </p>
+        ) : superAdmin ? (
           <p className="mp-card p-5 mt-4 text-[0.9375rem]">
             As {user.officerPosition === 'vice_president' ? 'Vice President (acting for the President)' : 'President'}, you have the Super Admin scope:
             every module, officer accounts, bylaws amendments and the audit log (Article VI).
@@ -154,7 +161,7 @@ export default function OfficerProfilePage() {
           {[
             { label: 'Email', value: user.email },
             { label: 'College / Dept.', value: user.collegeOrDept },
-            { label: 'Position', value: positionLabel(user.officerPosition) },
+            { label: 'Position', value: user.isDeveloper ? 'Developer (not an officer)' : positionLabel(user.officerPosition) },
           ].map((r, i) => (
             <div key={r.label} className={`py-3.5 flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-6 ${i ? 'border-t border-[rgb(20_39_24/0.1)]' : ''}`}>
               <dt className="mp-eyebrow sm:w-40 shrink-0" style={{ fontSize: '0.6875rem' }}>{r.label}</dt>
@@ -163,6 +170,8 @@ export default function OfficerProfilePage() {
           ))}
         </dl>
       </section>
+
+      <AccountSettings />
 
       <Panel title="Preferences">
         <div className="flex items-center gap-4">

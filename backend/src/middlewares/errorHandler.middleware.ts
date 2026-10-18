@@ -6,7 +6,7 @@ import { fail } from '../utils/response.js';
 // and handle expected errors (validation, not-found) themselves;
 // this exists for anything unexpected so the process doesn't crash
 // and the client still gets a clean JSON error.
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
-  logger.error(err);
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
+  logger.error(`${req.method} ${req.originalUrl.split('?')[0]}`, err);
   fail(res, 'Something went wrong', 500);
 }

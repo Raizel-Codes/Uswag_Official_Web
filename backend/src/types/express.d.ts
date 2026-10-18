@@ -9,6 +9,8 @@ declare global {
         id: string;
         role: UserRole;
         officerPosition?: OfficerPosition | null;
+        isDeveloper?: boolean;
+        mustChangePassword?: boolean;
       };
     }
   }

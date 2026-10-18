@@ -13,6 +13,8 @@ export interface OfficerUser {
   officerPosition: string | null;
   collegeOrDept: string;
   createdAt: string;
+  /** Created by the Super Admin and not yet signed in: still needs a setup link. */
+  awaitingPasswordSetup: boolean;
 }
 
 export async function listOfficers(): Promise<OfficerUser[]> {
@@ -150,5 +152,33 @@ export async function previewAccountDeletion(userId: string): Promise<AccountPre
 
 export async function deleteAccount(userId: string, purgeRecords: boolean): Promise<{ id: string; name: string }> {
   const { data } = await api.delete<{ success: boolean; data: { id: string; name: string } }>(`/accounts/${userId}`, { data: { purgeRecords } });
+  return data.data;
+}
+
+// ---------------------------------------------------------------------------
+// Accounts — SUPER ADMIN ONLY (backend: account.routes.ts)
+// ---------------------------------------------------------------------------
+
+export interface NewAccountInput {
+  name: string;
+  email: string;
+  studentId: string;
+  collegeOrDept: string;
+  yearLevel?: string;
+}
+
+export interface SetupLink {
+  url: string;
+  expiresInMinutes: number;
+}
+
+/** An active member without the public application (e.g. an incoming officer); returns their one-time setup link. */
+export async function createAccount(payload: NewAccountInput): Promise<SetupLink & { id: string; name: string; email: string }> {
+  const { data } = await api.post<{ success: boolean; data: SetupLink & { id: string; name: string; email: string } }>('/accounts', payload);
+  return data.data;
+}
+
+export async function issueSetupLink(userId: string): Promise<SetupLink> {
+  const { data } = await api.post<{ success: boolean; data: SetupLink }>(`/accounts/${userId}/setup-link`);
   return data.data;
 }

@@ -15,6 +15,15 @@ import { logger } from '../utils/logger.js';
 
 let isRunning = false;
 
+// For the /dev console (dev.service.ts). In memory, so it starts empty after a restart.
+let lastRunAt: string | null = null;
+let lastExpired: number | null = null;
+let lastError: string | null = null;
+
+export function getRenewalStatus() {
+  return { lastRunAt, lastExpired, lastError, isRunning };
+}
+
 /** ACTIVE members whose academic year has ended, or whose own expiry date has passed. Read-only. */
 export function findLapsedMembers(now: Date = new Date()) {
   return prisma.memberProfile.findMany({
@@ -32,7 +41,12 @@ export async function runMemberRenewal(now: Date = new Date()) {
   isRunning = true;
   try {
     const lapsed = await findLapsedMembers(now);
-    if (lapsed.length === 0) return { expired: 0 };
+    if (lapsed.length === 0) {
+      lastRunAt = new Date().toISOString();
+      lastExpired = 0;
+      lastError = null;
+      return { expired: 0 };
+    }
     // Re-check the status in the update itself so a member the Secretary renewed in the meantime
     // isn't expired by a stale list.
     const { count } = await prisma.memberProfile.updateMany({
@@ -55,8 +69,13 @@ export async function runMemberRenewal(now: Date = new Date()) {
       body: 'Membership lasts one academic year. Renew with the Secretary to get your card and event sign-ups back.',
       url: '/dashboard',
     });
+    lastRunAt = new Date().toISOString();
+    lastExpired = count;
+    lastError = null;
     return { expired: count };
   } catch (err) {
+    lastRunAt = new Date().toISOString();
+    lastError = err instanceof Error ? err.message : 'Renewal failed';
     logger.error('Membership renewal job failed', err);
     return { expired: 0 };
   } finally {

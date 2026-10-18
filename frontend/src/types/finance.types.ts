@@ -59,8 +59,23 @@ export interface FeeRosterMember {
   isOfficer: boolean;
 }
 
+/** What the public endpoint says: the fee now, and since when (null = the starting fee, never changed). */
+export interface PublicMembershipFee {
+  amount: number;
+  since: string | null;
+}
+
+export interface FeeChange {
+  amount: number;
+  effectiveFrom: string;
+  setBy: string | null;
+}
+
 export interface FeeRules {
   amount: number;
+  since: string | null;
+  /** The last few changes, newest first. */
+  history: FeeChange[];
   partialMonths: number;
   applicantDays: number;
   extensionDays: number;

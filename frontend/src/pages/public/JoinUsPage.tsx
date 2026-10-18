@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLandingReveal } from '@/hooks/useLandingReveal';
+import { useMembershipFee } from '@/hooks/useMembershipFee';
 import PublicPage from '@/components/landing/PublicPage';
 import PageMasthead from '@/components/landing/PageMasthead';
 import SectionHeading from '@/components/landing/SectionHeading';
@@ -8,7 +9,8 @@ import LandingCTA from '@/components/landing/sections/LandingCTA';
 import MembershipCardMorph from '@/components/landing/artifacts/MembershipCardMorph';
 import { FOUNDED_YEAR } from '@/components/landing/timeline.data';
 
-const FAQS = [
+// `fee` is the Treasurer's current membership fee (useMembershipFee), null until the server has answered.
+const faqs = (fee: string | null) => [
   {
     q: 'Do I need prior leadership experience?',
     a: 'No. USWAG is where you build that experience. We welcome anyone willing to learn and actively participate.',
@@ -26,7 +28,7 @@ const FAQS = [
     a: 'Applications are typically open at the start of each semester. Watch our Facebook Page and this website for announcements.',
   },
   {
-    q: 'What does the ₱50.00 membership fee cover?',
+    q: fee ? `What does the ${fee} membership fee cover?` : 'What does the membership fee cover?',
     a: 'The fee covers the cost of QR ID generation, organizational materials, and program seed funding. It is payable to the Treasurer upon approval.',
   },
 ];
@@ -74,6 +76,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 function Eligibility() {
   const ref = useRef<HTMLElement>(null);
   useLandingReveal(ref);
+  const { label: fee } = useMembershipFee();
   return (
     <section ref={ref} aria-labelledby="join-eligibility" data-era="past" className="lp-section lp-grain lp-grain--fade" data-lp-era-start>
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8 grid lg:grid-cols-12 gap-12 items-start">
@@ -108,7 +111,11 @@ function Eligibility() {
           <div className="lp-card lp-card--past p-6 sm:p-7" data-lp-reveal>
             <p className="lp-eyebrow lp-ink-caption">Membership dues</p>
             <p className="lp-body mt-3" style={{ fontSize: '1rem' }}>
-              The current annual membership fee is <strong className="font-semibold">₱50.00</strong>, payable to the
+              {fee ? (
+                <>The current annual membership fee is <strong className="font-semibold">{fee}</strong>, payable to the</>
+              ) : (
+                <>The annual membership fee is set by the officers and approved by the adviser. It is payable to the</>
+              )}{' '}
               Treasurer upon approval of your application. It supports our programs and your digital membership card.
             </p>
           </div>
@@ -169,12 +176,13 @@ function Process() {
 function Faq() {
   const ref = useRef<HTMLElement>(null);
   useLandingReveal(ref);
+  const { label: fee } = useMembershipFee();
   return (
     <section ref={ref} aria-labelledby="join-faq" data-era="present" className="lp-section pt-0">
       <div className="max-w-[880px] mx-auto px-4 sm:px-8">
         <SectionHeading id="join-faq" eyebrow="Before you apply" title="Frequently asked questions" />
         <div className="lp-card px-6 sm:px-8 py-2 mt-10" data-lp-reveal>
-          {FAQS.map((f) => (
+          {faqs(fee).map((f) => (
             <FaqItem key={f.q} q={f.q} a={f.a} />
           ))}
         </div>

@@ -1,8 +1,8 @@
 import type { FeeStanding, FeeState } from '@/types/finance.types';
 
-// How the membership-fee standing reads in the admin consoles. The rules themselves (and the
-// ₱50, the 3 months, the 7 days) live on the server, backend/src/config/fee.ts; the numbers shown
-// here come from what it sends, never from a copy.
+// How the membership-fee standing reads in the admin consoles. The rules themselves (the 3 months, the
+// 7 days) live on the server, backend/src/config/fee.ts, and the fee amount is set by the Treasurer
+// (stored in the database); the numbers shown here come from what the server sends, never from a copy.
 
 export const FEE_LABEL: Record<FeeState, string> = {
   exempt: 'Officer · no fee',

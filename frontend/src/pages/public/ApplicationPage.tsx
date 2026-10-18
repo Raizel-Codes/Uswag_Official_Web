@@ -16,6 +16,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Link } from 'react-router-dom';
 import { submitApplication } from '@/services/memberService';
 import { useLandingReveal } from '@/hooks/useLandingReveal';
+import { useMembershipFee } from '@/hooks/useMembershipFee';
 import { prefersReducedMotion } from '@/lib/motion';
 import PublicPage from '@/components/landing/PublicPage';
 import PageMasthead from '@/components/landing/PageMasthead';
@@ -91,6 +92,7 @@ type Mode = 'self' | 'friend';
 type Phase = 'form' | DropboxPhase;
 
 export default function ApplicationPage() {
+  const { label: feeLabel } = useMembershipFee();
   const [mode, setMode] = useState<Mode>('self');
   const [sent, setSent] = useState<SentRecord | null>(readSent);
   // A device that already sent an application opens on the shut door.
@@ -506,7 +508,7 @@ export default function ApplicationPage() {
                       <ol className="mt-6 space-y-4">
                         {[
                           <>Membership is open to all <strong className="font-semibold">bona fide students of Northwest Samar State University</strong> who support the vision and mission of USWAG.</>,
-                          <>To become a member you will <strong className="font-semibold">submit this completed form</strong>, <strong className="font-semibold">pay the membership fee</strong> (as determined by the officers and approved by the adviser; currently ₱50.00), and <strong className="font-semibold">attend an orientation</strong> or onboarding session.</>,
+                          <>To become a member you will <strong className="font-semibold">submit this completed form</strong>, <strong className="font-semibold">pay the membership fee</strong> (as determined by the officers and approved by the adviser{feeLabel ? `; currently ${feeLabel}` : ''}), and <strong className="font-semibold">attend an orientation</strong> or onboarding session.</>,
                           <>Membership is <strong className="font-semibold">valid for one academic year</strong> and is renewable annually.</>,
                           <>As a member you’re expected to take an active part in USWAG’s initiatives and to follow the Constitution and the policies of its elected officers (Article V).</>,
                         ].map((t, i) => (

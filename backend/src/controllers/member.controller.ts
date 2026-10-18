@@ -13,7 +13,6 @@ import { ProfileError, changeStudentId } from '../services/profile.service.js';
 import { hashStudentId, decryptStudentId } from '../utils/crypto.js';
 import { effectiveStatus } from '../utils/academicYear.js';
 import { applicantDeadline, FeeRequiredError, feeFor, isApplicant, toFeeDTO, type FeeInfo } from '../services/fee.service.js';
-import { MEMBERSHIP_FEE } from '../config/fee.js';
 import { ok, fail } from '../utils/response.js';
 
 type MemberProfileWithUser = Prisma.MemberProfileGetPayload<{ include: { user: true } }>;
@@ -77,9 +76,9 @@ export async function getMyProfile(req: Request, res: Response) {
   if (standingNote && profile.status === 'PENDING') {
     const day = (d: Date) => d.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', timeZone: 'Asia/Manila' });
     if (fee.state === 'unpaid' && isApplicant(profile)) {
-      standingNote = `Pay the ₱${MEMBERSHIP_FEE} membership fee to the Treasurer by ${day(applicantDeadline(profile))}, or this application is removed (you can apply again later). The Secretary approves it once the payment is recorded.`;
+      standingNote = `Pay the ₱${fee.amount} membership fee to the Treasurer by ${day(applicantDeadline(profile))}, or this application is removed (you can apply again later). The Secretary approves it once the payment is recorded.`;
     } else if (fee.state === 'unpaid') {
-      standingNote = `Your membership is pending until the ₱${MEMBERSHIP_FEE} fee is paid to the Treasurer. The Secretary approves it once the payment is recorded.`;
+      standingNote = `Your membership is pending until the ₱${fee.amount} fee is paid to the Treasurer. The Secretary approves it once the payment is recorded.`;
     } else if (fee.state === 'overdue') {
       standingNote = `The remaining ₱${fee.due.toFixed(2)} wasn’t paid in time, so your membership is pending again. Pay the balance to the Treasurer and the Secretary can approve you.`;
     }

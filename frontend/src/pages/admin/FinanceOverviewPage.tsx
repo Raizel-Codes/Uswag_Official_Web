@@ -25,6 +25,7 @@ import Panel from '@/components/portal/Panel';
 import StatPlate from '@/components/portal/StatPlate';
 import DuesForm from '@/components/admin/DuesForm';
 import FeeRoster from '@/components/admin/FeeRoster';
+import MembershipFeePanel from '@/components/admin/MembershipFeePanel';
 import PortalToast from '@/components/portal/PortalToast';
 import StackedBar from '@/components/admin/StackedBar';
 import BarList from '@/components/admin/BarList';
@@ -248,6 +249,8 @@ function TreasurerFinanceView() {
         />
       </div>
 
+      <MembershipFeePanel onSaved={show} />
+
       <FeeRoster onMessage={(m, ok = true) => show(m, ok ? 'ok' : 'error')} />
 
       <section id="ledger" aria-labelledby="ledger-title" className="scroll-mt-6 space-y-4">
@@ -296,6 +299,8 @@ function AuditorFinanceView() {
         <StatPlate label="On hand" value={s ? currency(s.fundsOnHand) : '…'} tone="primary" hint="Funds" />
         <StatPlate label="Spent" value={s ? currency(s.totalExpenses) : '…'} tone="warn" hint="Expenses" />
       </dl>
+
+      <MembershipFeePanel readOnly />
 
       <Panel title="Expenses to review" aside={<span className="mp-muted">Last 30 days</span>} flush>
         <Ledger entries={toReview} loading={entriesQ.isLoading} readOnly />

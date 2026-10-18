@@ -3,6 +3,7 @@ import type {
   FinanceEntry,
   FeeRoster,
   FinanceSummary,
+  PublicMembershipFee,
   RecordDuesPayload,
   RecordExpensePayload,
 } from '@/types/finance.types';
@@ -51,5 +52,17 @@ export async function getFeeRoster(): Promise<FeeRoster> {
 // POST /finance/roster/:memberId/extend — Treasurer + Super Admin: more time for an unpaid application
 export async function extendApplication(memberId: string): Promise<{ removedOn: string }> {
   const { data } = await api.post<{ success: boolean; data: { removedOn: string } }>(`/finance/roster/${memberId}/extend`);
+  return data.data;
+}
+
+// GET /finance/membership-fee — PUBLIC: the fee the Treasurer has set (Join Us and Application pages quote it)
+export async function getMembershipFee(): Promise<PublicMembershipFee> {
+  const { data } = await api.get<{ success: boolean; data: PublicMembershipFee }>('/finance/membership-fee');
+  return data.data;
+}
+
+// PUT /finance/membership-fee — Treasurer + Super Admin: applies from now, recorded in the audit log
+export async function setMembershipFee(amount: number): Promise<PublicMembershipFee> {
+  const { data } = await api.put<{ success: boolean; data: PublicMembershipFee }>('/finance/membership-fee', { amount });
   return data.data;
 }

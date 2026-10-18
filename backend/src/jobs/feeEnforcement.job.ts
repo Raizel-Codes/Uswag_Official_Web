@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { prisma } from '../config/db.js';
-import { APPLICANT_DAYS, APPLICANT_WARNING_DAYS, MEMBERSHIP_FEE, PARTIAL_PAYMENT_MONTHS } from '../config/fee.js';
-import { applicantDeadline, addDays, feeFor, isApplicant, isServingOfficer } from '../services/fee.service.js';
+import { APPLICANT_DAYS, APPLICANT_WARNING_DAYS, PARTIAL_PAYMENT_MONTHS } from '../config/fee.js';
+import { applicantDeadline, addDays, feeFor, getMembershipFee, isApplicant, isServingOfficer } from '../services/fee.service.js';
 import { getMaintenance } from '../services/maintenance.service.js';
 import { notifyUsers } from '../services/notification.service.js';
 import { logger } from '../utils/logger.js';
@@ -84,13 +84,14 @@ export async function runFeeEnforcement(now: Date = new Date()) {
     }
 
     if (toWarn.length > 0) {
+      const { amount: currentFee } = await getMembershipFee(now);
       await prisma.memberProfile.updateMany({ where: { id: { in: toWarn.map((a) => a.id) } }, data: { expiryWarnedAt: now } });
       result.warned = toWarn.length;
       for (const a of toWarn) {
         void notifyUsers([a.userId], {
           kind: 'membership',
           title: 'Pay the membership fee to keep your application',
-          body: `Your application is removed on ${applicantDeadline(a).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', timeZone: 'Asia/Manila' })} unless the ₱${MEMBERSHIP_FEE} membership fee is paid to the Treasurer. You can apply again later.`,
+          body: `Your application is removed on ${applicantDeadline(a).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', timeZone: 'Asia/Manila' })} unless the ₱${currentFee} membership fee is paid to the Treasurer. You can apply again later.`,
           url: '/dashboard',
         });
       }

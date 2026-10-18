@@ -22,6 +22,10 @@ import { logAction } from './audit.service.js';
 //            job (jobs/feeEnforcement.job.ts) returns an active member to PENDING.
 //   unpaid   nothing recorded.
 //
+// The amount is set by the Treasurer (setMembershipFee) and kept as a history of rates. A member is judged
+// against the fee in force when their first payment for the year was recorded (today, if they haven't paid),
+// so raising or lowering the fee never turns someone who already paid in full into a debtor.
+//
 // The Secretary can approve or renew only exempt / paid / partial. That rule lives in
 // assertCanActivate(), called from the member service itself, so no route (not even the Super Admin's)
 // reaches ACTIVE around it.
@@ -34,6 +38,8 @@ export interface FeeInfo {
   paid: number;
   /** Pesos still owed (0 when paid or exempt). */
   due: number;
+  /** The full fee this member is judged against (see the note above about which rate applies). */
+  amount: number;
   /** For partial / overdue: when the balance had to be (or must be) paid by. */
   deadline: Date | null;
 }
@@ -62,17 +68,33 @@ export function addMonths(date: Date, months: number): Date {
 
 export const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 86_400_000);
 
+export interface FeeRate {
+  amount: number;
+  effectiveFrom: Date;
+}
+
+/** The fee in force at `at`: the newest rate that had started by then, else the starting fee in config/fee.ts. */
+export function rateAt(rates: FeeRate[], at: Date): number {
+  let found: FeeRate | undefined;
+  for (const r of rates) if (r.effectiveFrom <= at && (!found || r.effectiveFrom > found.effectiveFrom)) found = r;
+  return found ? found.amount : MEMBERSHIP_FEE;
+}
+
+/** The rates, oldest first. A handful of rows at most (one per change the Treasurer makes). */
+export const loadRates = (): Promise<FeeRate[]> => prisma.membershipFeeRate.findMany({ select: { amount: true, effectiveFrom: true }, orderBy: { effectiveFrom: 'asc' } });
+
 /** The whole rule, with no database in it. */
-export function computeFee(payments: { amount: number; createdAt: Date }[], exempt: boolean, now: Date = new Date(), fee: number = MEMBERSHIP_FEE): FeeInfo {
+export function computeFee(payments: { amount: number; createdAt: Date }[], exempt: boolean, now: Date = new Date(), rates: FeeRate[] = []): FeeInfo {
+  const first = payments.length > 0 ? payments.reduce((a, b) => (a.createdAt <= b.createdAt ? a : b)).createdAt : null;
+  const fee = rateAt(rates, first ?? now);
   const paidCents = payments.reduce((sum, p) => sum + toCents(p.amount), 0);
   const paid = fromCents(paidCents);
-  if (exempt) return { state: 'exempt', paid, due: 0, deadline: null };
-  if (paidCents >= toCents(fee)) return { state: 'paid', paid, due: 0, deadline: null };
+  if (exempt) return { state: 'exempt', paid, due: 0, amount: fee, deadline: null };
+  if (paidCents >= toCents(fee)) return { state: 'paid', paid, due: 0, amount: fee, deadline: null };
   const due = fromCents(toCents(fee) - Math.max(0, paidCents));
-  if (paidCents <= 0) return { state: 'unpaid', paid: 0, due, deadline: null };
-  const first = payments.reduce((a, b) => (a.createdAt <= b.createdAt ? a : b)).createdAt;
+  if (paidCents <= 0 || !first) return { state: 'unpaid', paid: 0, due, amount: fee, deadline: null };
   const deadline = addMonths(first, PARTIAL_PAYMENT_MONTHS);
-  return { state: now > deadline ? 'overdue' : 'partial', paid, due, deadline };
+  return { state: now > deadline ? 'overdue' : 'partial', paid, due, amount: fee, deadline };
 }
 
 export interface FeeSubject {
@@ -106,6 +128,7 @@ function coveredYears(p: Pick<FeeSubject, 'status' | 'academicYear'>, now: Date)
 /** Fee standing for many members with two queries. */
 export async function feeFor(subjects: FeeSubject[], now: Date = new Date()): Promise<Map<string, FeeInfo>> {
   const ids = subjects.map((s) => s.id);
+  const rates = await loadRates();
   const payments = ids.length
     ? await prisma.financeEntry.findMany({
         where: { type: 'DUES', relatedMemberId: { in: ids } },
@@ -122,7 +145,7 @@ export async function feeFor(subjects: FeeSubject[], now: Date = new Date()): Pr
   for (const s of subjects) {
     const years = coveredYears(s, now);
     const mine = (byMember.get(s.id) ?? []).filter((p) => p.academicYear !== null && years.includes(p.academicYear));
-    out.set(s.id, computeFee(mine, isServingOfficer(s.user), now));
+    out.set(s.id, computeFee(mine, isServingOfficer(s.user), now, rates));
   }
   return out;
 }
@@ -162,7 +185,7 @@ export async function assertCanActivate(profileId: string, targetYear: string, n
     where: { type: 'DUES', relatedMemberId: profile.id },
     select: { amount: true, createdAt: true, academicYear: true },
   });
-  const info = computeFee(payments.filter((p) => p.academicYear !== null && years.has(p.academicYear)), isServingOfficer(profile.user), now);
+  const info = computeFee(payments.filter((p) => p.academicYear !== null && years.has(p.academicYear)), isServingOfficer(profile.user), now, await loadRates());
   if (canActivate(info.state)) return;
   const name = profile.user.name;
   if (info.state === 'overdue') {
@@ -172,7 +195,7 @@ export async function assertCanActivate(profileId: string, targetYear: string, n
     );
   }
   throw new FeeRequiredError(
-    `${name} hasn’t paid the ₱${MEMBERSHIP_FEE.toFixed(2)} membership fee yet. The Treasurer records the payment first, then it can be approved.`,
+    `${name} hasn’t paid the ₱${info.amount.toFixed(2)} membership fee yet. The Treasurer records the payment first, then it can be approved.`,
     info,
   );
 }
@@ -193,19 +216,44 @@ export interface RosterRow {
 
 const ORDER: Record<FeeState, number> = { overdue: 0, unpaid: 1, partial: 2, paid: 3, exempt: 4 };
 
-export const feeRules = () => ({
-  amount: MEMBERSHIP_FEE,
-  partialMonths: PARTIAL_PAYMENT_MONTHS,
-  applicantDays: APPLICANT_DAYS,
-  extensionDays: APPLICANT_EXTENSION_DAYS,
-});
+export interface FeeChange {
+  amount: number;
+  effectiveFrom: string;
+  setBy: string | null;
+}
+
+/** The fee in force right now, and since when (null = still the starting fee). */
+export async function getMembershipFee(now: Date = new Date()): Promise<{ amount: number; since: string | null }> {
+  const rates = await loadRates();
+  const current = rates.filter((r) => r.effectiveFrom <= now).pop();
+  return { amount: rateAt(rates, now), since: current?.effectiveFrom.toISOString() ?? null };
+}
+
+/** What the Treasurer sees: the fee now plus the last few changes and who made them. */
+async function feeRules(now: Date) {
+  const [{ amount, since }, rows] = await Promise.all([
+    getMembershipFee(now),
+    prisma.membershipFeeRate.findMany({ orderBy: { effectiveFrom: 'desc' }, take: 5 }),
+  ]);
+  const setters = rows.flatMap((r) => (r.setById ? [r.setById] : []));
+  const names = new Map((setters.length ? await prisma.user.findMany({ where: { id: { in: setters } }, select: { id: true, name: true } }) : []).map((u) => [u.id, u.name]));
+  const history: FeeChange[] = rows.map((r) => ({ amount: r.amount, effectiveFrom: r.effectiveFrom.toISOString(), setBy: r.setById ? names.get(r.setById) ?? null : null }));
+  return {
+    amount,
+    since,
+    history,
+    partialMonths: PARTIAL_PAYMENT_MONTHS,
+    applicantDays: APPLICANT_DAYS,
+    extensionDays: APPLICANT_EXTENSION_DAYS,
+  };
+}
 
 export function toFeeDTO(info: FeeInfo, removedOn: Date | null = null) {
   return { state: info.state, paid: info.paid, due: info.due, deadline: info.deadline?.toISOString() ?? null, removedOn: removedOn?.toISOString() ?? null };
 }
 
 /** Everyone who is, or is applying to be, a member (not the rejected, not the developer), unpaid first. */
-export async function listRoster(now: Date = new Date()): Promise<{ rules: ReturnType<typeof feeRules>; members: RosterRow[] }> {
+export async function listRoster(now: Date = new Date()): Promise<{ rules: Awaited<ReturnType<typeof feeRules>>; members: RosterRow[] }> {
   const profiles = await prisma.memberProfile.findMany({
     where: { status: { not: 'REJECTED' }, user: { isDeveloper: false } },
     select: { ...SUBJECT_SELECT, serialNumber: true, user: { select: { id: true, name: true, role: true, officerPosition: true, isDeveloper: true, collegeOrDept: true } } },
@@ -226,7 +274,7 @@ export async function listRoster(now: Date = new Date()): Promise<{ rules: Retur
     };
   });
   members.sort((a, b) => ORDER[a.fee.state] - ORDER[b.fee.state] || (a.removedOn ?? '9').localeCompare(b.removedOn ?? '9') || a.name.localeCompare(b.name));
-  return { rules: feeRules(), members };
+  return { rules: await feeRules(now), members };
 }
 
 export class PaymentError extends Error {
@@ -260,6 +308,25 @@ export async function recordMembershipPayment(actorId: string, input: { memberId
   await logAction(actorId, 'finance.dues', 'FinanceEntry', entry.id, { memberName: profile.user.name, memberId: profile.id, amount: fromCents(cents) });
   const after = (await feeFor([profile], now)).get(profile.id)!;
   return { entry, fee: toFeeDTO(after) };
+}
+
+export const MAX_MEMBERSHIP_FEE = 10_000;
+
+/**
+ * The Treasurer sets a new membership fee. It applies from now: payments already recorded keep the fee
+ * they were made under (see computeFee), and everyone else is asked for the new amount. Article III has
+ * the officers set the fee and the adviser approve it, so the page tells the Treasurer to get that first.
+ */
+export async function setMembershipFee(actorId: string, amount: number, now: Date = new Date()) {
+  if (!Number.isFinite(amount) || toCents(amount) <= 0) throw new PaymentError('Enter a fee greater than zero.');
+  if (Math.abs(amount * 100 - toCents(amount)) > 1e-6) throw new PaymentError('Use at most two decimal places (centavos).');
+  if (amount > MAX_MEMBERSHIP_FEE) throw new PaymentError(`A membership fee above ₱${MAX_MEMBERSHIP_FEE.toLocaleString('en-PH')} looks like a typing mistake.`);
+  const next = fromCents(toCents(amount));
+  const before = (await getMembershipFee(now)).amount;
+  if (next === before) throw new PaymentError(`The membership fee is already ₱${before.toFixed(2)}.`, 409);
+  const row = await prisma.membershipFeeRate.create({ data: { amount: next, effectiveFrom: now, setById: actorId } });
+  await logAction(actorId, 'finance.fee.set', 'MembershipFeeRate', row.id, { from: before, to: next });
+  return { amount: next, since: row.effectiveFrom.toISOString() };
 }
 
 /** The Treasurer gives an unpaid application more time (a cash payment not yet written down, say). */

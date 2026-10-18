@@ -131,7 +131,7 @@ export default function DuesForm({ onSaved }: { onSaved: (message: string) => vo
             value={amount}
             disabled={!picked}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder={fee ? String(fee) : '50.00'}
+            placeholder={fee ? fee.toFixed(2) : '0.00'}
             className="ap-input"
           />
           {picked && (

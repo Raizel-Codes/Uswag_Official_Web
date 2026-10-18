@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { prisma } from '../config/db.js';
 import { logAction } from '../services/audit.service.js';
 import { ok, fail } from '../utils/response.js';
-import { PaymentError, extendApplicant, listRoster, recordMembershipPayment } from '../services/fee.service.js';
+import { PaymentError, extendApplicant, getMembershipFee, listRoster, recordMembershipPayment, setMembershipFee } from '../services/fee.service.js';
 
 // ---------------------------------------------------------------------------
 // GET /finance/summary
@@ -63,6 +63,32 @@ export async function listFinanceEntries(req: Request, res: Response) {
 // ---------------------------------------------------------------------------
 export async function getFeeRoster(_req: Request, res: Response) {
   return ok(res, await listRoster());
+}
+
+// ---------------------------------------------------------------------------
+// GET /finance/membership-fee
+// Access: PUBLIC — the Join Us and Application pages quote the current fee. Just the amount and since when;
+// never who set it. Never cached, so a change by the Treasurer shows on the next load.
+// ---------------------------------------------------------------------------
+export async function getCurrentMembershipFee(_req: Request, res: Response) {
+  res.set('Cache-Control', 'no-store');
+  return ok(res, await getMembershipFee());
+}
+
+// ---------------------------------------------------------------------------
+// PUT /finance/membership-fee
+// Access: Treasurer + Super Admin ONLY
+// Body: { amount: number } — pesos, at most two decimals. Applies from now; recorded in the audit log.
+// ---------------------------------------------------------------------------
+export async function updateMembershipFee(req: Request, res: Response) {
+  const amount = typeof req.body?.amount === 'string' ? Number(req.body.amount) : req.body?.amount;
+  if (typeof amount !== 'number') return fail(res, 'Enter the new fee in pesos.', 400);
+  try {
+    return ok(res, await setMembershipFee(req.user!.id, amount));
+  } catch (err) {
+    if (err instanceof PaymentError) return fail(res, err.message, err.status);
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------

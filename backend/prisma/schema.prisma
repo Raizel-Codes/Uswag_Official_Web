@@ -355,3 +355,17 @@ model SiteMaintenance {
   setById   String?   // the developer account that last changed it (no relation: it must never block deleting a user)
   updatedAt DateTime  @updatedAt
 }
+
+// The membership fee over time (see services/fee.service.ts). Each change by the Treasurer adds a row; the fee
+// "in force" at a moment is the newest row whose effectiveFrom is not later. With no rows the starting amount
+// in config/fee.ts applies. A member is judged against the fee in force when their first payment for the
+// year was recorded (or today, if they have not paid), so raising the fee never turns people who already
+// paid in full into debtors. setById has no relation on purpose: it must never block deleting an account.
+model MembershipFeeRate {
+  id            String   @id @default(uuid())
+  amount        Float    // pesos
+  effectiveFrom DateTime @default(now())
+  setById       String?
+
+  @@index([effectiveFrom])
+}

@@ -5,7 +5,10 @@ import { requireOfficerPosition, requireRole } from '../middlewares/role.middlew
 
 const router = Router();
 
-// All finance routes require authentication
+// The one public finance route: the current membership fee, quoted on the Join Us and Application pages.
+router.get('/membership-fee', financeController.getCurrentMembershipFee);
+
+// Everything else requires authentication
 router.use(requireAuth);
 
 // ---- Read endpoints — Treasurer + Auditor + Super Admin ----
@@ -19,6 +22,7 @@ router.get('/roster', canReadFinance, financeController.getFeeRoster);
 // ---- Write endpoints — Treasurer + Super Admin ONLY ----
 // Auditor intentionally excluded here; will get 403 if they somehow hit these.
 const canWriteFinance = requireOfficerPosition('TREASURER');
+router.put('/membership-fee', canWriteFinance, financeController.updateMembershipFee);
 router.post('/dues', canWriteFinance, financeController.recordDues);
 router.post('/roster/:memberId/extend', canWriteFinance, financeController.extendApplication);
 router.post('/expense', canWriteFinance, financeController.recordExpense);

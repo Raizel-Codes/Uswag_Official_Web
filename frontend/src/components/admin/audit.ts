@@ -7,6 +7,7 @@ const ACTIONS: { prefix: string; label: string; sentence: string; tone: 'active'
   { prefix: 'member.reject', label: 'Member rejected', sentence: 'rejected a membership application', tone: 'rejected' },
   { prefix: 'member.studentId.view', label: 'Student ID viewed', sentence: 'viewed an applicant’s student ID', tone: 'neutral' },
   { prefix: 'member.setupLink', label: 'Setup link created', sentence: 'created a password setup link', tone: 'pending' },
+  { prefix: 'account.delete', label: 'Account deleted', sentence: 'deleted an account', tone: 'rejected' },
   { prefix: 'officer.assign', label: 'Officer assigned', sentence: 'reassigned an officer position', tone: 'info' },
   { prefix: 'scan.officer_verify', label: 'Officer ID checked', sentence: 'checked an officer’s ID at a scan', tone: 'neutral' },
   { prefix: 'finance.dues', label: 'Dues recorded', sentence: 'recorded a dues payment', tone: 'info' },

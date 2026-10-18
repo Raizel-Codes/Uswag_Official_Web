@@ -2,6 +2,7 @@ export type MembershipStatus = 'active' | 'pending' | 'expired' | 'rejected';
 
 export interface MemberProfile {
   id: string;
+  userId: string; // the account behind this profile (Super Admin "Delete account")
   serialNumber: string; // e.g. UW-2026-004821
   name: string;
   email: string;

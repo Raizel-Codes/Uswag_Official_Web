@@ -11,6 +11,7 @@ import notificationRoutes from './notification.routes.js';
 import financeRoutes from './finance.routes.js';
 import procurementRoutes from './procurement.routes.js';
 import attendanceRoutes from './attendance.routes.js';
+import accountRoutes from './account.routes.js';
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.use('/notifications', notificationRoutes);
 router.use('/finance', financeRoutes);
 router.use('/procurement', procurementRoutes);
 router.use('/attendance', attendanceRoutes);
+router.use('/accounts', accountRoutes);
 
 export default router;
 

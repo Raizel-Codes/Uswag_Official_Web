@@ -24,6 +24,7 @@ type MemberProfileWithUser = Prisma.MemberProfileGetPayload<{ include: { user: t
 function toMemberDTO(profile: MemberProfileWithUser, attendanceRate: number, nameMatches = 0) {
   return {
     id: profile.id,
+    userId: profile.userId, // the account behind the profile (Super Admin "Delete account")
     serialNumber: profile.serialNumber,
     name: profile.user.name,
     email: profile.user.email,

@@ -8,12 +8,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { usePortalToast } from '@/hooks/usePortalToast';
 import { prefersReducedMotion } from '@/lib/motion';
 import { useApplicationDecision } from '@/hooks/useApplicationDecision';
 import { listMembers, approveApplication, rejectApplication, renewMember } from '@/services/memberService';
 import type { MemberProfile, MembershipStatus } from '@/types/member.types';
 import ApplicationReviewAids from '@/components/common/ApplicationReviewAids';
+import DeleteAccountDialog from '@/components/admin/DeleteAccountDialog';
 import PageHeader from '@/components/portal/PageHeader';
 import Panel from '@/components/portal/Panel';
 import PortalToast from '@/components/portal/PortalToast';
@@ -28,7 +30,7 @@ import { apiError, initials, timeAgo } from '@/components/admin/format';
 
 type Filter = 'all' | MembershipStatus;
 const FILTERS: Filter[] = ['all', 'pending', 'active', 'expired', 'rejected'];
-const COLS = 'minmax(15rem,2.4fr) minmax(8.5rem,1fr) minmax(9rem,1fr) 7.5rem 5.5rem';
+const COLS = 'minmax(15rem,2.4fr) minmax(8.5rem,1fr) minmax(9rem,1fr) 7.5rem 8rem';
 
 export default function SuperAdminMembersPage() {
   const [params, setParams] = useSearchParams();
@@ -36,6 +38,8 @@ export default function SuperAdminMembersPage() {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const { toast, show } = usePortalToast();
+  const { user } = useAuth();
+  const [deleting, setDeleting] = useState<MemberProfile | null>(null);
 
   const { data: members, isLoading, error } = useQuery<MemberProfile[]>({ queryKey: ['members', 'all'], queryFn: () => listMembers(), staleTime: 30_000 });
   const approve = useApplicationDecision(approveApplication, 'Application approved', show);
@@ -230,12 +234,28 @@ export default function SuperAdminMembersPage() {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7" /><path d="M20 4v5h-5" /></svg>
                       </button>
                     )}
+                    {m.userId !== user?.id && (
+                      <button type="button" disabled={busy} onClick={() => setDeleting(m)} className="ap-iconbtn ap-iconbtn--no" aria-label={`Delete account of ${m.name}`} title="Delete account">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5" /></svg>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
             </BoardGroup>
           ))}
         </div>
+      )}
+
+      {deleting && (
+        <DeleteAccountDialog
+          userId={deleting.userId}
+          onClose={() => setDeleting(null)}
+          onDeleted={(name) => {
+            setDeleting(null);
+            show(`${name}’s account was deleted.`);
+          }}
+        />
       )}
 
       <PortalToast toast={toast} />

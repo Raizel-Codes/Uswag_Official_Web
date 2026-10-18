@@ -5,9 +5,11 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { usePortalToast } from '@/hooks/usePortalToast';
 import { listOfficers, listOfficerNominees, assignOfficer, type OfficerUser } from '@/services/adminService';
 import OfficerAvatar from '@/components/common/OfficerAvatar';
+import DeleteAccountDialog from '@/components/admin/DeleteAccountDialog';
 import InstallTermPanel from '@/components/admin/InstallTermPanel';
 import PageHeader from '@/components/portal/PageHeader';
 import Panel from '@/components/portal/Panel';
@@ -93,7 +95,7 @@ function AssignPanel({ onDone }: { onDone: (msg: string) => void }) {
   );
 }
 
-function OfficerDetailDialog({ officer, onClose }: { officer: OfficerUser; onClose: () => void }) {
+function OfficerDetailDialog({ officer, onClose, onDelete }: { officer: OfficerUser; onClose: () => void; onDelete?: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -133,6 +135,12 @@ function OfficerDetailDialog({ officer, onClose }: { officer: OfficerUser; onClo
             <dd className="mt-1">{formatDate(officer.createdAt)}</dd>
           </div>
         </dl>
+        {onDelete && (
+          <div className="mt-6 pt-5 border-t border-[rgb(20_39_24/0.1)]">
+            <button type="button" onClick={onDelete} className="mp-btn mp-btn--ghost w-full sm:w-auto">Delete account…</button>
+            <p className="mp-muted text-[0.8125rem] mt-2">Permanently removes this account. Use “Change one position” to just replace an officer.</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -140,9 +148,11 @@ function OfficerDetailDialog({ officer, onClose }: { officer: OfficerUser; onClo
 
 export default function OfficerRosterPage() {
   const { toast, show } = usePortalToast();
+  const { user } = useAuth();
   const { data, isLoading, error } = useQuery<OfficerUser[]>({ queryKey: ['officers'], queryFn: listOfficers, staleTime: 60_000 });
   const officers = [...(data ?? [])].sort((a, b) => order(a.officerPosition) - order(b.officerPosition));
   const [selected, setSelected] = useState<OfficerUser | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   return (
     <div className="mp-page space-y-8">
@@ -200,7 +210,23 @@ export default function OfficerRosterPage() {
         </div>
       </div>
 
-      {selected && <OfficerDetailDialog officer={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <OfficerDetailDialog
+          officer={selected}
+          onClose={() => setSelected(null)}
+          onDelete={selected.id === user?.id ? undefined : () => { setDeletingId(selected.id); setSelected(null); }}
+        />
+      )}
+      {deletingId && (
+        <DeleteAccountDialog
+          userId={deletingId}
+          onClose={() => setDeletingId(null)}
+          onDeleted={(name) => {
+            setDeletingId(null);
+            show(`${name}’s account was deleted.`);
+          }}
+        />
+      )}
 
       <PortalToast toast={toast} />
     </div>

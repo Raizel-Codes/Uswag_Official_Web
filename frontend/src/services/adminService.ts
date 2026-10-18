@@ -120,3 +120,35 @@ export async function listAuditLog(): Promise<AuditLogEntry[]> {
   const { data } = await api.get<{ success: boolean; data: AuditLogEntry[] }>('/audit-log');
   return data.data;
 }
+
+
+// ---------------------------------------------------------------------------
+// Accounts — SUPER ADMIN ONLY
+// Backend: account.routes.ts requireRole('SUPER_ADMIN')
+// ---------------------------------------------------------------------------
+
+/** What deleting an account removes. `records` = officer activity the database won't orphan (see account.service.ts). */
+export interface AccountImpact {
+  scans: number;
+  auditEntries: number;
+  financeEntries: number;
+  purchaseRequests: number;
+  posts: number;
+  rsvps: number;
+  records: number;
+}
+
+export interface AccountPreview {
+  account: { id: string; name: string; email: string; role: string; officerPosition: string | null; collegeOrDept: string };
+  impact: AccountImpact;
+}
+
+export async function previewAccountDeletion(userId: string): Promise<AccountPreview> {
+  const { data } = await api.get<{ success: boolean; data: AccountPreview }>(`/accounts/${userId}/impact`);
+  return data.data;
+}
+
+export async function deleteAccount(userId: string, purgeRecords: boolean): Promise<{ id: string; name: string }> {
+  const { data } = await api.delete<{ success: boolean; data: { id: string; name: string } }>(`/accounts/${userId}`, { data: { purgeRecords } });
+  return data.data;
+}

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { NavItem } from '@/config/navigation';
 import PortalRail from './PortalRail';
 import PortalTabBar from './PortalTabBar';
+import BetaBanner from '@/components/common/BetaBanner';
 
 /**
  * The frame shared by the member portal and the admin console: skip link, desktop rail,
@@ -46,6 +47,7 @@ export default function PortalShell({
         <PortalRail label={railLabel} items={items} isLocked={isLocked} lockReason={lockReason} name={name} subtitle={subtitle} />
       </div>
       <main id="mp-main" tabIndex={-1} className="flex-1 min-w-0 focus:outline-none">
+        <BetaBanner />
         {children}
       </main>
       <div className={tabCls}>

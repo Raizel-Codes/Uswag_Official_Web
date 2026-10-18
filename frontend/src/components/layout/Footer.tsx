@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import Logo from '@/components/common/Logo';
 import { CHAPTERS } from '@/components/landing/chapters';
 import { FOUNDED_YEAR } from '@/components/landing/timeline.data';
+import { IS_BETA } from '@/config/release';
 
 // Public-site footer (PublicLayout only). The colophon of the Record: nameplate between Sage
 // double rules, the chapters in reading order, then appendices and the member portal.
@@ -106,7 +107,9 @@ export default function Footer() {
         </div>
 
         <div className="mt-14 pt-6 border-t border-sage/25 flex flex-col-reverse md:flex-row justify-between items-start md:items-center gap-4">
-          <p className="text-[0.8125rem] text-mist/80">© {year} USWAG · Northwest Samar State University</p>
+          <p className="text-[0.8125rem] text-mist/80">
+            © {year} USWAG · Northwest Samar State University{IS_BETA && ' · Beta version, testing phase'}
+          </p>
           <div className="flex items-center gap-6">
             <Link to="/bylaws" className="text-[0.8125rem] text-mist/80 hover:text-mist hover:underline underline-offset-4 decoration-sage">
               Governed by the USWAG Constitution &amp; By-Laws
